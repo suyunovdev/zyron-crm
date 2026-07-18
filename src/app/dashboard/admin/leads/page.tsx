@@ -320,9 +320,11 @@ export default function LeadsPage() {
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50">
                     <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">Ism</th>
+                    <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">Telefon</th>
+                    <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">Fan</th>
                     <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">Qo&apos;shilgan sana</th>
                     <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">LeadID</th>
-                    <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">Admin.status</th>
+                    <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">Status</th>
                     <th className="text-center text-xs font-medium text-slate-500 uppercase px-5 py-3">Davom etish</th>
                     <th className="text-center text-xs font-medium text-slate-500 uppercase px-5 py-3">O&apos;chirish</th>
                   </tr>
@@ -332,6 +334,19 @@ export default function LeadsPage() {
                     <tr key={lead.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-5 py-3.5 text-sm font-medium text-slate-900">
                         {lead.name}{lead.surname ? ` ${lead.surname}` : ''}
+                      </td>
+                      <td className="px-5 py-3.5 text-sm text-slate-600">
+                        <a href={`tel:${lead.phone}`} className="hover:text-[#2660A4] flex items-center gap-1">
+                          <Phone className="w-3.5 h-3.5" />
+                          {lead.phone}
+                        </a>
+                      </td>
+                      <td className="px-5 py-3.5 text-sm">
+                        {lead.note ? (
+                          <span className="text-slate-700">{lead.note.split('|')[0]?.replace('Fan:', '').trim() || '—'}</span>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
                       </td>
                       <td className="px-5 py-3.5 text-sm text-slate-500">
                         {new Date(lead.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).replace(/ /g, '.')}

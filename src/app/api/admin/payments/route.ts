@@ -1,0 +1,102 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/api-utils";
+import { prisma } from "@/lib/db";
+
+export async function GET(req: NextRequest) {
+  try {
+    const auth = await requireAuth("admin");
+    if (auth instanceof NextResponse) return auth;
+
+    const { searchParams } = new URL(req.url);
+    const month = searchParams.get("month");
+    const studentId = searchParams.get("studentId");
+
+    const where: Record<string, unknown> = {};
+
+    if (month) {
+      where.month = month;
+    }
+
+    if (studentId) {
+      where.studentId = studentId;
+    }
+
+    const payments = await prisma.payment.findMany({
+      where,
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            login: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return NextResponse.json(payments);
+  } catch (error) {
+    console.error("[GET /api/admin/payments]", error);
+    return NextResponse.json({ error: "Server xatosi" }, { status: 500 });
+  }
+}
+
+export async function POST(req: NextRequest) {
+  const auth = await requireAuth("admin");
+  if (auth instanceof NextResponse) return auth;
+
+  const body = await req.json();
+  const { studentId, amount, month, method, note } = body;
+
+  if (!studentId || !amount || !month) {
+    return NextResponse.json(
+      { error: "studentId, amount va month majburiy" },
+      { status: 400 }
+    );
+  }
+
+  const payment = await prisma.payment.create({
+    data: {
+      studentId,
+      amount: Number(amount),
+      month,
+      method: method || "cash",
+      note: note || null,
+    },
+    include: {
+      student: {
+        select: {
+          id: true,
+          name: true,
+          login: true,
+        },
+      },
+    },
+  });
+
+  return NextResponse.json(payment, { status: 201 });
+}
+
+export async function DELETE(req: NextRequest) {
+  const auth = await requireAuth("admin");
+  if (auth instanceof NextResponse) return auth;
+
+  const body = await req.json();
+  const { id } = body;
+
+  if (!id) {
+    return NextResponse.json(
+      { error: "id majburiy" },
+      { status: 400 }
+    );
+  }
+
+  await prisma.payment.delete({
+    where: { id },
+  });
+
+  return NextResponse.json({ success: true });
+}

@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  login     String   @unique
+  password  String
+  rawPass   String?  // original password (admin ko'rish uchun)
+  name      String
+  phone     String?
+  role      String   @default("student") // admin, teacher, student
+  subject   String?  // faqat teacher uchun (fan nomi)
+  status    String   @default("active") // active, frozen, archived
+  level     String?  // teacher: senior, middle, junior
+  avatar    String?  // rasm URL
+  createdAt DateTime @default(now())
+
+  teacherGroups Group[]
+  groupStudents GroupStudent[]
+  attendances   Attendance[]
+  payments      Payment[]
+  notes         Note[]
+}
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  subject     String
+  teacherId   String
+  teacher     User     @relation(fields: [teacherId], references: [id])
+  schedule    String
+  meetLink    String
+  mode        String   @default("offline") // offline, online
+  status      String   @default("active") // active, archived
+  maxStudents Int      @default(15)
+  startDate   String?  // guruh boshlanish sanasi
+  room        String?  // xona raqami (Room 7, Room 8...)
+  dayType     String   @default("toq") // toq, juft, boshqa
+  time        String?  // dars vaqti (14:00, 18:40...)
+  language    String   @default("uz") // uz, ru, en
+  price       Int      @default(0)   // oylik kurs narxi (so'mda)
+  lessonsPerMonth Int  @default(12)  // oyiga nechta dars
+  createdAt   DateTime @default(now())
+
+  students GroupStudent[]
+  lessons  Lesson[]
+}
+
+model GroupStudent {
+  id        String   @id @default(cuid())
+  groupId   String
+  group     Group    @relation(fields: [groupId], references: [id])
+  studentId String
+  student   User     @relation(fields: [studentId], references: [id])
+  joinedAt  DateTime @default(now())
+
+  @@unique([groupId, studentId])
+}
+
+model Lesson {
+  id            String   @id @default(cuid())
+  groupId       String
+  group         Group    @relation(fields: [groupId], references: [id])
+  topic         String?
+  scheduledDate String
+  scheduledTime String
+  duration      String   @default("1.5 soat")
+  order         Int
+  createdAt     DateTime @default(now())
+
+  attendances Attendance[]
+}
+
+model Attendance {
+  id        String   @id @default(cuid())
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id])
+  studentId String
+  student   User     @relation(fields: [studentId], references: [id])
+  present   Boolean
+  markedAt  DateTime @default(now())
+
+  @@unique([lessonId, studentId])
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  studentId String
+  student   User     @relation(fields: [studentId], references: [id])
+  amount    Int      // so'mda
+  month     String   // "2026-07" formatda
+  method    String   @default("cash") // cash, card, transfer
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  studentId String
+  student   User     @relation(fields: [studentId], references: [id])
+  type      String   @default("comment") // comment, frozen, archived, status
+  text      String
+  createdAt DateTime @default(now())
+}
+
+model Lead {
+  id          String   @id @default(cuid())
+  leadId      String   @unique @default(cuid()) // auto-generated LeadID
+  name        String
+  surname     String?
+  phone       String
+  gender      String?  // male, female
+  birthDate   String?
+  guardianPhone String?
+  guardianName  String?
+  guardianType  String?  // ota, ona, aka, opa, boshqa
+  preferredLang String?  // uz, ru, en
+  source      String?  // telegram, instagram, do'stlar, boshqa
+  status      String   @default("new") // new, contacted, trial, enrolled, rejected
+  note        String?
+  prepayment  Int?     // oldindan to'lov summasi
+  createdAt   DateTime @default(now())
+}

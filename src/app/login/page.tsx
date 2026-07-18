@@ -1,0 +1,185 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+import Image from 'next/image';
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [login, setLogin] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Xatolik yuz berdi");
+        setLoading(false);
+        return;
+      }
+
+      router.push(data.redirect);
+    } catch {
+      setError("Server bilan aloqa yo'q");
+      setLoading(false);
+    }
+  };
+
+  const demoAccounts = [
+    { role: 'Admin', login: 'admin', password: 'admin123' },
+    { role: "O'qituvchi", login: 'shahboz', password: 'teacher123' },
+    { role: "O'quvchi", login: 'zoir', password: 'student123' },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background blobs */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-indigo-600/15 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-cyan-500/10 rounded-full blur-[100px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-purple-500/10 rounded-full blur-[80px]" />
+      </div>
+
+      {/* Main card */}
+      <div className="w-full max-w-4xl relative z-10 flex rounded-3xl overflow-hidden shadow-2xl shadow-black/40">
+        {/* Left side — Form */}
+        <div className="w-full md:w-1/2 bg-white p-8 md:p-10">
+          {/* Logo */}
+          <div className="mb-10">
+            <Image src="/logo-horizontal.png" alt="Aka-Uka Ta'lim Markazi" width={180} height={56} className="object-contain" />
+          </div>
+
+          <h1 className="text-2xl font-bold text-slate-900 mb-1">Xush Kelibsiz</h1>
+          <p className="text-sm text-slate-400 mb-8">Online ta&apos;lim platformasiga kirish</p>
+
+          {error && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-5 text-sm">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <span className="text-red-500">*</span> Login
+              </label>
+              <input
+                type="text"
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
+                placeholder="Loginingizni kiriting"
+                className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-slate-900"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <span className="text-red-500">*</span> Parol
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Parolni kiriting"
+                  className="w-full px-4 pr-12 py-3 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-slate-900"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#2660A4] text-white py-3.5 rounded-lg font-bold text-base hover:bg-[#1d4e87] transition-all shadow-lg shadow-[#2660A4]/25 disabled:opacity-50"
+            >
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Kirish...
+                </span>
+              ) : 'Kirish'}
+            </button>
+          </form>
+
+          {/* Demo accounts */}
+          <div className="mt-6">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex-1 h-px bg-slate-200" />
+              <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Demo akkauntlar</span>
+              <div className="flex-1 h-px bg-slate-200" />
+            </div>
+            <div className="flex gap-2">
+              {demoAccounts.map((acc) => (
+                <button
+                  key={acc.login}
+                  onClick={() => { setLogin(acc.login); setPassword(acc.password); setError(''); }}
+                  className="flex-1 px-3 py-2 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all text-center"
+                >
+                  <span className="text-xs font-semibold text-slate-700">{acc.role}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Right side — Illustration */}
+        <div className="hidden md:flex w-1/2 bg-gradient-to-br from-[#2660A4] via-[#1d4e87] to-[#22AA79] items-center justify-center p-10 relative overflow-hidden">
+          {/* Decorative elements */}
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute top-10 right-10 w-20 h-20 border-2 border-white/30 rounded-full" />
+            <div className="absolute bottom-20 left-10 w-32 h-32 border-2 border-white/20 rounded-full" />
+            <div className="absolute top-1/3 left-1/4 w-3 h-3 bg-yellow-400 rounded-full" />
+            <div className="absolute bottom-1/3 right-1/4 w-4 h-4 bg-pink-400 rounded-full" />
+            <div className="absolute top-1/2 right-1/3 w-2 h-2 bg-cyan-400 rounded-full" />
+            <div className="absolute top-20 left-20 w-5 h-5 bg-green-400/60 rounded-full" />
+            <div className="absolute bottom-1/4 left-1/3 w-6 h-6 border border-white/40 rounded-lg rotate-45" />
+          </div>
+
+          {/* Central content */}
+          <div className="text-center relative z-10">
+            <div className="mx-auto mb-6">
+              <Image src="/logo-vertical-white.png" alt="Aka-Uka" width={160} height={160} className="object-contain mx-auto" />
+            </div>
+            <div className="mt-6 flex items-center justify-center gap-2">
+              <div className="w-8 h-1 bg-white/40 rounded-full" />
+              <div className="w-8 h-1 bg-white rounded-full" />
+              <div className="w-8 h-1 bg-white/40 rounded-full" />
+            </div>
+            <p className="text-white/50 text-xs mt-6">Online darslar platformasi</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Zyron credit */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5">
+        <Image src="/zyron-mark.svg" alt="Zyron" width={16} height={16} className="opacity-40" />
+        <span className="text-white/30 text-[10px] font-medium">Zyron</span>
+      </div>
+    </div>
+  );
+}

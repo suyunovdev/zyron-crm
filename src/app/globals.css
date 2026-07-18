@@ -1,0 +1,338 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-brand-blue: #2660A4;
+  --color-brand-blue-dark: #1d4e87;
+  --color-brand-blue-light: #3a7bc8;
+  --color-brand-green: #22AA79;
+  --color-brand-green-dark: #1a8a62;
+  --color-brand-green-light: #2ec48e;
+  --color-brand-grey: #7F8080;
+  --color-primary: #2660A4;
+  --color-primary-dark: #1d4e87;
+  --color-primary-light: #3a7bc8;
+  --color-accent: #22AA79;
+  --color-surface: #f8fafc;
+  --color-surface-dark: #0f172a;
+  --color-card: #ffffff;
+  --color-card-dark: #1e293b;
+  --color-success: #22AA79;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* ── Light mode defaults ── */
+body {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+/* ══════════════════════════════════════════════
+   DARK MODE — comprehensive overrides
+   ══════════════════════════════════════════════ */
+
+html.dark body {
+  background: #0b1120;
+  color: #e2e8f0;
+}
+
+/* ── Backgrounds ── */
+html.dark .bg-white {
+  background-color: #1e293b !important;
+}
+html.dark .bg-\[\#f8f9fb\] {
+  background-color: #0b1120 !important;
+}
+html.dark .bg-slate-50 {
+  background-color: #162032 !important;
+}
+html.dark .bg-slate-100 {
+  background-color: #1e293b !important;
+}
+html.dark .bg-slate-200 {
+  background-color: #334155 !important;
+}
+
+/* ── Text colors ── */
+html.dark .text-slate-900 {
+  color: #f1f5f9 !important;
+}
+html.dark .text-slate-800 {
+  color: #e2e8f0 !important;
+}
+html.dark .text-slate-700 {
+  color: #cbd5e1 !important;
+}
+html.dark .text-slate-600 {
+  color: #94a3b8 !important;
+}
+html.dark .text-slate-500 {
+  color: #64748b !important;
+}
+html.dark .text-slate-400 {
+  color: #64748b !important;
+}
+html.dark .text-slate-300 {
+  color: #94a3b8 !important;
+}
+
+/* ── Borders ── */
+html.dark .border-slate-200 {
+  border-color: #293548 !important;
+}
+html.dark .border-slate-100 {
+  border-color: #1e293b !important;
+}
+html.dark .border-slate-300 {
+  border-color: #334155 !important;
+}
+
+/* ── Hover backgrounds ── */
+html.dark .hover\:bg-slate-50:hover {
+  background-color: #253348 !important;
+}
+html.dark .hover\:bg-slate-100:hover {
+  background-color: #253348 !important;
+}
+html.dark .hover\:bg-blue-50:hover {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+html.dark .hover\:bg-red-50:hover {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+}
+
+/* ── Colored badges/pills (soften in dark) ── */
+html.dark .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+}
+html.dark .bg-emerald-50\/50 {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+}
+html.dark .bg-emerald-100 {
+  background-color: rgba(16, 185, 129, 0.2) !important;
+}
+html.dark .bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.12) !important;
+}
+html.dark .bg-red-50\/50 {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+}
+html.dark .bg-red-100 {
+  background-color: rgba(239, 68, 68, 0.2) !important;
+}
+html.dark .bg-blue-50 {
+  background-color: rgba(59, 130, 246, 0.12) !important;
+}
+html.dark .bg-blue-100 {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+}
+html.dark .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+}
+html.dark .bg-amber-100 {
+  background-color: rgba(245, 158, 11, 0.2) !important;
+}
+html.dark .bg-purple-50 {
+  background-color: rgba(139, 92, 246, 0.12) !important;
+}
+html.dark .bg-purple-100 {
+  background-color: rgba(139, 92, 246, 0.2) !important;
+}
+html.dark .bg-orange-50 {
+  background-color: rgba(249, 115, 22, 0.12) !important;
+}
+html.dark .bg-orange-100 {
+  background-color: rgba(249, 115, 22, 0.2) !important;
+}
+html.dark .bg-cyan-50 {
+  background-color: rgba(6, 182, 212, 0.12) !important;
+}
+html.dark .bg-cyan-100 {
+  background-color: rgba(6, 182, 212, 0.2) !important;
+}
+html.dark .bg-green-50 {
+  background-color: rgba(34, 197, 94, 0.12) !important;
+}
+html.dark .bg-green-100 {
+  background-color: rgba(34, 197, 94, 0.2) !important;
+}
+html.dark .bg-yellow-50 {
+  background-color: rgba(234, 179, 8, 0.12) !important;
+}
+html.dark .bg-yellow-100 {
+  background-color: rgba(234, 179, 8, 0.2) !important;
+}
+html.dark .bg-indigo-50 {
+  background-color: rgba(99, 102, 241, 0.12) !important;
+}
+html.dark .bg-indigo-100 {
+  background-color: rgba(99, 102, 241, 0.2) !important;
+}
+
+/* ── Colored borders (soften) ── */
+html.dark .border-emerald-300 {
+  border-color: rgba(16, 185, 129, 0.4) !important;
+}
+html.dark .border-red-300 {
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+html.dark .border-blue-300 {
+  border-color: rgba(59, 130, 246, 0.4) !important;
+}
+html.dark .border-amber-300 {
+  border-color: rgba(245, 158, 11, 0.4) !important;
+}
+
+/* ── Form elements ── */
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #162032 !important;
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b !important;
+}
+html.dark input:focus,
+html.dark select:focus,
+html.dark textarea:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+}
+/* radio/checkbox keep accent */
+html.dark input[type="radio"],
+html.dark input[type="checkbox"] {
+  background-color: #334155 !important;
+}
+
+/* ── Tables ── */
+html.dark th {
+  background-color: #162032 !important;
+}
+html.dark .divide-slate-100 > * + * {
+  border-color: #1e293b !important;
+}
+
+/* ── Shadows (darken) ── */
+html.dark .shadow-sm,
+html.dark .shadow,
+html.dark .shadow-md,
+html.dark .shadow-lg,
+html.dark .shadow-xl,
+html.dark .shadow-2xl {
+  --tw-shadow-color: rgba(0, 0, 0, 0.4) !important;
+}
+html.dark .hover\:shadow-md:hover {
+  --tw-shadow-color: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* ── Scrollbar ── */
+html.dark ::-webkit-scrollbar-track {
+  background: #0b1120;
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* ── Placeholder text ── */
+html.dark .placeholder-slate-400::placeholder {
+  color: #475569 !important;
+}
+
+/* ── Ring colors ── */
+html.dark .ring-slate-200 {
+  --tw-ring-color: #334155 !important;
+}
+
+/* ── Opacity modifiers for dark ── */
+html.dark .bg-black\/50 {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+}
+html.dark .bg-black\/60 {
+  background-color: rgba(0, 0, 0, 0.75) !important;
+}
+
+/* ══════════════════════════════════════════════
+   Animations
+   ══════════════════════════════════════════════ */
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(99, 102, 241, 0.6); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out forwards;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.5s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+html.dark .glass {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(51, 65, 85, 0.5);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #2660A4, #22AA79);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-bg {
+  background: linear-gradient(135deg, #2660A4, #22AA79);
+}
+
+.hero-gradient {
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}

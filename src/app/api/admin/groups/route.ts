@@ -1,0 +1,106 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+import { requireAuth } from '@/lib/api-utils';
+
+// Get all groups
+export async function GET() {
+  const auth = await requireAuth('admin');
+  if (auth instanceof NextResponse) return auth;
+
+  const groups = await prisma.group.findMany({
+    include: {
+      teacher: { select: { id: true, name: true } },
+      students: { include: { student: { select: { id: true, name: true, status: true } } } },
+      _count: { select: { lessons: true, students: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return NextResponse.json(groups);
+}
+
+// Create group
+export async function POST(req: NextRequest) {
+  const auth = await requireAuth('admin');
+  if (auth instanceof NextResponse) return auth;
+
+  const { name, subject, teacherId, schedule, meetLink, maxStudents, startDate, room, dayType, time, price, lessonsPerMonth, mode } = await req.json();
+  if (!name || !subject || !teacherId) {
+    return NextResponse.json({ error: 'Nomi, fani va o\'qituvchi kerak' }, { status: 400 });
+  }
+
+  const group = await prisma.group.create({
+    data: {
+      name,
+      subject,
+      teacherId,
+      schedule: schedule || '',
+      meetLink: meetLink || '',
+      maxStudents: maxStudents ? parseInt(maxStudents) : 15,
+      startDate: startDate || null,
+      room: room || null,
+      dayType: dayType || 'toq',
+      time: time || null,
+      mode: mode || 'offline',
+      price: price ? parseInt(price) : 0,
+      lessonsPerMonth: lessonsPerMonth ? parseInt(lessonsPerMonth) : 12,
+    },
+    include: { teacher: { select: { name: true } } },
+  });
+
+  return NextResponse.json(group, { status: 201 });
+}
+
+// Update group (status, info, add/remove students, move student)
+export async function PATCH(req: NextRequest) {
+  const auth = await requireAuth('admin');
+  if (auth instanceof NextResponse) return auth;
+
+  const { id, name, schedule, meetLink, status, maxStudents, startDate, room, dayType, time, price, lessonsPerMonth, mode, addStudentId, removeStudentId, moveStudentId, toGroupId } = await req.json();
+  if (!id) return NextResponse.json({ error: 'id kerak' }, { status: 400 });
+
+  // Move student from this group to another
+  if (moveStudentId && toGroupId) {
+    await prisma.groupStudent.deleteMany({
+      where: { groupId: id, studentId: moveStudentId },
+    });
+    await prisma.groupStudent.create({
+      data: { groupId: toGroupId, studentId: moveStudentId },
+    });
+    return NextResponse.json({ ok: true, message: "O'quvchi ko'chirildi" });
+  }
+
+  // Add student to group
+  if (addStudentId) {
+    await prisma.groupStudent.create({
+      data: { groupId: id, studentId: addStudentId },
+    });
+    return NextResponse.json({ ok: true, message: "O'quvchi qo'shildi" });
+  }
+
+  // Remove student from group
+  if (removeStudentId) {
+    await prisma.groupStudent.deleteMany({
+      where: { groupId: id, studentId: removeStudentId },
+    });
+    return NextResponse.json({ ok: true, message: "O'quvchi chiqarildi" });
+  }
+
+  // Update group info
+  const data: Record<string, unknown> = {};
+  if (name !== undefined) data.name = name;
+  if (schedule !== undefined) data.schedule = schedule;
+  if (meetLink !== undefined) data.meetLink = meetLink;
+  if (status !== undefined) data.status = status;
+  if (maxStudents !== undefined) data.maxStudents = parseInt(maxStudents);
+  if (startDate !== undefined) data.startDate = startDate;
+  if (room !== undefined) data.room = room;
+  if (dayType !== undefined) data.dayType = dayType;
+  if (time !== undefined) data.time = time;
+  if (price !== undefined) data.price = parseInt(price);
+  if (lessonsPerMonth !== undefined) data.lessonsPerMonth = parseInt(lessonsPerMonth);
+  if (mode !== undefined) data.mode = mode;
+
+  const group = await prisma.group.update({ where: { id }, data });
+  return NextResponse.json(group);
+}

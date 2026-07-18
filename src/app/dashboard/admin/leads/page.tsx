@@ -304,7 +304,7 @@ export default function LeadsPage() {
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-visible">
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
@@ -315,7 +315,7 @@ export default function LeadsPage() {
               <p>Lidlar topilmadi</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto overflow-y-visible">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50">
@@ -370,7 +370,7 @@ export default function LeadsPage() {
                             Davom etish
                           </button>
                           {openDropdown === lead.id && (
-                            <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1.5"
+                            <div className="absolute right-0 bottom-full mb-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1.5"
                               onClick={e => e.stopPropagation()}>
                               {Object.entries(STATUS_LABELS).map(([key, label]) => (
                                 <button key={key} onClick={() => {

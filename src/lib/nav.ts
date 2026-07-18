@@ -9,7 +9,7 @@ export const adminNav: NavItem[] = [
   { label: 'Guruhlar', href: '/dashboard/admin/groups', icon: FolderOpen },
   { label: "To'lovlar", href: '/dashboard/admin/payments', icon: CreditCard },
   { label: 'Jadval', href: '/dashboard/admin/schedule', icon: CalendarClock },
-  { label: 'Oylik hisobot', href: '/dashboard/admin/reports', icon: FileBarChart },
+  { label: 'Oylik hisobot', href: '/dashboard/admin/reports', icon: FileBarChart, action: 'report-modal' },
 ];
 
 export const teacherNav: NavItem[] = [];

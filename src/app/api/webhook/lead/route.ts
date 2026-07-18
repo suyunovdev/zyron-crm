@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { createNotification } from '@/lib/notify';
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'aka-uka-lead-webhook-2026';
 
@@ -44,6 +45,14 @@ export async function POST(req: NextRequest) {
           message || '',
         ].filter(Boolean).join(' | ') || null,
       },
+    });
+
+    const subjectText = subject ? (subjectLabels[subject] || subject) : '';
+    await createNotification({
+      type: 'lead',
+      title: 'Yangi lid saytdan!',
+      message: `${name} — ${phone}${subjectText ? ` (${subjectText})` : ''}`,
+      link: '/dashboard/admin/leads',
     });
 
     return NextResponse.json({ ok: true, leadId: lead.leadId }, { status: 201 });

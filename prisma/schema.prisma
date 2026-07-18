@@ -109,6 +109,16 @@ model Note {
   createdAt DateTime @default(now())
 }
 
+model Notification {
+  id        String   @id @default(cuid())
+  type      String   // lead, payment, enrollment, attendance, system
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  link      String?  // sahifaga yo'naltirish
+  createdAt DateTime @default(now())
+}
+
 model Lead {
   id          String   @id @default(cuid())
   leadId      String   @unique @default(cuid()) // auto-generated LeadID

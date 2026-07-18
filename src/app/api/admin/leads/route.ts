@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-utils";
 import { prisma } from "@/lib/db";
+import { createNotification } from "@/lib/notify";
 
 const VALID_STATUSES = ["new", "contacted", "trial", "enrolled", "rejected"];
 
@@ -65,6 +66,13 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  await createNotification({
+    type: 'lead',
+    title: 'Yangi lid qo\'shildi',
+    message: `${name} — ${phone}`,
+    link: '/dashboard/admin/leads',
+  });
+
   return NextResponse.json({ lead }, { status: 201 });
 }
 
@@ -99,6 +107,15 @@ export async function PATCH(req: NextRequest) {
       where: { id },
       data,
     });
+
+    if (status === 'enrolled') {
+      await createNotification({
+        type: 'enrollment',
+        title: 'Lid ro\'yxatdan o\'tdi',
+        message: `${lead.name} o'quvchiga aylandi`,
+        link: '/dashboard/admin/students',
+      });
+    }
 
     return NextResponse.json({ lead });
   } catch (error) {

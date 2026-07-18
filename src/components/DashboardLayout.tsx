@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { GraduationCap, Menu, X, LogOut, ChevronDown, Settings, Search, Users, UserPlus, FolderOpen, Moon, Sun, Calendar, Loader2, Banknote, CreditCard, ArrowRightLeft, BarChart3, UserCheck, UserX, Snowflake, Archive, BookOpen, ChevronUp, Download } from 'lucide-react';
+import { GraduationCap, Menu, X, LogOut, ChevronDown, Settings, Search, Users, UserPlus, FolderOpen, Moon, Sun, Calendar, Loader2, Banknote, CreditCard, ArrowRightLeft, BarChart3, UserCheck, UserX, Snowflake, Archive, BookOpen, ChevronUp, Download, Bell, Check, CheckCheck, Trash2, UserRoundPlus, CircleDollarSign, Globe } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 
@@ -525,6 +525,19 @@ function ReportModal({ open, onClose, theme }: { open: boolean; onClose: () => v
   );
 }
 
+// ─── Time ago helper ───
+function getTimeAgo(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diff < 60) return 'Hozirgina';
+  if (diff < 3600) return `${Math.floor(diff / 60)} daqiqa oldin`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} soat oldin`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)} kun oldin`;
+  return date.toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 // ─── Main Layout ───
 export default function DashboardLayout({ children, navItems, roleLabel, roleColor }: DashboardLayoutProps) {
   const router = useRouter();
@@ -537,8 +550,13 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
   const [searchResults, setSearchResults] = useState<{ students: any[]; teachers: any[]; groups: any[] } | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const searchRef = useRef<HTMLDivElement>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const notifTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const hasSidebar = navItems.length > 0;
 
@@ -551,6 +569,48 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
       })
       .catch(() => router.push('/login'));
   }, [router]);
+
+  // Notifications polling
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/notifications');
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (user?.role !== 'admin') return;
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [user, fetchNotifications]);
+
+  const markAllRead = async () => {
+    await fetch('/api/admin/notifications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ all: true }),
+    });
+    fetchNotifications();
+  };
+
+  const markOneRead = async (id: string) => {
+    await fetch('/api/admin/notifications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    fetchNotifications();
+  };
+
+  const clearRead = async () => {
+    await fetch('/api/admin/notifications', { method: 'DELETE' });
+    fetchNotifications();
+  };
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -581,6 +641,9 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
     const handleClickOutside = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
         setSearchOpen(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
       }
       if (!(e.target as HTMLElement).closest('[data-profile-dropdown]')) {
         setProfileOpen(false);
@@ -851,7 +914,7 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
           {hasSidebar && user.role !== 'admin' && <div className="hidden md:block flex-1" />}
 
           {/* Right side */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={toggleTheme}
               className="p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -863,6 +926,139 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
                 <Sun className="w-4.5 h-4.5 text-yellow-300" />
               )}
             </button>
+
+            {/* Notification Bell */}
+            {user.role === 'admin' && (
+              <div ref={notifRef} className="relative">
+                <button
+                  onClick={() => setNotifOpen(!notifOpen)}
+                  className="relative p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  title="Bildirishnomalar"
+                >
+                  <Bell className="w-[18px] h-[18px] text-white/70" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 animate-pulse">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {notifOpen && (
+                  <div className={`absolute right-0 top-full mt-2 w-[380px] max-h-[480px] rounded-xl shadow-2xl border z-50 flex flex-col ${
+                    theme === 'dark' ? 'bg-[#1e293b] border-[#334155]' : 'bg-white border-slate-200'
+                  }`}>
+                    {/* Header */}
+                    <div className={`flex items-center justify-between px-4 py-3 border-b ${
+                      theme === 'dark' ? 'border-[#334155]' : 'border-slate-100'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        <h3 className={`text-sm font-bold ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>
+                          Bildirishnomalar
+                        </h3>
+                        {unreadCount > 0 && (
+                          <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            {unreadCount}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={markAllRead}
+                            className={`p-1.5 rounded-lg transition-colors text-xs ${
+                              theme === 'dark' ? 'hover:bg-[#334155] text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+                            }`}
+                            title="Hammasini o'qilgan deb belgilash"
+                          >
+                            <CheckCheck className="w-4 h-4" />
+                          </button>
+                        )}
+                        {notifications.some(n => n.read) && (
+                          <button
+                            onClick={clearRead}
+                            className={`p-1.5 rounded-lg transition-colors text-xs ${
+                              theme === 'dark' ? 'hover:bg-[#334155] text-slate-400' : 'hover:bg-slate-100 text-slate-500'
+                            }`}
+                            title="O'qilganlarni tozalash"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Notifications list */}
+                    <div className="flex-1 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12">
+                          <Bell className={`w-10 h-10 mb-3 ${theme === 'dark' ? 'text-slate-600' : 'text-slate-300'}`} />
+                          <p className={`text-sm ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
+                            Bildirishnomalar yo&apos;q
+                          </p>
+                        </div>
+                      ) : (
+                        notifications.map(notif => {
+                          const iconMap: Record<string, { icon: typeof Bell; color: string; bg: string }> = {
+                            lead: { icon: UserRoundPlus, color: 'text-blue-500', bg: theme === 'dark' ? 'bg-blue-900/30' : 'bg-blue-50' },
+                            payment: { icon: CircleDollarSign, color: 'text-emerald-500', bg: theme === 'dark' ? 'bg-emerald-900/30' : 'bg-emerald-50' },
+                            enrollment: { icon: UserCheck, color: 'text-purple-500', bg: theme === 'dark' ? 'bg-purple-900/30' : 'bg-purple-50' },
+                            system: { icon: Bell, color: 'text-amber-500', bg: theme === 'dark' ? 'bg-amber-900/30' : 'bg-amber-50' },
+                          };
+                          const meta = iconMap[notif.type] || iconMap.system;
+                          const NotifIcon = meta.icon;
+                          const timeAgo = getTimeAgo(notif.createdAt);
+
+                          return (
+                            <div
+                              key={notif.id}
+                              onClick={() => {
+                                if (!notif.read) markOneRead(notif.id);
+                                if (notif.link) {
+                                  router.push(notif.link);
+                                  setNotifOpen(false);
+                                }
+                              }}
+                              className={`flex items-start gap-3 px-4 py-3 cursor-pointer transition-colors border-b last:border-b-0 ${
+                                theme === 'dark'
+                                  ? `border-[#334155] ${notif.read ? 'hover:bg-[#1a2744]' : 'bg-[#162033] hover:bg-[#1a2744]'}`
+                                  : `border-slate-50 ${notif.read ? 'hover:bg-slate-50' : 'bg-blue-50/40 hover:bg-blue-50/70'}`
+                              }`}
+                            >
+                              <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${meta.bg}`}>
+                                <NotifIcon className={`w-4.5 h-4.5 ${meta.color}`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className={`text-sm font-semibold truncate ${
+                                    theme === 'dark' ? 'text-slate-100' : 'text-slate-900'
+                                  }`}>
+                                    {notif.title}
+                                  </p>
+                                  {!notif.read && (
+                                    <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />
+                                  )}
+                                </div>
+                                <p className={`text-xs mt-0.5 truncate ${
+                                  theme === 'dark' ? 'text-slate-400' : 'text-slate-500'
+                                }`}>
+                                  {notif.message}
+                                </p>
+                                <p className={`text-[10px] mt-1 ${
+                                  theme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                                }`}>
+                                  {timeAgo}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <span className={`px-2.5 py-1 rounded text-[11px] font-semibold ${roleColor}`}>
               {roleLabel}
             </span>

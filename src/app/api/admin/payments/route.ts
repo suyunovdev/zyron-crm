@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-utils";
 import { prisma } from "@/lib/db";
+import { createNotification } from "@/lib/notify";
 
 export async function GET(req: NextRequest) {
   try {
@@ -75,6 +76,14 @@ export async function POST(req: NextRequest) {
         },
       },
     },
+  });
+
+  const methodLabel = method === 'card' ? 'Karta' : method === 'transfer' ? "O'tkazma" : 'Naqd';
+  await createNotification({
+    type: 'payment',
+    title: 'Yangi to\'lov qabul qilindi',
+    message: `${payment.student.name} — ${Number(amount).toLocaleString()} so'm (${methodLabel})`,
+    link: '/dashboard/admin/payments',
   });
 
   return NextResponse.json(payment, { status: 201 });

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { adminNav } from "@/lib/nav";
 import {
@@ -72,6 +73,8 @@ export default function LeadsPage() {
   const [showModal, setShowModal] = useState(false);
   const [creating, setCreating] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+  const dropdownBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [modalStep, setModalStep] = useState(1);
 
@@ -243,7 +246,7 @@ export default function LeadsPage() {
   // Close dropdown when clicking outside
   useEffect(() => {
     if (!openDropdown) return;
-    const handler = () => setOpenDropdown(null);
+    const handler = () => { setOpenDropdown(null); setDropdownPos(null); };
     document.addEventListener('click', handler);
     return () => document.removeEventListener('click', handler);
   }, [openDropdown]);
@@ -364,33 +367,22 @@ export default function LeadsPage() {
                         </span>
                       </td>
                       <td className="px-5 py-3.5 text-center">
-                        <div className="relative inline-block">
-                          <button onClick={e => { e.stopPropagation(); setOpenDropdown(openDropdown === lead.id ? null : lead.id); }}
-                            className="text-sm text-amber-600 hover:text-amber-700 font-semibold">
-                            Davom etish
-                          </button>
-                          {openDropdown === lead.id && (
-                            <div className="absolute right-0 bottom-full mb-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-1.5"
-                              onClick={e => e.stopPropagation()}>
-                              {Object.entries(STATUS_LABELS).map(([key, label]) => (
-                                <button key={key} onClick={() => {
-                                  if (key === "enrolled" && lead.status !== "enrolled") {
-                                    setOpenDropdown(null);
-                                    openEnrollModal(lead);
-                                  } else {
-                                    handleStatusChange(lead.id, key);
-                                  }
-                                }}
-                                  className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2.5 transition-colors ${
-                                    lead.status === key ? "font-semibold text-slate-900 bg-slate-50" : "text-slate-600"
-                                  }`}>
-                                  <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${STATUS_COLORS[key]?.split(" ")[0] || "bg-slate-300"}`} />
-                                  {label}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                        <button
+                          ref={el => { dropdownBtnRefs.current[lead.id] = el; }}
+                          onClick={e => {
+                            e.stopPropagation();
+                            if (openDropdown === lead.id) {
+                              setOpenDropdown(null);
+                              setDropdownPos(null);
+                            } else {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setDropdownPos({ top: rect.top, left: rect.right });
+                              setOpenDropdown(lead.id);
+                            }
+                          }}
+                          className="text-sm text-amber-600 hover:text-amber-700 font-semibold">
+                          Davom etish
+                        </button>
                       </td>
                       <td className="px-5 py-3.5 text-center">
                         <button onClick={() => handleDelete(lead.id)}
@@ -688,6 +680,41 @@ export default function LeadsPage() {
             </div>
           </div>
         </div>
+      )}
+      {/* Portal dropdown for status change */}
+      {openDropdown && dropdownPos && typeof window !== 'undefined' && createPortal(
+        <div
+          className="fixed z-[9999] w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5"
+          style={{
+            top: Math.max(8, dropdownPos.top - 5 * 40 - 12),
+            left: dropdownPos.left - 192,
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          {Object.entries(STATUS_LABELS).map(([key, label]) => {
+            const lead = filteredLeads.find(l => l.id === openDropdown);
+            if (!lead) return null;
+            return (
+              <button key={key} onClick={() => {
+                if (key === "enrolled" && lead.status !== "enrolled") {
+                  setOpenDropdown(null);
+                  setDropdownPos(null);
+                  openEnrollModal(lead);
+                } else {
+                  handleStatusChange(lead.id, key);
+                  setDropdownPos(null);
+                }
+              }}
+                className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2.5 transition-colors ${
+                  lead.status === key ? "font-semibold text-slate-900 bg-slate-50" : "text-slate-600"
+                }`}>
+                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${STATUS_COLORS[key]?.split(" ")[0] || "bg-slate-300"}`} />
+                {label}
+              </button>
+            );
+          })}
+        </div>,
+        document.body
       )}
     </DashboardLayout>
   );

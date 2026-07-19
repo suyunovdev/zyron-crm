@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
 import { UsersRound, ChevronDown, ChevronUp, Video, Clock, Users, ExternalLink } from 'lucide-react';
-import { studentNav } from '@/lib/nav';
 
 interface Lesson {
   id: string;
@@ -170,7 +168,7 @@ export default function StudentGroupsPage() {
   }, []);
 
   return (
-    <DashboardLayout navItems={studentNav} roleLabel="O'quvchi" roleColor="bg-blue-100 text-blue-700">
+    <>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Guruhlarim</h1>
@@ -207,6 +205,6 @@ export default function StudentGroupsPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </>
   );
 }

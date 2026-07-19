@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import DashboardLayout from '@/components/DashboardLayout';
-import { adminNav } from '@/lib/nav';
 import {
   ArrowLeft, Phone, Loader2, Snowflake, Archive, RotateCcw,
   X, Pencil, Send, GraduationCap, CheckCircle, XCircle,
@@ -416,23 +414,23 @@ export default function StudentProfilePage() {
   // ─── Loading / Not found ───
   if (loading) {
     return (
-      <DashboardLayout navItems={adminNav} roleLabel="Admin" roleColor="bg-red-100 text-red-700">
+      <>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-7 h-7 animate-spin text-blue-500" />
           <span className="ml-2 text-slate-400 text-sm">Yuklanmoqda...</span>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
   if (!student) {
     return (
-      <DashboardLayout navItems={adminNav} roleLabel="Admin" roleColor="bg-red-100 text-red-700">
+      <>
         <div className="text-center py-20">
           <p className="text-slate-500">O&apos;quvchi topilmadi</p>
           <Link href="/dashboard/admin/students" className="text-blue-600 text-sm mt-2 inline-block">Orqaga qaytish</Link>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
@@ -447,7 +445,7 @@ export default function StudentProfilePage() {
   ];
 
   return (
-    <DashboardLayout navItems={adminNav} roleLabel="Admin" roleColor="bg-red-100 text-red-700">
+    <>
       {/* Back */}
       <div className="mb-4">
         <button onClick={() => router.push('/dashboard/admin/students')}
@@ -1383,6 +1381,6 @@ export default function StudentProfilePage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </>
   );
 }

@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
-import { adminNav } from '@/lib/nav';
 import {
   Users,
   UserPlus,
@@ -106,7 +104,7 @@ export default function AdminDashboardPage() {
   const unfilledGroups = activeGroups.filter(g => (g._count?.students ?? 0) < g.maxStudents);
 
   return (
-    <DashboardLayout navItems={adminNav} roleLabel="Admin" roleColor="bg-red-100 text-red-700">
+    <>
       {loading ? (
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-7 h-7 animate-spin text-blue-500" />
@@ -371,6 +369,6 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </>
   );
 }

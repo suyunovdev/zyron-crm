@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
-import { teacherNav } from '@/lib/nav';
 import {
   Users,
   BookOpen,
@@ -263,26 +261,22 @@ export default function TeacherGroupsPage() {
 
   if (loading) {
     return (
-      <DashboardLayout navItems={teacherNav} roleLabel="O'qituvchi" roleColor="bg-emerald-100 text-emerald-700">
+      <>
         <div className="flex items-center justify-center h-64 text-slate-400 text-sm">Yuklanmoqda...</div>
-      </DashboardLayout>
+      </>
     );
   }
 
   if (groups.length === 0) {
     return (
-      <DashboardLayout navItems={teacherNav} roleLabel="O'qituvchi" roleColor="bg-emerald-100 text-emerald-700">
+      <>
         <div className="flex items-center justify-center h-64 text-slate-400 text-sm">Hozircha guruhlar mavjud emas</div>
-      </DashboardLayout>
+      </>
     );
   }
 
   return (
-    <DashboardLayout
-      navItems={teacherNav}
-      roleLabel="O'qituvchi"
-      roleColor="bg-emerald-100 text-emerald-700"
-    >
+    <>
       <div className="flex min-h-[calc(100vh-5rem)]" style={{ marginLeft: '-1rem', marginRight: '-1rem', marginTop: '-1rem' }}>
 
         {/* ──────── Left Sidebar — dark, narrow ──────── */}
@@ -739,6 +733,6 @@ export default function TeacherGroupsPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </>
   );
 }

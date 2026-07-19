@@ -2,8 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
-import DashboardLayout from "@/components/DashboardLayout";
-import { adminNav } from "@/lib/nav";
 import {
   Plus, Trash2, ChevronDown, Phone, User, TrendingUp, X, Loader2, Search, UserPlus,
 } from "lucide-react";
@@ -274,7 +272,7 @@ export default function LeadsPage() {
   const isPhoneValid = (val: string) => phoneDigits(val).length === 9;
 
   return (
-    <DashboardLayout navItems={adminNav} roleLabel="Admin" roleColor="bg-red-100 text-red-700">
+    <>
       <div className="space-y-5">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -716,6 +714,6 @@ export default function LeadsPage() {
         </div>,
         document.body
       )}
-    </DashboardLayout>
+    </>
   );
 }

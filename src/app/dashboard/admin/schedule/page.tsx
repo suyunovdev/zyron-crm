@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import DashboardLayout from '@/components/DashboardLayout';
-import { adminNav } from '@/lib/nav';
 import { Loader2, Users } from 'lucide-react';
 
 interface Group {
@@ -120,7 +118,7 @@ export default function SchedulePage() {
   };
 
   return (
-    <DashboardLayout navItems={adminNav} roleLabel="Admin" roleColor="bg-red-100 text-red-700">
+    <>
       <div className="h-full flex flex-col overflow-hidden">
         {/* Day type radio + mode select */}
         <div className="flex items-center justify-between flex-shrink-0 mb-3">
@@ -220,6 +218,6 @@ export default function SchedulePage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </>
   );
 }

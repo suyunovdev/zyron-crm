@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import DashboardLayout from '@/components/DashboardLayout';
-import { adminNav } from '@/lib/nav';
 import {
   ArrowLeft, Phone, Loader2, Users, FolderOpen,
   Calendar, Clock, MapPin, LayoutGrid, List,
@@ -87,29 +85,29 @@ export default function TeacherProfilePage() {
 
   if (loading) {
     return (
-      <DashboardLayout navItems={adminNav} roleLabel="Admin" roleColor="bg-red-100 text-red-700">
+      <>
         <div className="flex items-center justify-center h-[60vh]">
           <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
   if (!teacher) {
     return (
-      <DashboardLayout navItems={adminNav} roleLabel="Admin" roleColor="bg-red-100 text-red-700">
+      <>
         <div className="text-center py-20 text-slate-400">
           <p>Mentor topilmadi</p>
           <button onClick={() => router.push('/dashboard/admin/teachers')} className="text-blue-600 text-sm mt-2">Orqaga qaytish</button>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
   const level = teacher.level ? LEVEL_COLORS[teacher.level] : null;
 
   return (
-    <DashboardLayout navItems={adminNav} roleLabel="Admin" roleColor="bg-red-100 text-red-700">
+    <>
       {/* Back */}
       <div className="mb-4">
         <button onClick={() => router.push('/dashboard/admin/teachers')}
@@ -310,6 +308,6 @@ export default function TeacherProfilePage() {
           </div>
         )
       )}
-    </DashboardLayout>
+    </>
   );
 }

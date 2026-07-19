@@ -1,10 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
 import Link from 'next/link';
 import { UsersRound, BookOpen, Calendar, ArrowRight, Users } from 'lucide-react';
-import { studentNav } from '@/lib/nav';
 
 interface Lesson {
   id: string;
@@ -77,7 +75,7 @@ export default function StudentDashboardPage() {
   ];
 
   return (
-    <DashboardLayout navItems={studentNav} roleLabel="O'quvchi" roleColor="bg-blue-100 text-blue-700">
+    <>
       <div className="space-y-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Bosh sahifa</h1>
@@ -161,6 +159,6 @@ export default function StudentDashboardPage() {
           )}
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

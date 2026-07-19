@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import DashboardLayout from '@/components/DashboardLayout';
-import { adminNav } from '@/lib/nav';
 import {
   Plus, X, Search, Video, ChevronUp, ChevronDown, Archive,
   UserPlus, UserMinus, QrCode, Trash2, RotateCcw,
@@ -180,7 +178,7 @@ export default function GroupsPage() {
   }, [groups, filterStatus, filterLang, search, sortKey, sortDir]);
 
   return (
-    <DashboardLayout navItems={adminNav} roleLabel="Admin" roleColor="bg-red-100 text-red-700">
+    <>
       <div className="space-y-5">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -718,6 +716,6 @@ export default function GroupsPage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </>
   );
 }

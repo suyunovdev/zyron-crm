@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
-import { adminNav } from '@/lib/nav';
 import { Search, Plus, X, LayoutGrid, List, Users, FolderOpen, Phone, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -102,7 +100,7 @@ export default function TeachersPage() {
   const initials = (name: string) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <DashboardLayout navItems={adminNav} roleLabel="Admin" roleColor="bg-red-100 text-red-700">
+    <>
       <div className="space-y-5">
         {/* Header with count, search, filters */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -328,6 +326,6 @@ export default function TeachersPage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </>
   );
 }

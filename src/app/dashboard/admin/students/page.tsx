@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
-import { adminNav } from '@/lib/nav';
 import { Search, Plus, X, ChevronUp, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 
@@ -168,7 +166,7 @@ export default function StudentsPage() {
   };
 
   return (
-    <DashboardLayout navItems={adminNav} roleLabel="Admin" roleColor="bg-red-100 text-red-700">
+    <>
       <div className="space-y-5">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -453,6 +451,6 @@ export default function StudentsPage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </>
   );
 }

@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import DashboardLayout from '@/components/DashboardLayout';
-import { adminNav } from '@/lib/nav';
 import {
   ArrowLeft, Users, BookOpen, CalendarDays, Clock,
   UserCheck, UserX, Check, Video, Loader2, MapPin,
@@ -198,22 +196,22 @@ export default function AdminGroupDetailPage() {
 
   if (loading) {
     return (
-      <DashboardLayout navItems={adminNav} roleLabel="Admin" roleColor="bg-red-100 text-red-700">
+      <>
         <div className="flex items-center justify-center h-[60vh]">
           <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
   if (!group) {
     return (
-      <DashboardLayout navItems={adminNav} roleLabel="Admin" roleColor="bg-red-100 text-red-700">
+      <>
         <div className="text-center py-20 text-slate-400">
           <p>Guruh topilmadi</p>
           <button onClick={() => router.push('/dashboard/admin/schedule')} className="text-blue-600 text-sm mt-2">Jadvalga qaytish</button>
         </div>
-      </DashboardLayout>
+      </>
     );
   }
 
@@ -223,7 +221,7 @@ export default function AdminGroupDetailPage() {
   ];
 
   return (
-    <DashboardLayout navItems={adminNav} roleLabel="Admin" roleColor="bg-red-100 text-red-700">
+    <>
       {/* Back */}
       <div className="mb-4">
         <button onClick={() => router.back()}
@@ -518,6 +516,6 @@ export default function AdminGroupDetailPage() {
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </>
   );
 }

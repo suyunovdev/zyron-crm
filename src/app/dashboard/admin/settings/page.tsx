@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
-import { adminNav } from '@/lib/nav';
 import {
   Users,
   FolderOpen,
@@ -60,7 +58,7 @@ export default function AdminSettingsPage() {
     : 0;
 
   return (
-    <DashboardLayout navItems={adminNav} roleLabel="Admin" roleColor="bg-red-100 text-red-700">
+    <>
       {loading ? (
         <div className="flex items-center justify-center h-64 text-slate-400 text-sm">Yuklanmoqda...</div>
       ) : (
@@ -143,6 +141,6 @@ export default function AdminSettingsPage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </>
   );
 }

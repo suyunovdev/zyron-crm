@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
-import { teacherNav } from '@/lib/nav';
 import {
   Users,
   BookOpen,
@@ -94,11 +92,7 @@ export default function TeacherSettingsPage() {
   ];
 
   return (
-    <DashboardLayout
-      navItems={teacherNav}
-      roleLabel="O'qituvchi"
-      roleColor="bg-emerald-100 text-emerald-700"
-    >
+    <>
       {loading ? (
         <div className="flex items-center justify-center h-64 text-slate-400 text-sm">Yuklanmoqda...</div>
       ) : (
@@ -214,6 +208,6 @@ export default function TeacherSettingsPage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </>
   );
 }

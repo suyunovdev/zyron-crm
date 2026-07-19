@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
 import { User, Phone, Hash, Shield } from 'lucide-react';
-import { studentNav } from '@/lib/nav';
 
 interface SessionUser {
   id: string;
@@ -34,7 +32,7 @@ export default function StudentSettingsPage() {
     : [];
 
   return (
-    <DashboardLayout navItems={studentNav} roleLabel="O'quvchi" roleColor="bg-blue-100 text-blue-700">
+    <>
       <div className="space-y-6 max-w-2xl">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Sozlamalar</h1>
@@ -89,6 +87,6 @@ export default function StudentSettingsPage() {
           </p>
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

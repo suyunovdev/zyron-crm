@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
 import { ClipboardList, CheckCircle2, XCircle, TrendingUp } from 'lucide-react';
-import { studentNav } from '@/lib/nav';
 
 interface AttendanceLesson {
   id: string;
@@ -80,7 +78,7 @@ export default function StudentAttendancePage() {
   ];
 
   return (
-    <DashboardLayout navItems={studentNav} roleLabel="O'quvchi" roleColor="bg-blue-100 text-blue-700">
+    <>
       <div className="space-y-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Davomatim</h1>
@@ -205,6 +203,6 @@ export default function StudentAttendancePage() {
           )}
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import DashboardLayout from "@/components/DashboardLayout";
-import { adminNav } from "@/lib/nav";
 import {
   Plus,
   Trash2,
@@ -212,11 +210,7 @@ export default function AdminPaymentsPage() {
   };
 
   return (
-    <DashboardLayout
-      navItems={adminNav}
-      roleLabel="Admin"
-      roleColor="bg-red-100 text-red-700"
-    >
+    <>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -514,6 +508,6 @@ export default function AdminPaymentsPage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </>
   );
 }

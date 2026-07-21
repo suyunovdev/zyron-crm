@@ -38,7 +38,7 @@ export async function getSession(): Promise<SessionUser | null> {
 export function getDashboardPath(role: string): string {
   switch (role) {
     case 'admin': return '/dashboard/admin';
-    case 'teacher': return '/dashboard/teacher/groups';
+    case 'teacher': return '/dashboard/teacher';
     case 'student': return '/dashboard/student';
     default: return '/login';
   }

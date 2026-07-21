@@ -1,4 +1,4 @@
-import { Users, UsersRound, UserPlus, FolderOpen, ClipboardList, CreditCard, UserSearch, FileBarChart, LayoutDashboard, CalendarClock } from 'lucide-react';
+import { Users, UsersRound, UserPlus, FolderOpen, ClipboardList, CreditCard, UserSearch, FileBarChart, LayoutDashboard, CalendarClock, Settings } from 'lucide-react';
 import type { NavItem } from '@/components/DashboardLayout';
 
 export const adminNav: NavItem[] = [
@@ -12,7 +12,11 @@ export const adminNav: NavItem[] = [
   { label: 'Oylik hisobot', href: '/dashboard/admin/reports', icon: FileBarChart, action: 'report-modal' },
 ];
 
-export const teacherNav: NavItem[] = [];
+export const teacherNav: NavItem[] = [
+  { label: 'Asosiy', href: '/dashboard/teacher', icon: LayoutDashboard },
+  { label: 'Guruhlar', href: '/dashboard/teacher/groups', icon: FolderOpen },
+  { label: 'Sozlamalar', href: '/dashboard/teacher/settings', icon: Settings },
+];
 
 export const studentNav: NavItem[] = [
   { label: 'Guruhlarim', href: '/dashboard/student/groups', icon: UsersRound },

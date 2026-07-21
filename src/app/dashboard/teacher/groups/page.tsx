@@ -11,6 +11,8 @@ import {
   Pencil,
   Check,
   Video,
+  Phone,
+  TrendingUp,
 } from 'lucide-react';
 
 interface Student {
@@ -81,7 +83,7 @@ const MONTHS_UZ = [
   'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr',
 ];
 
-type TabType = 'davomat' | 'mavzular' | 'topshiriqlar' | 'uyga_vazifalar';
+type TabType = 'davomat' | 'mavzular' | 'oquvchilar';
 
 export default function TeacherGroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
@@ -249,14 +251,20 @@ export default function TeacherGroupsPage() {
     }
   };
 
+  // Check if a lesson is today or in the past (editable)
+  const isLessonEditable = (dateStr: string): boolean => {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    return dateStr <= todayStr;
+  };
+
   void now;
   void activeLessonToday;
 
   const tabs: { key: TabType; label: string }[] = [
     { key: 'davomat', label: 'Davomat' },
     { key: 'mavzular', label: 'Mavzular' },
-    { key: 'topshiriqlar', label: 'Topshiriqlar' },
-    { key: 'uyga_vazifalar', label: 'Uyga vazifalar' },
+    { key: 'oquvchilar', label: "O'quvchilar" },
   ];
 
   if (loading) {
@@ -515,14 +523,14 @@ export default function TeacherGroupsPage() {
                               {/* Attendance cells per date */}
                               {filteredLessons.map(lesson => {
                                 const record = lesson.attendances.find(a => a.studentId === student.id);
-                                const active = isLessonActive(lesson.scheduledDate, lesson.scheduledTime, lesson.duration);
+                                const editable = isLessonEditable(lesson.scheduledDate);
                                 const savingKey = `${lesson.id}-${student.id}`;
                                 const isSaving = savingAttendance === savingKey;
 
                                 return (
                                   <td key={lesson.id} className="px-1 py-2 text-center">
-                                    {active ? (
-                                      // Active lesson — clickable
+                                    {editable ? (
+                                      // Editable (today or past) — clickable
                                       record ? (
                                         <button
                                           onClick={() => handleAttendance(lesson.id, student.id, !record.present)}
@@ -530,11 +538,11 @@ export default function TeacherGroupsPage() {
                                           className="mx-auto block disabled:opacity-50"
                                         >
                                           {record.present ? (
-                                            <div className="w-7 h-7 bg-emerald-500 rounded-md flex items-center justify-center mx-auto">
+                                            <div className="w-7 h-7 bg-emerald-500 rounded-md flex items-center justify-center mx-auto hover:bg-emerald-600 transition-colors">
                                               <Check className="w-4 h-4 text-white stroke-[3]" />
                                             </div>
                                           ) : (
-                                            <div className="w-7 h-7 bg-red-100 rounded-md flex items-center justify-center mx-auto">
+                                            <div className="w-7 h-7 bg-red-100 rounded-md flex items-center justify-center mx-auto hover:bg-red-200 transition-colors">
                                               <span className="text-red-500 text-xs font-bold">✕</span>
                                             </div>
                                           )}
@@ -557,20 +565,9 @@ export default function TeacherGroupsPage() {
                                           </button>
                                         </div>
                                       )
-                                    ) : record ? (
-                                      // Past/future with record
-                                      record.present ? (
-                                        <div className="w-7 h-7 bg-emerald-500 rounded-md flex items-center justify-center mx-auto">
-                                          <Check className="w-4 h-4 text-white stroke-[3]" />
-                                        </div>
-                                      ) : (
-                                        <div className="w-7 h-7 bg-red-100 rounded-md flex items-center justify-center mx-auto">
-                                          <span className="text-red-500 text-xs font-bold">✕</span>
-                                        </div>
-                                      )
                                     ) : (
-                                      // No record — empty checkbox
-                                      <div className="w-7 h-7 border-2 border-slate-200 rounded-md mx-auto" />
+                                      // Future — not editable, just show empty
+                                      <div className="w-7 h-7 border-2 border-dashed border-slate-200 rounded-md mx-auto" />
                                     )}
                                   </td>
                                 );
@@ -717,17 +714,87 @@ export default function TeacherGroupsPage() {
               </div>
             )}
 
-            {activeTab === 'topshiriqlar' && (
-              <div className="p-12 text-center">
-                <BookOpen className="w-12 h-12 text-slate-200 mx-auto mb-3" />
-                <p className="text-sm text-slate-400 font-medium">Tez orada qo&apos;shiladi</p>
-              </div>
-            )}
+            {activeTab === 'oquvchilar' && (
+              <div>
+                {selectedGroup.students.length === 0 ? (
+                  <div className="p-12 text-center text-sm text-slate-400">
+                    O&apos;quvchilar mavjud emas
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {selectedGroup.students.map(({ student }, idx) => {
+                      // Calculate per-student attendance
+                      let present = 0, marked = 0;
+                      selectedGroup.lessons.forEach(l => {
+                        const rec = l.attendances.find(a => a.studentId === student.id);
+                        if (rec) { marked++; if (rec.present) present++; }
+                      });
+                      const pct = marked > 0 ? Math.round((present / marked) * 100) : 0;
 
-            {activeTab === 'uyga_vazifalar' && (
-              <div className="p-12 text-center">
-                <CalendarDays className="w-12 h-12 text-slate-200 mx-auto mb-3" />
-                <p className="text-sm text-slate-400 font-medium">Tez orada qo&apos;shiladi</p>
+                      return (
+                        <div key={student.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50/50 transition-colors">
+                          {/* Number + avatar */}
+                          <span className="text-xs text-slate-400 w-5 text-right">{idx + 1}.</span>
+                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                            student.status === 'active' ? 'bg-emerald-100' : student.status === 'frozen' ? 'bg-blue-100' : 'bg-slate-100'
+                          }`}>
+                            <span className={`text-xs font-bold ${
+                              student.status === 'active' ? 'text-emerald-700' : student.status === 'frozen' ? 'text-blue-600' : 'text-slate-500'
+                            }`}>
+                              {student.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                            </span>
+                          </div>
+
+                          {/* Name + status */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-slate-800 truncate">{student.name}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                                student.status === 'active' ? 'bg-emerald-100 text-emerald-700'
+                                  : student.status === 'frozen' ? 'bg-blue-100 text-blue-600'
+                                  : 'bg-slate-100 text-slate-500'
+                              }`}>
+                                {student.status === 'active' ? 'Faol' : student.status === 'frozen' ? 'Muzlatilgan' : 'Arxiv'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Phone */}
+                          {student.phone && (
+                            <a href={`tel:${student.phone}`} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-600 transition-colors">
+                              <Phone className="w-3.5 h-3.5" />
+                              {student.phone}
+                            </a>
+                          )}
+
+                          {/* Attendance stats */}
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <div className="text-right">
+                              <p className={`text-sm font-bold ${
+                                pct >= 80 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-600' : 'text-red-600'
+                              }`}>
+                                {marked > 0 ? `${pct}%` : '—'}
+                              </p>
+                              <p className="text-[10px] text-slate-400">
+                                {marked > 0 ? `${present}/${marked}` : 'belgilanmagan'}
+                              </p>
+                            </div>
+                            {marked > 0 && (
+                              <div className="w-12 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    pct >= 80 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : 'bg-red-500'
+                                  }`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { requireAuth, isLessonActive } from '@/lib/api-utils';
+import { requireAuth } from '@/lib/api-utils';
 
-// Teacher marks attendance - ONLY during lesson time
+// Teacher marks attendance — allowed for today's lessons and past lessons
 export async function POST(req: NextRequest) {
   const auth = await requireAuth('teacher');
   if (auth instanceof NextResponse) return auth;
@@ -22,9 +22,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Bu dars sizga tegishli emas' }, { status: 403 });
   }
 
-  // Check if lesson is active (within time window)
-  if (!isLessonActive(lesson.scheduledDate, lesson.scheduledTime, lesson.duration)) {
-    return NextResponse.json({ error: 'Davomat faqat dars vaqtida belgilanadi' }, { status: 400 });
+  // Allow marking for today and past lessons (not future)
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  if (lesson.scheduledDate > todayStr) {
+    return NextResponse.json({ error: 'Kelajakdagi darsga davomat belgilab bo\'lmaydi' }, { status: 400 });
   }
 
   const attendance = await prisma.attendance.upsert({

@@ -13,7 +13,7 @@ interface AttendanceLesson {
 
 interface Attendance {
   id: string;
-  status: 'present' | 'absent' | string;
+  present: boolean;
   markedAt: string;
   lesson: AttendanceLesson;
 }
@@ -49,8 +49,8 @@ export default function StudentAttendancePage() {
   }, []);
 
   const total = attendances.length;
-  const attended = attendances.filter(a => a.status === 'present').length;
-  const absent = attendances.filter(a => a.status === 'absent').length;
+  const attended = attendances.filter(a => a.present).length;
+  const absent = attendances.filter(a => !a.present).length;
   const percentage = total > 0 ? Math.round((attended / total) * 100) : 0;
 
   const summaryCards = [
@@ -163,7 +163,7 @@ export default function StudentAttendancePage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {attendances.map(attendance => {
-                    const isPresent = attendance.status === 'present';
+                    const isPresent = attendance.present;
                     return (
                       <tr key={attendance.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 text-slate-700 font-medium whitespace-nowrap">

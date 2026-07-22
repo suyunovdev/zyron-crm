@@ -1,14 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { createToken } from '@/lib/auth';
+import { parseBody } from '@/lib/validate';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
+
+const LoginSchema = z.object({
+  login: z.string().min(1, 'kiritilishi shart').max(64),
+  password: z.string().min(1, 'kiritilishi shart').max(128),
+});
 
 export async function POST(req: NextRequest) {
-  const { login, password } = await req.json();
-
-  if (!login || !password) {
-    return NextResponse.json({ error: 'Login va parol kiriting' }, { status: 400 });
+  // Brute-force himoyasi: IP bo'yicha 1 daqiqada 10 urinish
+  const ip = getClientIp(req);
+  const rl = rateLimit(`login:${ip}`, 10, 60_000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: `Juda ko'p urinish. ${rl.retryAfterSec} soniyadan keyin qayta urinib ko'ring` },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+    );
   }
+
+  const parsed = await parseBody(req, LoginSchema);
+  if (parsed instanceof NextResponse) return parsed;
+  const { login, password } = parsed;
 
   const user = await prisma.user.findUnique({ where: { login } });
 

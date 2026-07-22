@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { attendanceWindow } from '@/lib/api-utils';
 
 // Cron endpoint: belgilanmagan o'quvchilarni avtomatik "absent" qiladi.
 // Muhlat teacher davomat oynasi bilan mos: dars kuni oxiri (ertasi 00:00)
@@ -41,8 +42,7 @@ export async function GET(req: NextRequest) {
 
   for (const lesson of lessons) {
     // Muhlat: dars kuni oxiri (ertasi kun 00:00). Shu vaqtgacha teacher o'zi belgilaydi.
-    const [y, m, d] = lesson.scheduledDate.split('-').map(Number);
-    const dayEnd = new Date(y, m - 1, d + 1, 0, 0, 0);
+    const { dayEnd } = attendanceWindow(lesson.scheduledDate, lesson.scheduledTime);
 
     // Muhlat hali tugamagan bo'lsa — o'tkazib yuboramiz
     if (now < dayEnd) continue;

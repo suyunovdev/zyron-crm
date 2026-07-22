@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/api-utils";
 import { prisma } from "@/lib/db";
 import { createNotification } from "@/lib/notify";
 import { logger } from '@/lib/logger';
+import { getPagination, paginated } from '@/lib/paginate';
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,22 +24,22 @@ export async function GET(req: NextRequest) {
       where.studentId = studentId;
     }
 
-    const payments = await prisma.payment.findMany({
-      where,
-      include: {
-        student: {
-          select: {
-            id: true,
-            name: true,
-            login: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    const include = {
+      student: { select: { id: true, name: true, login: true } },
+    };
+    const orderBy = { createdAt: "desc" as const };
 
+    // Opt-in pagination: ?page/?limit bo'lsa konvert, bo'lmasa to'liq massiv
+    const pg = getPagination(searchParams);
+    if (pg) {
+      const [data, total] = await Promise.all([
+        prisma.payment.findMany({ where, include, orderBy, skip: pg.skip, take: pg.take }),
+        prisma.payment.count({ where }),
+      ]);
+      return NextResponse.json(paginated(data, total, pg));
+    }
+
+    const payments = await prisma.payment.findMany({ where, include, orderBy });
     return NextResponse.json(payments);
   } catch (error) {
     logger.error("[GET /api/admin/payments]", error);

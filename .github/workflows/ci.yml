@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: "file:./dev.db"
+      JWT_SECRET: "ci-dummy-jwt-secret"
+      CRON_SECRET: "ci-dummy-cron-secret"
+      WEBHOOK_SECRET: "ci-dummy-webhook-secret"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Bog'liqliklarni o'rnatish
+        run: npm ci
+
+      - name: Prisma Client generatsiya
+        run: npx prisma generate
+
+      - name: TypeScript tekshiruvi
+        run: npx tsc --noEmit
+
+      # Lint hozircha informativ — kod bazasida mavjud (eski) ogohlantirishlar
+      # bosqichma-bosqich tozalanadi. Typecheck/test/build esa majburiy.
+      - name: Lint (informativ)
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Testlar
+        run: npm test
+
+      - name: Build
+        run: npm run build

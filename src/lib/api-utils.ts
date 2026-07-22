@@ -49,3 +49,23 @@ export function getTodayUz(): string {
   const now = getNowUz();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
+
+/**
+ * Teacher davomat belgilash oynasi (sof funksiya — test qilinadigan).
+ *  - windowStart: dars boshlanishidan 15 min oldin (bundan oldin belgilab bo'lmaydi)
+ *  - dayEnd:      dars kuni oxiri = ertasi kun 00:00 (bundan keyin faqat admin)
+ */
+export function attendanceWindow(scheduledDate: string, scheduledTime: string) {
+  const [y, m, d] = scheduledDate.split('-').map(Number);
+  const [h, min] = scheduledTime.split(':').map(Number);
+  const start = new Date(y, m - 1, d, h, min);
+  const windowStart = new Date(start.getTime() - 15 * 60000);
+  const dayEnd = new Date(y, m - 1, d + 1, 0, 0, 0);
+  return { windowStart, dayEnd };
+}
+
+/** Berilgan vaqtda teacher davomatni belgilay oladimi? */
+export function canTeacherMark(scheduledDate: string, scheduledTime: string, now: Date): boolean {
+  const { windowStart, dayEnd } = attendanceWindow(scheduledDate, scheduledTime);
+  return now >= windowStart && now < dayEnd;
+}

@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/api-utils";
 import { prisma } from "@/lib/db";
 import { createNotification } from "@/lib/notify";
 import { logger } from '@/lib/logger';
+import { getPagination } from '@/lib/paginate';
 
 const VALID_STATUSES = ["new", "contacted", "trial", "enrolled", "rejected"];
 
@@ -17,6 +18,16 @@ export async function GET(req: NextRequest) {
     const where: Record<string, string> = {};
     if (status && VALID_STATUSES.includes(status)) {
       where.status = status;
+    }
+
+    // Opt-in pagination: ?page/?limit bo'lsa meta qo'shiladi (leads kaliti saqlanadi)
+    const pg = getPagination(searchParams);
+    if (pg) {
+      const [leads, total] = await Promise.all([
+        prisma.lead.findMany({ where, orderBy: { createdAt: "desc" }, skip: pg.skip, take: pg.take }),
+        prisma.lead.count({ where }),
+      ]);
+      return NextResponse.json({ leads, total, page: pg.page, limit: pg.limit, totalPages: Math.ceil(total / pg.limit) });
     }
 
     const leads = await prisma.lead.findMany({

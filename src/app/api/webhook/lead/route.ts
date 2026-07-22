@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { createNotification } from '@/lib/notify';
 import { logger } from '@/lib/logger';
+import { parseBody } from '@/lib/validate';
 
-const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'aka-uka-lead-webhook-2026';
+const LeadSchema = z.object({
+  name: z.string().min(1).max(120),
+  phone: z.string().min(3).max(32),
+  subject: z.string().max(40).optional(),
+  message: z.string().max(2000).optional(),
+});
 
 const subjectLabels: Record<string, string> = {
   math: 'Matematika',
@@ -21,16 +28,18 @@ const subjectLabels: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
+    const expected = process.env.WEBHOOK_SECRET;
+    if (!expected) {
+      return NextResponse.json({ error: 'WEBHOOK_SECRET sozlanmagan' }, { status: 500 });
+    }
     const secret = req.headers.get('x-webhook-secret');
-    if (secret !== WEBHOOK_SECRET) {
+    if (secret !== expected) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { name, phone, subject, message } = await req.json();
-
-    if (!name || !phone) {
-      return NextResponse.json({ error: 'name va phone kerak' }, { status: 400 });
-    }
+    const parsed = await parseBody(req, LeadSchema);
+    if (parsed instanceof NextResponse) return parsed;
+    const { name, phone, subject, message } = parsed;
 
     const prefix = name.charAt(0).toLowerCase();
     const randomId = Math.random().toString(36).substring(2, 6);

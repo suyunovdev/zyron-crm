@@ -11,7 +11,7 @@ tavsiflaydi.
 
 | O'zgaruvchi | Tavsif |
 |-------------|--------|
-| `DATABASE_URL` | Baza ulanish satri (production'da PostgreSQL/Neon) |
+| `DATABASE_URL` | Baza ulanish satri (Contabo VPS'da SQLite `file:` yoki localhost Postgres) |
 | `JWT_SECRET` | JWT imzo kaliti — `openssl rand -base64 32` |
 | `CRON_SECRET` | auto-absent cron sekret — `openssl rand -hex 24` |
 | `WEBHOOK_SECRET` | Saytdan lid webhook sekret |
@@ -21,12 +21,34 @@ tavsiflaydi.
 
 ---
 
-## 2. SQLite → PostgreSQL/Neon ko'chirish (tavsiya etiladi)
+## 2. Ma'lumotlar bazasi (Contabo VPS)
 
-Production'da SQLite fayl bazasi xavfli (parallel yozuv yo'q, zaxira/miqyos qiyin).
-[Neon](https://neon.tech) (bepul Postgres) tavsiya etiladi.
+Loyiha o'zimiz boshqaradigan **Contabo VPS**da turadi (Vercel/serverless emas).
+Shuning uchun **Neon kabi tashqi bulut DB tavsiya etilmaydi** — u serverless uchun
+mo'ljallangan; VPS'da ilova ↔ bulut orasida ortiqcha tarmoq kechikishi paydo bo'ladi.
 
-1. Neon'da loyiha yarating, connection string oling.
+### Variant A — SQLite + WAL (joriy, tavsiya etiladi)
+
+Bitta ta'lim markazi, bitta VPS, bitta Node jarayoni uchun SQLite yetarli.
+Kod avtomatik ravishda ishga tushganda quyidagilarni yoqadi (`src/lib/db.ts`):
+
+- **WAL** — parallel o'qishlar yozuvni bloklamaydi
+- **busy_timeout=5000** — "database is locked" xatosini kamaytiradi
+- **synchronous=NORMAL** — WAL bilan xavfsiz va tezroq
+
+> WAL faylda saqlanadi. Bir marta qo'lda ham yoqish mumkin:
+> ```bash
+> sqlite3 prisma/dev.db "PRAGMA journal_mode=WAL;"
+> ```
+> Backup — 5-bo'limdagi `scripts/backup-db.sh` (kunlik cron).
+
+### Variant B — PostgreSQL **shu Contabo VPS'da** (kelajak uchun)
+
+Agar keyinchalik kuchliroq konkurentlik yoki bir nechta app instance kerak
+bo'lsa — Postgres'ni Neon'da emas, **shu VPS'ga** o'rnating (`localhost`), shunda
+ma'lumot serverda qoladi va kechikish bo'lmaydi:
+
+1. `sudo apt install postgresql` va baza/foydalanuvchi yarating.
 2. `prisma/schema.prisma` da provayderni o'zgartiring:
    ```prisma
    datasource db {
@@ -34,17 +56,13 @@ Production'da SQLite fayl bazasi xavfli (parallel yozuv yo'q, zaxira/miqyos qiyi
      url      = env("DATABASE_URL")
    }
    ```
-3. `.env` da `DATABASE_URL` ni Neon satriga o'zgartiring.
+3. `.env`: `DATABASE_URL="postgresql://user:pass@localhost:5432/zyron?schema=public"`
 4. Migratsiyalarni qaytadan yarating (SQLite migratsiyalari Postgres'ga mos emas):
    ```bash
-   rm -rf prisma/migrations
-   npx prisma migrate dev --name init
+   rm -rf prisma/migrations && npx prisma migrate dev --name init
    ```
-5. Ma'lumotni ko'chirish kerak bo'lsa, seed'ni qayta ishga tushiring yoki
-   mavjud SQLite'dan eksport qiling.
 
-> Eslatma: `Int` narx maydonlari Postgres'da ham ishlaydi. `String` sanalar
-> (`scheduledDate`) o'zgarishsiz qoladi.
+> Neon faqat ilovaning o'zini Vercel'ga ko'chirsangizgina mantiqli bo'ladi.
 
 ---
 
@@ -103,7 +121,7 @@ Deploy'ni shu pipeline oxiriga qo'shish mumkin (SSH yoki Vercel).
 ## Yig'ma tekshiruv ro'yxati
 
 - [ ] `.env` to'ldirilgan (4 ta sekret)
-- [ ] PostgreSQL/Neon'ga ko'chirilgan
+- [ ] DB: SQLite+WAL (yoki VPS'dagi localhost Postgres) — Neon EMAS
 - [ ] PM2/systemd bilan ishlaydi, reboot'da tiklanadi
 - [ ] nginx 443 → ilova porti proksilaydi
 - [ ] auto-absent cron sozlangan

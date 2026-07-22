@@ -45,3 +45,6 @@ next-env.d.ts
 
 dev.db
 prisma/dev.db
+# SQLite WAL yordamchi fayllari (transient)
+*.db-wal
+*.db-shm

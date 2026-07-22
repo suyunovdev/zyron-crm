@@ -6,7 +6,7 @@ davomat, to'lovlar, lidlar (CRM) va ota-ona kabineti.
 ## Texnologiyalar
 
 - **Next.js 16** (App Router, Turbopack) + React 19 + TypeScript
-- **Prisma 6** — lokalda SQLite, production'da PostgreSQL/Neon tavsiya etiladi
+- **Prisma 6** + **SQLite** (WAL rejimida) — Contabo VPS'da o'zi-yetarli
 - **jose** (JWT) + **bcryptjs** — autentifikatsiya
 - **Tailwind CSS 4**, framer-motion, lucide-react
 - **Vitest** — testlar
@@ -72,8 +72,8 @@ npm run db:reset   # migratsiyani reset + seed
 
 Batafsil: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
-Qisqacha:
-1. Production'da `DATABASE_URL` ni PostgreSQL/Neon ga o'tkazing.
-2. `JWT_SECRET` va `CRON_SECRET` ni env'ga qo'ying (kuchli qiymatlar).
+Qisqacha (Contabo VPS):
+1. DB — SQLite + WAL (kod avtomatik yoqadi). Backup cron sozlang.
+2. `JWT_SECRET`, `CRON_SECRET`, `WEBHOOK_SECRET` ni env'ga qo'ying (kuchli qiymatlar).
 3. `npm run build && npm run start` — PM2/systemd orqali (`ecosystem.config.js`).
 4. `cron/auto-absent` ni har 30 daqiqada chaqiradigan cron sozlang.

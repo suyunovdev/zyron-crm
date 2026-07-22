@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
+import { canManageRole } from '@/lib/roles';
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth('admin');
@@ -19,6 +20,11 @@ export async function POST(req: NextRequest) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     return NextResponse.json({ error: 'Foydalanuvchi topilmadi' }, { status: 404 });
+  }
+
+  // Admin/superadmin parolini faqat superadmin tiklay oladi (akkaunt egallab olishning oldini oladi)
+  if (!canManageRole(auth.role, user.role)) {
+    return NextResponse.json({ error: 'Bu foydalanuvchi parolini tiklashga ruxsatingiz yo\'q' }, { status: 403 });
   }
 
   await prisma.user.update({

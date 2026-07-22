@@ -590,7 +590,7 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
   }, []);
 
   useEffect(() => {
-    if (user?.role !== 'admin') return;
+    if (!(user?.role === 'admin' || user?.role === 'superadmin')) return;
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
@@ -670,6 +670,7 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
 
   if (!user) return null;
 
+  const isAdmin = user.role === 'admin' || user.role === 'superadmin';
   const initials = user.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
   return (
@@ -797,8 +798,8 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
             </Link>
           )}
 
-          {/* Global search (admin only) */}
-          {user.role === 'admin' && (
+          {/* Global search (admin / superadmin) */}
+          {isAdmin && (
             <div ref={searchRef} className="hidden sm:block relative flex-1 max-w-md mx-4">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
               <input
@@ -918,7 +919,7 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
           )}
 
           {/* Left spacer on desktop (only with sidebar, no search) */}
-          {hasSidebar && user.role !== 'admin' && <div className="hidden md:block flex-1" />}
+          {hasSidebar && !isAdmin && <div className="hidden md:block flex-1" />}
 
           {/* Right side */}
           <div className="flex items-center gap-2 sm:gap-3">
@@ -935,7 +936,7 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
             </button>
 
             {/* Notification Bell */}
-            {user.role === 'admin' && (
+            {isAdmin && (
               <div ref={notifRef} className="relative">
                 <button
                   onClick={() => setNotifOpen(!notifOpen)}

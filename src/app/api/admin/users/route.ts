@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+import { parseBody } from '@/lib/validate';
+import { canManageRole } from '@/lib/roles';
+
+const CreateUserSchema = z.object({
+  login: z.string().min(1).max(64),
+  password: z.string().min(4).max(128),
+  name: z.string().min(1).max(120),
+  role: z.enum(['superadmin', 'admin', 'teacher', 'student', 'parent']),
+  phone: z.string().max(32).optional().nullable(),
+  subject: z.string().max(80).optional().nullable(),
+  level: z.string().max(40).optional().nullable(),
+});
 
 // Get all users (with optional filters)
 export async function GET(req: NextRequest) {
@@ -106,10 +119,13 @@ export async function POST(req: NextRequest) {
   const auth = await requireAuth('admin');
   if (auth instanceof NextResponse) return auth;
 
-  const { login, password, name, phone, role, subject, level } = await req.json();
+  const parsed = await parseBody(req, CreateUserSchema);
+  if (parsed instanceof NextResponse) return parsed;
+  const { login, password, name, phone, role, subject, level } = parsed;
 
-  if (!login || !password || !name || !role) {
-    return NextResponse.json({ error: 'login, password, name va role kerak' }, { status: 400 });
+  // Rol darajasidagi ruxsat: faqat superadmin admin/superadmin yarata oladi
+  if (!canManageRole(auth.role, role)) {
+    return NextResponse.json({ error: 'Bu rolda foydalanuvchi yaratishga ruxsatingiz yo\'q' }, { status: 403 });
   }
 
   const existing = await prisma.user.findUnique({ where: { login } });
@@ -140,6 +156,13 @@ export async function PATCH(req: NextRequest) {
 
   const { id, name, phone, subject, status, password } = await req.json();
   if (!id) return NextResponse.json({ error: 'id kerak' }, { status: 400 });
+
+  // Nishon foydalanuvchi admin/superadmin bo'lsa — faqat superadmin tahrirlaydi
+  const target = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+  if (!target) return NextResponse.json({ error: 'Foydalanuvchi topilmadi' }, { status: 404 });
+  if (!canManageRole(auth.role, target.role)) {
+    return NextResponse.json({ error: 'Bu foydalanuvchini tahrirlashga ruxsatingiz yo\'q' }, { status: 403 });
+  }
 
   const data: Record<string, unknown> = {};
   if (name !== undefined) data.name = name;

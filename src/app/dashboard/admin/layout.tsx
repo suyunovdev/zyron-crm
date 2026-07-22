@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { adminNav } from '@/lib/nav';
+import { adminNav, superadminNav } from '@/lib/nav';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isSuperadmin, setIsSuperadmin] = useState(false);
@@ -16,7 +16,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <DashboardLayout
-      navItems={adminNav}
+      navItems={isSuperadmin ? superadminNav : adminNav}
       roleLabel={isSuperadmin ? 'Superadmin' : 'Admin'}
       roleColor={isSuperadmin ? 'bg-purple-100 text-purple-700' : 'bg-red-100 text-red-700'}
     >

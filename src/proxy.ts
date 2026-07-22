@@ -75,6 +75,10 @@ export async function proxy(req: NextRequest) {
     }
 
     // Role-based access control
+    // Adminlar sahifasi — faqat superadmin
+    if (path.startsWith('/dashboard/admin/admins') && role !== 'superadmin') {
+      return NextResponse.redirect(new URL('/dashboard/admin', req.url));
+    }
     if (path.startsWith('/dashboard/admin') && role !== 'admin' && role !== 'superadmin') {
       return NextResponse.redirect(new URL(dashboardPath, req.url));
     }

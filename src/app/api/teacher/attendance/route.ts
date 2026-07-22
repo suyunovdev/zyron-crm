@@ -22,17 +22,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Bu dars sizga tegishli emas' }, { status: 403 });
   }
 
-  // Dars boshlanishidan 15 min oldindan boshlab belgilash mumkin.
-  // Keyingi vaqt cheklovi yo'q — teacher xato davomatni keyin ham tuzata oladi.
-  // (Kelajakdagi darsni oldindan belgilab qo'yish taqiqlanadi.)
+  // Davomat belgilash oynasi:
+  //  - dars boshlanishidan 15 min oldindan boshlab (kelajakdagi darsni oldindan
+  //    belgilab bo'lmaydi);
+  //  - esdan chiqqan davomat uchun dars kuni oxirigacha (ertasi kun 00:00) muhlat.
+  //    Muhlatdan keyin faqat admin tuzata oladi.
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tashkent' }));
   const [ly, lm, ld] = lesson.scheduledDate.split('-').map(Number);
   const [lh, lmin] = lesson.scheduledTime.split(':').map(Number);
   const lessonStart = new Date(ly, lm - 1, ld, lh, lmin);
   const windowStart = new Date(lessonStart.getTime() - 15 * 60000); // 15 min oldin
+  const dayEnd = new Date(ly, lm - 1, ld + 1, 0, 0, 0); // dars kuni oxiri = ertasi 00:00
 
   if (now < windowStart) {
     return NextResponse.json({ error: 'Dars hali boshlanmagan — davomatni oldindan belgilab bo\'lmaydi' }, { status: 400 });
+  }
+  if (now >= dayEnd) {
+    return NextResponse.json({ error: 'Davomat muhlati tugagan (dars kuni oxirigacha). Tuzatish uchun admin bilan bog\'laning' }, { status: 400 });
   }
 
   const scores: Record<string, number> = {};

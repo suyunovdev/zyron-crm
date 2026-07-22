@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
-// Cron endpoint: automatically mark unmarked students as absent
-// after lesson time window closes (lesson end + 15 min)
-// Called by system cron every 30 minutes
+// Cron endpoint: belgilanmagan o'quvchilarni avtomatik "absent" qiladi.
+// Muhlat teacher davomat oynasi bilan mos: dars kuni oxiri (ertasi 00:00)
+// tugagachgina belgilanadi — shu vaqtgacha teacher esdan chiqqan davomatni
+// o'zi belgilay oladi. Har 30 daqiqada ishga tushiriladi.
 export async function GET(req: NextRequest) {
   // Sekret header orqali auth. CRON_SECRET faqat env'dan olinadi —
   // sozlanmagan bo'lsa endpoint ochiq qolmasligi uchun to'xtatiladi.
@@ -17,11 +18,15 @@ export async function GET(req: NextRequest) {
   }
 
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tashkent' }));
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const fmt = (dt: Date) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+  const todayStr = fmt(now);
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = fmt(yesterday);
 
-  // Find today's lessons
+  // Kecha va bugungi darslar (yarim tundan keyin kechagi kun ham finalize bo'lsin)
   const lessons = await prisma.lesson.findMany({
-    where: { scheduledDate: todayStr },
+    where: { scheduledDate: { in: [yesterdayStr, todayStr] } },
     include: {
       group: {
         include: {
@@ -35,16 +40,12 @@ export async function GET(req: NextRequest) {
   let totalMarked = 0;
 
   for (const lesson of lessons) {
-    // Check if lesson window has closed
+    // Muhlat: dars kuni oxiri (ertasi kun 00:00). Shu vaqtgacha teacher o'zi belgilaydi.
     const [y, m, d] = lesson.scheduledDate.split('-').map(Number);
-    const [h, min] = lesson.scheduledTime.split(':').map(Number);
-    const start = new Date(y, m - 1, d, h, min);
-    const dur = parseFloat(lesson.duration.match(/[\d.]+/)?.[0] || '1.5');
-    const end = new Date(start.getTime() + dur * 3600000);
-    const windowEnd = new Date(end.getTime() + 15 * 60000);
+    const dayEnd = new Date(y, m - 1, d + 1, 0, 0, 0);
 
-    // Skip if lesson window hasn't closed yet
-    if (now <= windowEnd) continue;
+    // Muhlat hali tugamagan bo'lsa — o'tkazib yuboramiz
+    if (now < dayEnd) continue;
 
     // Find students without attendance records
     const markedIds = new Set(lesson.attendances.map(a => a.studentId));

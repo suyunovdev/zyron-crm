@@ -5,9 +5,14 @@ import { prisma } from '@/lib/db';
 // after lesson time window closes (lesson end + 15 min)
 // Called by system cron every 30 minutes
 export async function GET(req: NextRequest) {
-  // Simple auth via secret header
+  // Sekret header orqali auth. CRON_SECRET faqat env'dan olinadi —
+  // sozlanmagan bo'lsa endpoint ochiq qolmasligi uchun to'xtatiladi.
+  const expected = process.env.CRON_SECRET;
+  if (!expected) {
+    return NextResponse.json({ error: 'CRON_SECRET sozlanmagan' }, { status: 500 });
+  }
   const secret = req.headers.get('x-cron-secret');
-  if (secret !== (process.env.CRON_SECRET || 'zyron-cron-secret-2026')) {
+  if (secret !== expected) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

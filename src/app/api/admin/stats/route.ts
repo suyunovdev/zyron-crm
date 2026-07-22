@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
+import { computeDebtSummary } from '@/lib/billing';
 
 export async function GET() {
   try {
@@ -29,7 +30,7 @@ export async function GET() {
     enrolledLeads,
     allPayments,
     todayPayments,
-    paidStudentIds,
+    debt,
   ] = await Promise.all([
     prisma.user.count({ where: { role: 'student' } }),
     prisma.user.count({ where: { role: 'student', status: 'active' } }),
@@ -57,20 +58,15 @@ export async function GET() {
       },
       select: { amount: true },
     }),
-    // Students who paid this month
-    prisma.payment.findMany({
-      where: { month: currentMonth },
-      select: { studentId: true },
-      distinct: ['studentId'],
-    }),
+    // Qarzdorlik (yagona billing manbasidan — student/balance bilan bir xil)
+    computeDebtSummary(),
   ]);
 
   const umumiyTushum = allPayments.reduce((s, p) => s + p.amount, 0);
   const bugungiTushum = todayPayments.reduce((s, p) => s + p.amount, 0);
 
-  // Qarzdorlar = active students who haven't paid this month
-  const paidIds = new Set(paidStudentIds.map(p => p.studentId));
-  const qarzdorlar = activeStudents - paidIds.size;
+  // Qarzdorlar = balansi manfiy o'quvchilar (summa asosida, student/balance bilan mos)
+  const qarzdorlar = debt.debtorCount;
 
   // Konversiya = enrolled leads / total leads * 100
   const konversiya = totalLeads > 0 ? Math.round((enrolledLeads / totalLeads) * 100) : 0;
@@ -96,7 +92,7 @@ export async function GET() {
     qarzdorlarPercent: activeStudents > 0 ? Math.round((qarzdorlar / activeStudents) * 100) : 0,
     umumiyTushum,
     bugungiTushum,
-    umumiyQarzdorlik: 0, // placeholder — real debt needs subscription pricing
+    umumiyQarzdorlik: debt.totalDebt, // haqiqiy qarz (billing.ts orqali hisoblanadi)
   });
   } catch (error) {
     console.error("[GET /api/admin/stats]", error);

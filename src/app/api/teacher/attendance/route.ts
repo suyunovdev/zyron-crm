@@ -22,18 +22,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Bu dars sizga tegishli emas' }, { status: 403 });
   }
 
-  // Allow marking only during lesson time (start - 15min to end + 15min)
+  // Dars boshlanishidan 15 min oldindan boshlab belgilash mumkin.
+  // Keyingi vaqt cheklovi yo'q — teacher xato davomatni keyin ham tuzata oladi.
+  // (Kelajakdagi darsni oldindan belgilab qo'yish taqiqlanadi.)
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tashkent' }));
   const [ly, lm, ld] = lesson.scheduledDate.split('-').map(Number);
   const [lh, lmin] = lesson.scheduledTime.split(':').map(Number);
   const lessonStart = new Date(ly, lm - 1, ld, lh, lmin);
-  const dur = parseFloat(lesson.duration.match(/[\d.]+/)?.[0] || '1.5');
-  const lessonEnd = new Date(lessonStart.getTime() + dur * 3600000);
   const windowStart = new Date(lessonStart.getTime() - 15 * 60000); // 15 min oldin
-  const windowEnd = new Date(lessonEnd.getTime() + 15 * 60000); // 15 min keyin
 
-  if (now < windowStart || now > windowEnd) {
-    return NextResponse.json({ error: 'Davomat faqat dars vaqtida belgilanadi' }, { status: 400 });
+  if (now < windowStart) {
+    return NextResponse.json({ error: 'Dars hali boshlanmagan — davomatni oldindan belgilab bo\'lmaydi' }, { status: 400 });
   }
 
   const scores: Record<string, number> = {};

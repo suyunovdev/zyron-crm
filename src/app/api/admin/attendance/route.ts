@@ -8,14 +8,21 @@ export async function PATCH(req: NextRequest) {
     const auth = await requireAuth('admin');
     if (auth instanceof NextResponse) return auth;
 
-    const { lessonId, studentId, present, groupId, date, time } = await req.json();
+    const { lessonId, studentId, present, groupId, date, time, scoreAttend, scoreHomework, scoreActivity } = await req.json();
+
+    // 0-5 oralig'iga cheklangan ballar (berilganlarigina)
+    const clamp = (v: number) => Math.min(5, Math.max(0, Number(v)));
+    const scores: Record<string, number> = {};
+    if (scoreAttend !== undefined) scores.scoreAttend = clamp(scoreAttend);
+    if (scoreHomework !== undefined) scores.scoreHomework = clamp(scoreHomework);
+    if (scoreActivity !== undefined) scores.scoreActivity = clamp(scoreActivity);
 
     // Direct lessonId mode
     if (lessonId && studentId && present !== undefined) {
       const attendance = await prisma.attendance.upsert({
         where: { lessonId_studentId: { lessonId, studentId } },
-        update: { present, markedAt: new Date() },
-        create: { lessonId, studentId, present },
+        update: { present, ...scores, markedAt: new Date() },
+        create: { lessonId, studentId, present, ...scores },
       });
       return NextResponse.json(attendance);
     }
@@ -27,12 +34,17 @@ export async function PATCH(req: NextRequest) {
       });
 
       if (!lesson) {
+        // Soxta '00:00' o'rniga guruhning haqiqiy vaqtidan foydalanamiz
+        const group = await prisma.group.findUnique({
+          where: { id: groupId },
+          select: { time: true },
+        });
         const lessonCount = await prisma.lesson.count({ where: { groupId } });
         lesson = await prisma.lesson.create({
           data: {
             groupId,
             scheduledDate: date,
-            scheduledTime: time || '00:00',
+            scheduledTime: time || group?.time || '00:00',
             order: lessonCount + 1,
           },
         });
@@ -40,8 +52,8 @@ export async function PATCH(req: NextRequest) {
 
       const attendance = await prisma.attendance.upsert({
         where: { lessonId_studentId: { lessonId: lesson.id, studentId } },
-        update: { present, markedAt: new Date() },
-        create: { lessonId: lesson.id, studentId, present },
+        update: { present, ...scores, markedAt: new Date() },
+        create: { lessonId: lesson.id, studentId, present, ...scores },
       });
       return NextResponse.json(attendance);
     }

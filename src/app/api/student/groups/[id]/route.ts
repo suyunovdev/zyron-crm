@@ -1,14 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 
-// Student's groups — with attendance data for the student
-export async function GET() {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAuth('student');
   if (auth instanceof NextResponse) return auth;
 
-  const groupStudents = await prisma.groupStudent.findMany({
-    where: { studentId: auth.id },
+  const { id } = await params;
+
+  const gs = await prisma.groupStudent.findFirst({
+    where: { studentId: auth.id, groupId: id },
     include: {
       group: {
         include: {
@@ -33,6 +34,9 @@ export async function GET() {
     },
   });
 
-  const groups = groupStudents.map(gs => gs.group);
-  return NextResponse.json(groups);
+  if (!gs) {
+    return NextResponse.json({ error: 'Guruh topilmadi' }, { status: 404 });
+  }
+
+  return NextResponse.json(gs.group);
 }

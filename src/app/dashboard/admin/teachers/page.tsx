@@ -44,10 +44,10 @@ export default function TeachersPage() {
 
   const fetchTeachers = () => {
     setLoading(true);
-    fetch('/api/admin/users?role=teacher')
+    fetch('/api/admin/users?role=teacher&limit=500')
       .then(res => res.json())
-      .then(data => {
-        setTeachers(Array.isArray(data) ? data : []);
+      .then(resp => {
+        setTeachers(Array.isArray(resp) ? resp : (resp.data || []));
         setLoading(false);
       })
       .catch(() => setLoading(false));

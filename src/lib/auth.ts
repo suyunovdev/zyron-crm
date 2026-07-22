@@ -1,15 +1,16 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'aka-uka-talim-markazi-secret-key-2024'
-);
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export interface SessionUser {
   id: string;
   login: string;
   name: string;
-  role: 'admin' | 'teacher' | 'student';
+  role: 'superadmin' | 'admin' | 'teacher' | 'student' | 'parent';
 }
 
 export async function createToken(user: SessionUser): Promise<string> {
@@ -37,9 +38,11 @@ export async function getSession(): Promise<SessionUser | null> {
 
 export function getDashboardPath(role: string): string {
   switch (role) {
+    case 'superadmin': return '/dashboard/admin';
     case 'admin': return '/dashboard/admin';
     case 'teacher': return '/dashboard/teacher';
     case 'student': return '/dashboard/student';
+    case 'parent': return '/dashboard/parent';
     default: return '/login';
   }
 }

@@ -33,7 +33,12 @@ export default function LoginPage() {
         return;
       }
 
-      router.push(data.redirect);
+      // Cross-subdomain redirect (full URL) yoki oddiy path
+      if (data.redirect.startsWith('http')) {
+        window.location.href = data.redirect;
+      } else {
+        router.push(data.redirect);
+      }
     } catch {
       setError("Server bilan aloqa yo'q");
       setLoading(false);

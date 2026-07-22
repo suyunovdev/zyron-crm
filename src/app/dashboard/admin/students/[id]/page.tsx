@@ -5,10 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Phone, Loader2, Snowflake, Archive, RotateCcw,
   X, Pencil, Send, GraduationCap, CheckCircle, XCircle,
-  ChevronDown, ChevronRight, Printer,
+  ChevronDown, ChevronRight, Printer, KeyRound,
 } from 'lucide-react';
 import Link from 'next/link';
-import QRCode from 'qrcode';
 
 // ─── Types ───
 interface Teacher { id: string; name: string }
@@ -33,7 +32,7 @@ interface Note {
   id: string; type: string; text: string; createdAt: string;
 }
 interface StudentDetail {
-  id: string; login: string; rawPass: string | null; name: string; phone: string;
+  id: string; login: string; name: string; phone: string;
   role: string; subject: string | null; status: string; level: string | null;
   avatar: string | null; createdAt: string;
   groupStudents: GroupStudent[];
@@ -97,14 +96,17 @@ export default function StudentProfilePage() {
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [addingToGroup, setAddingToGroup] = useState(false);
 
-  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [showResetPassModal, setShowResetPassModal] = useState(false);
+  const [resetPassValue, setResetPassValue] = useState('');
+  const [resetPassSubmitting, setResetPassSubmitting] = useState(false);
+
   const [statusChanging, setStatusChanging] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [pendingStatus, setPendingStatus] = useState('');
   const [statusComment, setStatusComment] = useState('');
   const [markingDate, setMarkingDate] = useState<string | null>(null);
 
-  const now = new Date();
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tashkent' }));
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
   const fetchStudent = useCallback(() => {
@@ -116,16 +118,6 @@ export default function StudentProfilePage() {
   }, [studentId]);
 
   useEffect(() => { fetchStudent(); }, [fetchStudent]);
-
-  // Generate QR code when student loads
-  useEffect(() => {
-    if (!student?.login) { setQrDataUrl(''); return; }
-    // QR code links to student panel with auto-login
-    const url = `${window.location.origin}/login?u=${student.login}&p=${student.rawPass || ''}`;
-    QRCode.toDataURL(url, { width: 300, margin: 2, errorCorrectionLevel: 'M' })
-      .then(setQrDataUrl)
-      .catch(() => setQrDataUrl(''));
-  }, [student?.login, student?.rawPass]);
 
   const activeGroup = student?.groupStudents?.[activeGroupIdx]?.group || null;
 
@@ -459,83 +451,9 @@ export default function StudentProfilePage() {
         <div className="lg:col-span-4 space-y-4">
           {/* ── Profile card ── */}
           <div className="bg-white rounded-xl border border-slate-200 p-5">
-            {/* Name + QR icon */}
+            {/* Name */}
             <div className="flex items-start justify-between mb-1">
               <h1 className="text-xl font-bold text-slate-900">{student.name}</h1>
-              <button
-                onClick={() => {
-                  if (!qrDataUrl) return;
-                  const canvas = document.createElement('canvas');
-                  const w = 360, h = 500;
-                  canvas.width = w; canvas.height = h;
-                  const ctx = canvas.getContext('2d')!;
-
-                  ctx.fillStyle = '#fff';
-                  ctx.fillRect(0, 0, w, h);
-
-                  const cx = 20, cy = 20, cw = 320, lw = 1.5;
-
-                  // Black header
-                  ctx.fillStyle = '#000';
-                  ctx.fillRect(cx, cy, cw, 44);
-                  ctx.fillStyle = '#fff';
-                  ctx.font = 'bold 20px Arial';
-                  ctx.textAlign = 'left';
-                  ctx.fillText("AKA-UKA TA'LIM MARKAZI", cx + 12, cy + 30);
-
-                  // Name row
-                  let y = cy + 44;
-                  ctx.strokeStyle = '#000'; ctx.lineWidth = lw;
-                  ctx.strokeRect(cx, y, cw, 34);
-                  ctx.fillStyle = '#000';
-                  ctx.font = '16px Arial';
-                  ctx.fillText(student.name, cx + 12, y + 24);
-                  y += 34;
-
-                  // QR area
-                  const qrSize = 220;
-                  ctx.strokeRect(cx, y, cw, qrSize + 16);
-
-                  const qrImg = new Image();
-                  qrImg.onload = () => {
-                    ctx.drawImage(qrImg, cx + (cw - qrSize) / 2, y + 8, qrSize, qrSize);
-                    let ry = y + qrSize + 16;
-
-                    // ID + password rows
-                    const rows: [string, string][] = [
-                      ['ID:', student.login],
-                      ['password:', student.rawPass || '—'],
-                    ];
-                    rows.forEach(([label, val]) => {
-                      ctx.strokeStyle = '#000'; ctx.lineWidth = lw;
-                      ctx.strokeRect(cx, ry, cw / 2, 36);
-                      ctx.strokeRect(cx + cw / 2, ry, cw / 2, 36);
-                      ctx.fillStyle = '#000';
-                      ctx.font = 'bold 15px Arial';
-                      ctx.textAlign = 'left';
-                      ctx.fillText(label, cx + 12, ry + 24);
-                      ctx.font = '15px Arial';
-                      ctx.fillText(val, cx + cw / 2 + 12, ry + 24);
-                      ry += 36;
-                    });
-
-                    const link = document.createElement('a');
-                    link.download = `${student.login}-qr-card.png`;
-                    link.href = canvas.toDataURL('image/png');
-                    link.click();
-                  };
-                  qrImg.src = qrDataUrl;
-                }}
-                className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-                title="QR kodni yuklab olish"
-              >
-                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
-                  <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="3" height="3" />
-                  <rect x="18" y="14" width="3" height="3" /><rect x="14" y="18" width="3" height="3" />
-                  <rect x="18" y="18" width="3" height="3" />
-                </svg>
-              </button>
             </div>
 
             {/* Status + meta + Shaxsiy button */}
@@ -545,17 +463,14 @@ export default function StudentProfilePage() {
                 <span className="text-xs text-slate-400 font-semibold">#{student.login}</span>
                 <span className="text-xs text-slate-400">· {joinStr}</span>
               </div>
-              {student.rawPass && (
-                <button
-                  onClick={() => {
-                    const text = `Login: ${student.login}\nParol: ${student.rawPass}`;
-                    navigator.clipboard.writeText(text);
-                    alert('Login va parol nusxalandi!');
-                  }}
-                  className="px-3 py-1 rounded-lg border border-blue-200 bg-blue-50 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors">
-                  Shaxsiy
-                </button>
-              )}
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(student.login);
+                  alert('Login nusxalandi!');
+                }}
+                className="px-3 py-1 rounded-lg border border-blue-200 bg-blue-50 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors">
+                Login nusxalash
+              </button>
             </div>
 
             {/* Phone rows */}
@@ -575,19 +490,18 @@ export default function StudentProfilePage() {
                   <span className="text-sm text-slate-300 italic">Kiritilmagan</span>
                 </div>
               )}
-              {/* Credentials row */}
-              {student.rawPass && (
-                <>
-                  <div className="flex items-center justify-between py-3 border-b border-slate-100 bg-slate-50/50 px-3">
-                    <span className="text-sm text-slate-500">Login</span>
-                    <span className="text-sm font-mono font-bold text-slate-800">{student.login}</span>
-                  </div>
-                  <div className="flex items-center justify-between py-3 border-b border-slate-100 bg-slate-50/50 px-3 rounded-b-lg">
-                    <span className="text-sm text-slate-500">Parol</span>
-                    <span className="text-sm font-mono font-bold text-slate-800">{student.rawPass}</span>
-                  </div>
-                </>
-              )}
+              <div className="flex items-center justify-between py-3 border-b border-slate-100 bg-slate-50/50 px-3">
+                <span className="text-sm text-slate-500">Login</span>
+                <span className="text-sm font-mono font-bold text-slate-800">{student.login}</span>
+              </div>
+              <div className="flex items-center justify-between py-3 border-b border-slate-100 bg-slate-50/50 px-3 rounded-b-lg">
+                <span className="text-sm text-slate-500">Parol</span>
+                <button
+                  onClick={() => { setResetPassValue(''); setShowResetPassModal(true); }}
+                  className="flex items-center gap-1 text-xs font-semibold text-amber-600 hover:text-amber-700">
+                  <KeyRound className="w-3.5 h-3.5" /> Parolni yangilash
+                </button>
+              </div>
               {/* Kurs info is shown in group card */}
             </div>
 
@@ -1378,6 +1292,56 @@ export default function StudentProfilePage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+      {/* ═══ Reset Password Modal ═══ */}
+      {showResetPassModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowResetPassModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-slate-900">Parolni yangilash</h2>
+              <button onClick={() => setShowResetPassModal(false)} className="p-2 hover:bg-slate-100 rounded-xl">
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+            <p className="text-sm text-slate-500 mb-4">{student.name} uchun yangi parol</p>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (!resetPassValue.trim() || resetPassValue.length < 4) return;
+              setResetPassSubmitting(true);
+              const res = await fetch('/api/admin/users/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: student.id, newPassword: resetPassValue }),
+              });
+              setResetPassSubmitting(false);
+              if (res.ok) {
+                setShowResetPassModal(false);
+                alert('Parol muvaffaqiyatli yangilandi!');
+              } else {
+                alert('Xatolik yuz berdi');
+              }
+            }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Yangi parol</label>
+                <input type="text" required minLength={4} value={resetPassValue}
+                  onChange={e => setResetPassValue(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  placeholder="Kamida 4 ta belgi" autoFocus />
+              </div>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setShowResetPassModal(false)}
+                  className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  Bekor qilish
+                </button>
+                <button type="submit" disabled={resetPassSubmitting || resetPassValue.length < 4}
+                  className="flex-1 bg-amber-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-amber-700 disabled:opacity-60">
+                  {resetPassSubmitting ? 'Saqlanmoqda...' : 'Yangilash'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

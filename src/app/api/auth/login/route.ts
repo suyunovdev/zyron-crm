@@ -25,8 +25,30 @@ export async function POST(req: NextRequest) {
     id: user.id,
     login: user.login,
     name: user.name,
-    role: user.role as 'admin' | 'teacher' | 'student',
+    role: user.role as 'superadmin' | 'admin' | 'teacher' | 'student' | 'parent',
   });
+
+  const dashboardPath =
+    (user.role === 'admin' || user.role === 'superadmin') ? '/dashboard/admin' :
+    user.role === 'teacher' ? '/dashboard/teacher' :
+    user.role === 'parent' ? '/dashboard/parent' : '/dashboard/student';
+
+  // Subdomen bo'yicha to'g'ri URL qaytarish
+  const host = req.headers.get('host') || '';
+  const isStaff = ['superadmin', 'admin', 'teacher'].includes(user.role);
+  const isClient = ['student', 'parent'].includes(user.role);
+  let redirectUrl = dashboardPath;
+
+  // Agar noto'g'ri subdomenda bo'lsa, to'g'ri subdomendagi URL qaytarish
+  if (host.startsWith('my.') && isStaff) {
+    const staffHost = host.replace(/^my\./, 'crm.');
+    const proto = req.headers.get('x-forwarded-proto') || 'https';
+    redirectUrl = `${proto}://${staffHost}${dashboardPath}`;
+  } else if (host.startsWith('crm.') && isClient) {
+    const clientHost = host.replace(/^crm\./, 'my.');
+    const proto = req.headers.get('x-forwarded-proto') || 'https';
+    redirectUrl = `${proto}://${clientHost}${dashboardPath}`;
+  }
 
   const response = NextResponse.json({
     user: {
@@ -34,9 +56,11 @@ export async function POST(req: NextRequest) {
       name: user.name,
       role: user.role,
     },
-    redirect: user.role === 'admin' ? '/dashboard/admin' :
-              user.role === 'teacher' ? '/dashboard/teacher' : '/dashboard/student',
+    redirect: redirectUrl,
   });
+
+  // Cookie'ni ikkala subdomenda ham o'qish uchun domain sozlash
+  const cookieDomain = host.includes('akaukalarmarkazi.uz') ? '.akaukalarmarkazi.uz' : undefined;
 
   response.cookies.set('token', token, {
     httpOnly: true,
@@ -44,6 +68,7 @@ export async function POST(req: NextRequest) {
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60,
     path: '/',
+    ...(cookieDomain ? { domain: cookieDomain } : {}),
   });
 
   return response;

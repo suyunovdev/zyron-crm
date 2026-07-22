@@ -152,13 +152,13 @@ function ReportModal({ open, onClose, theme }: { open: boolean; onClose: () => v
             </div>
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: 'Naqd', amount: pb.cash, icon: Banknote, color: 'emerald' },
-                { label: 'Karta', amount: pb.card, icon: CreditCard, color: 'blue' },
-                { label: "O'tkazma", amount: pb.transfer, icon: ArrowRightLeft, color: 'purple' },
+                { label: 'Naqd', amount: pb.cash, icon: Banknote, darkBg: 'bg-emerald-900/50', lightBg: 'bg-emerald-100', darkText: 'text-emerald-400', lightText: 'text-emerald-600' },
+                { label: 'Karta', amount: pb.card, icon: CreditCard, darkBg: 'bg-blue-900/50', lightBg: 'bg-blue-100', darkText: 'text-blue-400', lightText: 'text-blue-600' },
+                { label: "O'tkazma", amount: pb.transfer, icon: ArrowRightLeft, darkBg: 'bg-purple-900/50', lightBg: 'bg-purple-100', darkText: 'text-purple-400', lightText: 'text-purple-600' },
               ].map(item => (
                 <div key={item.label} className={`p-3 rounded-lg border ${borderColor} ${isDark ? 'bg-[#0f172a]' : 'bg-slate-50'}`}>
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${isDark ? `bg-${item.color}-900/50` : `bg-${item.color}-100`}`}>
-                    <item.icon className={`w-4 h-4 ${isDark ? `text-${item.color}-400` : `text-${item.color}-600`}`} />
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-2 ${isDark ? item.darkBg : item.lightBg}`}>
+                    <item.icon className={`w-4 h-4 ${isDark ? item.darkText : item.lightText}`} />
                   </div>
                   <p className={`text-[10px] ${textSecondary}`}>{item.label}</p>
                   <p className={`text-sm font-bold ${textPrimary}`}>{formatAmount(item.amount)}</p>
@@ -186,18 +186,25 @@ function ReportModal({ open, onClose, theme }: { open: boolean; onClose: () => v
             </div>
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: 'Faol', count: s.activeStudents ?? 0, icon: UserCheck, bg: 'emerald' },
-                { label: 'Muzlatilgan', count: s.frozenStudents ?? 0, icon: Snowflake, bg: 'blue' },
-                { label: 'Arxivlangan', count: s.archivedStudents ?? 0, icon: Archive, bg: 'slate' },
+                { label: 'Faol', count: s.activeStudents ?? 0, icon: UserCheck,
+                  darkCard: 'bg-emerald-900/20 border-emerald-800/50', lightCard: 'bg-emerald-50 border-emerald-100',
+                  darkIcon: 'text-emerald-400', lightIcon: 'text-emerald-600',
+                  darkNum: 'text-emerald-300', lightNum: 'text-emerald-700' },
+                { label: 'Muzlatilgan', count: s.frozenStudents ?? 0, icon: Snowflake,
+                  darkCard: 'bg-blue-900/20 border-blue-800/50', lightCard: 'bg-blue-50 border-blue-100',
+                  darkIcon: 'text-blue-400', lightIcon: 'text-blue-600',
+                  darkNum: 'text-blue-300', lightNum: 'text-blue-700' },
+                { label: 'Arxivlangan', count: s.archivedStudents ?? 0, icon: Archive,
+                  darkCard: 'bg-slate-900/20 border-slate-800/50', lightCard: 'bg-slate-50 border-slate-100',
+                  darkIcon: 'text-slate-400', lightIcon: 'text-slate-600',
+                  darkNum: 'text-slate-300', lightNum: 'text-slate-700' },
               ].map(item => (
                 <div key={item.label} className={`p-4 rounded-lg border text-center ${
-                  isDark
-                    ? `bg-${item.bg}-900/20 border-${item.bg}-800/50`
-                    : `bg-${item.bg}-50 border-${item.bg}-100`
+                  isDark ? item.darkCard : item.lightCard
                 }`}>
-                  <item.icon className={`w-5 h-5 mx-auto mb-2 ${isDark ? `text-${item.bg}-400` : `text-${item.bg}-600`}`} />
-                  <p className={`text-2xl font-bold ${isDark ? `text-${item.bg}-300` : `text-${item.bg}-700`}`}>{item.count}</p>
-                  <p className={`text-[10px] mt-1 ${isDark ? `text-${item.bg}-400` : `text-${item.bg}-600`}`}>{item.label}</p>
+                  <item.icon className={`w-5 h-5 mx-auto mb-2 ${isDark ? item.darkIcon : item.lightIcon}`} />
+                  <p className={`text-2xl font-bold ${isDark ? item.darkNum : item.lightNum}`}>{item.count}</p>
+                  <p className={`text-[10px] mt-1 ${isDark ? item.darkIcon : item.lightIcon}`}>{item.label}</p>
                 </div>
               ))}
             </div>

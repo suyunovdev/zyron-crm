@@ -34,8 +34,12 @@ function formatAmount(amount: number): string {
   return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 
+function tzNow(): Date {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tashkent' }));
+}
+
 function getCurrentMonth(): string {
-  const now = new Date();
+  const now = tzNow();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   return `${year}-${month}`;
@@ -47,7 +51,7 @@ function getMonthOptions(): { value: string; label: string }[] {
     "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
     "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
   ];
-  const now = new Date();
+  const now = tzNow();
 
   for (let i = -6; i <= 6; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
@@ -123,10 +127,10 @@ export default function AdminPaymentsPage() {
 
   const fetchStudents = async () => {
     try {
-      const res = await fetch("/api/admin/users?role=student");
+      const res = await fetch("/api/admin/users?role=student&limit=500");
       if (res.ok) {
-        const data = await res.json();
-        setStudents(Array.isArray(data) ? data : data.users || []);
+        const resp = await res.json();
+        setStudents(Array.isArray(resp) ? resp : (resp.data || []));
       }
     } catch {
       console.error("O'quvchilarni yuklashda xatolik");
@@ -143,7 +147,8 @@ export default function AdminPaymentsPage() {
 
   const totalForMonth = payments.reduce((sum, p) => sum + p.amount, 0);
 
-  const today = new Date().toISOString().split("T")[0];
+  const tn = tzNow();
+  const today = `${tn.getFullYear()}-${String(tn.getMonth() + 1).padStart(2, '0')}-${String(tn.getDate()).padStart(2, '0')}`;
   const todayPayments = payments.filter(
     (p) => p.createdAt.split("T")[0] === today
   );

@@ -11,14 +11,17 @@ model User {
   id        String   @id @default(cuid())
   login     String   @unique
   password  String
-  rawPass   String?  // original password (admin ko'rish uchun)
+  rawPass   String?
   name      String
   phone     String?
-  role      String   @default("student") // admin, teacher, student
+  role      String   @default("student") // superadmin, admin, teacher, student, parent
   subject   String?  // faqat teacher uchun (fan nomi)
   status    String   @default("active") // active, frozen, archived
   level     String?  // teacher: senior, middle, junior
   avatar    String?  // rasm URL
+  parentId  String?  // parent user ID — farzandni bog'lash uchun
+  parent    User?    @relation("ParentChild", fields: [parentId], references: [id])
+  children  User[]   @relation("ParentChild")
   createdAt DateTime @default(now())
 
   teacherGroups Group[]
@@ -84,6 +87,9 @@ model Attendance {
   studentId String
   student   User     @relation(fields: [studentId], references: [id])
   present   Boolean
+  scoreAttend   Int  @default(0) // 0-5 qatnashish balli
+  scoreHomework Int  @default(0) // 0-5 uyga vazifa balli
+  scoreActivity Int  @default(0) // 0-5 faollik balli
   markedAt  DateTime @default(now())
 
   @@unique([lessonId, studentId])

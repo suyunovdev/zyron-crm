@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
+import { generateLessons } from '@/lib/generate-lessons';
 
 // Get all groups
 export async function GET() {
@@ -10,7 +11,7 @@ export async function GET() {
   const groups = await prisma.group.findMany({
     include: {
       teacher: { select: { id: true, name: true } },
-      students: { include: { student: { select: { id: true, name: true, status: true } } } },
+      students: { include: { student: { select: { id: true, name: true, login: true, rawPass: true, status: true } } } },
       _count: { select: { lessons: true, students: true } },
     },
     orderBy: { createdAt: 'desc' },
@@ -47,6 +48,24 @@ export async function POST(req: NextRequest) {
     },
     include: { teacher: { select: { name: true } } },
   });
+
+  // Darslarni avtomatik generatsiya qilish (12 oy)
+  {
+    const dt = dayType || 'toq';
+    const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tashkent' }));
+    const sd = startDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    try {
+      await generateLessons({
+        groupId: group.id,
+        startDate: sd,
+        months: 12,
+        dayType: dt,
+        time: time || '14:00',
+      });
+    } catch (e) {
+      console.error('[Auto-generate lessons]', e);
+    }
+  }
 
   return NextResponse.json(group, { status: 201 });
 }

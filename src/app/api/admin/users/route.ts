@@ -11,15 +11,28 @@ export async function GET(req: NextRequest) {
 
     const role = req.nextUrl.searchParams.get('role');
     const status = req.nextUrl.searchParams.get('status');
+    const page = parseInt(req.nextUrl.searchParams.get('page') || '1');
+    const limit = parseInt(req.nextUrl.searchParams.get('limit') || '50');
+    const search = req.nextUrl.searchParams.get('search') || '';
 
-    const where: Record<string, string> = {};
+    const where: Record<string, unknown> = {};
     if (role) where.role = role;
     if (status) where.status = status;
+    if (search) {
+      where.OR = [
+        { name: { contains: search } },
+        { login: { contains: search } },
+        { phone: { contains: search } },
+      ];
+    }
 
     const isStudent = role === 'student';
 
-    const users = await prisma.user.findMany({
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
       where,
+      skip: (page - 1) * limit,
+      take: limit,
       select: {
         id: true, login: true, name: true, phone: true,
         role: true, subject: true, status: true, level: true, avatar: true, createdAt: true,
@@ -43,7 +56,11 @@ export async function GET(req: NextRequest) {
         } : {}),
       },
       orderBy: { createdAt: 'desc' },
-    });
+    }),
+      prisma.user.count({ where }),
+    ]);
+
+    const pagination = { page, limit, total, totalPages: Math.ceil(total / limit) };
 
     if (isStudent) {
       const now = new Date();
@@ -73,10 +90,10 @@ export async function GET(req: NextRequest) {
         return { ...rest, groupStudents: u.groupStudents, _balance: { totalPaid, paidThisMonth, totalDeducted, balance } };
       });
 
-      return NextResponse.json(enriched);
+      return NextResponse.json({ data: enriched, pagination });
     }
 
-    return NextResponse.json(users);
+    return NextResponse.json({ data: users, pagination });
   } catch (error) {
     console.error("[GET /api/admin/users]", error);
     return NextResponse.json({ error: "Server xatosi" }, { status: 500 });
@@ -103,7 +120,7 @@ export async function POST(req: NextRequest) {
     data: {
       login,
       password: bcrypt.hashSync(password, 10),
-      rawPass: role === 'student' ? password : null,
+      rawPass: password,
       name,
       phone: phone || null,
       role,
@@ -128,7 +145,10 @@ export async function PATCH(req: NextRequest) {
   if (phone !== undefined) data.phone = phone;
   if (subject !== undefined) data.subject = subject;
   if (status !== undefined) data.status = status;
-  if (password) data.password = bcrypt.hashSync(password, 10);
+  if (password) {
+    data.password = bcrypt.hashSync(password, 10);
+    data.rawPass = password;
+  }
 
   const user = await prisma.user.update({
     where: { id },

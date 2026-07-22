@@ -64,12 +64,15 @@ export default function StudentsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
+
   const fetchStudents = () => {
     setLoading(true);
-    fetch('/api/admin/users?role=student')
-      .then(res => res.ok ? res.json() : [])
-      .then(data => {
-        setStudents(Array.isArray(data) ? data : []);
+    fetch('/api/admin/users?role=student&limit=500')
+      .then(res => res.ok ? res.json() : { data: [] })
+      .then(resp => {
+        setStudents(Array.isArray(resp) ? resp : (resp.data || []));
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -143,6 +146,12 @@ export default function StudentsPage() {
 
     return list;
   }, [students, search, filterStatus, sortKey, sortDir]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginatedStudents = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // Reset page when filter/search changes
+  useEffect(() => { setCurrentPage(1); }, [search, filterStatus]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -249,7 +258,7 @@ export default function StudentsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((student, idx) => {
+                  {paginatedStudents.map((student, idx) => {
                     const badge = STATUS_BADGE[student.status] || STATUS_BADGE.active;
                     const group = getFirstGroup(student);
                     const mentor = group?.teacher?.name || '—';
@@ -366,6 +375,33 @@ export default function StudentsPage() {
                   Yangi: {filtered.filter(s => !s._balance || s._balance.totalDeducted === 0).length}
                 </span>
               </div>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-center gap-1">
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40">
+                Oldingi
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+                .map((p, i, arr) => (
+                  <span key={p} className="flex items-center">
+                    {i > 0 && arr[i - 1] !== p - 1 && <span className="px-1 text-slate-300">...</span>}
+                    <button onClick={() => setCurrentPage(p)}
+                      className={`w-8 h-8 rounded-lg text-xs font-medium ${
+                        p === currentPage ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                      }`}>
+                      {p}
+                    </button>
+                  </span>
+                ))}
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40">
+                Keyingi
+              </button>
             </div>
           )}
         </div>

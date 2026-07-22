@@ -4,12 +4,14 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Plus, X, Search, Video, ChevronUp, ChevronDown, Archive,
-  UserPlus, UserMinus, QrCode, Trash2, RotateCcw,
+  UserPlus, UserMinus, QrCode, Trash2, RotateCcw, CalendarPlus, Loader2, Download,
 } from 'lucide-react';
+import QRCode from 'qrcode';
+import { jsPDF } from 'jspdf';
 import Link from 'next/link';
 
 interface Teacher { id: string; name: string; subject?: string }
-interface StudentUser { id: string; name: string; login: string; status: string }
+interface StudentUser { id: string; name: string; login: string; rawPass?: string; status: string }
 interface GroupStudent { student: StudentUser }
 interface Group {
   id: string; name: string; subject: string; schedule: string;
@@ -41,6 +43,8 @@ export default function GroupsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [addStudentGroupId, setAddStudentGroupId] = useState<string | null>(null);
   const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [generatingLessons, setGeneratingLessons] = useState<string | null>(null);
+  const [generateMsg, setGenerateMsg] = useState<{ groupId: string; type: 'success' | 'error'; text: string } | null>(null);
 
   // Filters & Sort
   const [search, setSearch] = useState('');
@@ -59,14 +63,14 @@ export default function GroupsPage() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [groupsRes, teachersRes, studentsRes] = await Promise.all([
+      const [groupsRes, teachersResp, studentsResp] = await Promise.all([
         fetch('/api/admin/groups').then(r => r.ok ? r.json() : []).catch(() => []),
-        fetch('/api/admin/users?role=teacher').then(r => r.ok ? r.json() : []).catch(() => []),
-        fetch('/api/admin/users?role=student').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch('/api/admin/users?role=teacher&limit=500').then(r => r.ok ? r.json() : { data: [] }).catch(() => ({ data: [] })),
+        fetch('/api/admin/users?role=student&limit=500').then(r => r.ok ? r.json() : { data: [] }).catch(() => ({ data: [] })),
       ]);
       setGroups(Array.isArray(groupsRes) ? groupsRes : []);
-      setTeachers(Array.isArray(teachersRes) ? teachersRes : []);
-      setAllStudents(Array.isArray(studentsRes) ? studentsRes : []);
+      setTeachers(Array.isArray(teachersResp) ? teachersResp : (teachersResp.data || []));
+      setAllStudents(Array.isArray(studentsResp) ? studentsResp : (studentsResp.data || []));
     } catch { /* handled above */ } finally {
       setLoading(false);
     }
@@ -86,6 +90,91 @@ export default function GroupsPage() {
       }, 200);
     }
   }, [searchParams, groups]);
+
+  const [qrGenerating, setQrGenerating] = useState<string | null>(null);
+
+  const handleDownloadQrPdf = async (group: Group) => {
+    if (group.students.length === 0) return;
+    setQrGenerating(group.id);
+    try {
+      const doc = new jsPDF('p', 'mm', 'a4');
+      const pageW = 210;
+      const margin = 15;
+      const colW = (pageW - margin * 2) / 2;
+      const cardH = 65;
+      let x = margin;
+      let y = margin;
+      let col = 0;
+
+      // Title
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text(group.name, pageW / 2, y + 5, { align: 'center' });
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100);
+      doc.text(`${group.subject} | ${group.students.length} ta o'quvchi`, pageW / 2, y + 11, { align: 'center' });
+      doc.setTextColor(0);
+      y = margin + 18;
+
+      for (let i = 0; i < group.students.length; i++) {
+        const student = group.students[i].student;
+
+        // New page check
+        if (y + cardH > 280) {
+          doc.addPage();
+          y = margin;
+          col = 0;
+          x = margin;
+        }
+
+        // Card border
+        doc.setDrawColor(200);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(x, y, colW - 5, cardH - 5, 3, 3);
+
+        // Student number + name
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${i + 1}. ${student.name}`, x + 5, y + 8);
+
+        // Login + Password info
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80);
+        doc.text(`Login: ${student.login}`, x + 5, y + 15);
+        doc.text(`Parol: ${student.rawPass || '—'}`, x + 5, y + 21);
+        doc.setTextColor(0);
+
+        // QR Code — contains login and password
+        const qrData = `Login: ${student.login}\nParol: ${student.rawPass || '—'}`;
+        const qrDataUrl = await QRCode.toDataURL(qrData, { width: 160, margin: 1 });
+        doc.addImage(qrDataUrl, 'PNG', x + colW - 50, y + 3, 38, 38);
+
+        // CRM URL
+        doc.setFontSize(7);
+        doc.setTextColor(120);
+        doc.text('crm.akaukalarmarkazi.uz', x + 5, y + cardH - 10);
+        doc.setTextColor(0);
+
+        // Move to next position
+        col++;
+        if (col >= 2) {
+          col = 0;
+          x = margin;
+          y += cardH;
+        } else {
+          x = margin + colW;
+        }
+      }
+
+      doc.save(`${group.name}-QR-codes.pdf`);
+    } catch (err) {
+      console.error('QR PDF generation error:', err);
+    } finally {
+      setQrGenerating(null);
+    }
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,6 +208,29 @@ export default function GroupsPage() {
       body: JSON.stringify(payload),
     });
     fetchAll();
+  };
+
+  const handleGenerateLessons = async (groupId: string, months?: number) => {
+    setGeneratingLessons(groupId);
+    setGenerateMsg(null);
+    try {
+      const res = await fetch('/api/admin/groups/generate-lessons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId, months: months || 12 }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setGenerateMsg({ groupId, type: 'success', text: data.message || `${data.created} ta dars yaratildi` });
+        fetchAll();
+      } else {
+        setGenerateMsg({ groupId, type: 'error', text: data.error || 'Xatolik yuz berdi' });
+      }
+    } catch {
+      setGenerateMsg({ groupId, type: 'error', text: 'Server bilan bog\'lanishda xatolik' });
+    } finally {
+      setGeneratingLessons(null);
+    }
   };
 
   const handleAddStudent = async (groupId: string) => {
@@ -347,8 +459,21 @@ export default function GroupsPage() {
 
                           {/* QR */}
                           <td className="px-4 py-3.5 text-center" onClick={e => e.stopPropagation()}>
-                            <button className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600">
-                              <QrCode className="w-4 h-4" />
+                            <button
+                              onClick={() => handleDownloadQrPdf(group)}
+                              disabled={qrGenerating === group.id || group.students.length === 0}
+                              title={group.students.length === 0 ? "O'quvchi yo'q" : `${group.students.length} ta o'quvchi QR PDF`}
+                              className={`p-1.5 rounded-lg transition-colors ${
+                                group.students.length === 0
+                                  ? 'text-slate-200 cursor-not-allowed'
+                                  : 'text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600'
+                              }`}
+                            >
+                              {qrGenerating === group.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <QrCode className="w-4 h-4" />
+                              )}
                             </button>
                           </td>
 
@@ -418,8 +543,77 @@ export default function GroupsPage() {
                                     </div>
                                   </div>
 
-                                  {/* Right: Students list */}
-                                  <div>
+                                  {/* Right: Students list + Lessons */}
+                                  <div className="space-y-4">
+                                    {/* Darslarni generatsiya qilish */}
+                                    <div>
+                                      <h4 className="text-sm font-bold text-slate-700 mb-2">Darslar jadvali</h4>
+                                      <div className="bg-white rounded-lg border border-slate-100 p-3">
+                                        <div className="flex items-center justify-between mb-2">
+                                          <div className="text-sm text-slate-600">
+                                            <span className="font-medium">{group._count?.lessons ?? 0}</span> ta dars mavjud
+                                            {group.dayType && (
+                                              <span className="ml-2 text-xs text-slate-400">
+                                                ({group.dayType === 'toq' ? 'Dush/Chor/Jum' : group.dayType === 'juft' ? 'Sesh/Pay/Shan' : group.dayType})
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <button
+                                            onClick={() => handleGenerateLessons(group.id, 1)}
+                                            disabled={generatingLessons === group.id}
+                                            className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                                          >
+                                            {generatingLessons === group.id ? (
+                                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            ) : (
+                                              <CalendarPlus className="w-3.5 h-3.5" />
+                                            )}
+                                            +1 oy
+                                          </button>
+                                          <button
+                                            onClick={() => handleGenerateLessons(group.id, 3)}
+                                            disabled={generatingLessons === group.id}
+                                            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-lg text-xs font-semibold hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                                          >
+                                            {generatingLessons === group.id ? (
+                                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            ) : (
+                                              <CalendarPlus className="w-3.5 h-3.5" />
+                                            )}
+                                            +3 oy
+                                          </button>
+                                          <button
+                                            onClick={() => handleGenerateLessons(group.id, 12)}
+                                            disabled={generatingLessons === group.id}
+                                            className="flex items-center gap-1.5 px-3 py-2 bg-orange-500 text-white rounded-lg text-xs font-semibold hover:bg-orange-600 disabled:opacity-50 transition-colors"
+                                          >
+                                            {generatingLessons === group.id ? (
+                                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            ) : (
+                                              <CalendarPlus className="w-3.5 h-3.5" />
+                                            )}
+                                            +12 oy
+                                          </button>
+                                        </div>
+                                        {generateMsg && generateMsg.groupId === group.id && (
+                                          <div className={`mt-2 text-xs px-3 py-2 rounded-lg ${
+                                            generateMsg.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
+                                          }`}>
+                                            {generateMsg.text}
+                                          </div>
+                                        )}
+                                        {!group.startDate && (
+                                          <p className="mt-2 text-[11px] text-amber-600">
+                                            Boshlanish sanasi kiritilmagan. Bugungi kundan boshlab generatsiya qilinadi.
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Students list */}
+                                    <div>
                                     <div className="flex items-center justify-between mb-3">
                                       <h4 className="text-sm font-bold text-slate-700">
                                         O&apos;quvchilar ({group.students.length}/{group.maxStudents})
@@ -487,6 +681,7 @@ export default function GroupsPage() {
                                         ))}
                                       </div>
                                     )}
+                                  </div>
                                   </div>
                                 </div>
                               </div>

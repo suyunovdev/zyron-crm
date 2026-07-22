@@ -49,7 +49,8 @@ interface Group {
 }
 
 function isSameDay(dateStr: string): boolean {
-  const today = new Date();
+  const str = new Date().toLocaleString('en-US', { timeZone: 'Asia/Tashkent' });
+  const today = new Date(str);
   const [y, m, d] = dateStr.split('-').map(Number);
   return today.getFullYear() === y && today.getMonth() + 1 === m && today.getDate() === d;
 }
@@ -76,7 +77,7 @@ export default function TeacherDashboardPage() {
     }).catch(() => setLoading(false));
   }, []);
 
-  const now = new Date();
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tashkent' }));
   const totalStudents = groups.reduce((s, g) => s + g._count.students, 0);
   const totalLessons = groups.reduce((s, g) => s + g._count.lessons, 0);
 

@@ -17,7 +17,6 @@ export async function GET(
       select: {
         id: true,
         login: true,
-        rawPass: true,
         name: true,
         phone: true,
         role: true,

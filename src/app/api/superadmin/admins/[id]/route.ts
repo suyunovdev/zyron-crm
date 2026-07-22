@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { parseBody } from '@/lib/validate';
 import { isAdminRole } from '@/lib/roles';
+import { logAudit } from '@/lib/audit';
 import { logger } from '@/lib/logger';
 
 // Faol superadminlar soni (oxirgisini himoya qilish uchun)
@@ -63,6 +64,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       data,
       select: { id: true, login: true, name: true, role: true, status: true },
     });
+    const changes = [
+      role && `rol→${role}`, status && `holat→${status}`, password && 'parol tiklandi', name && 'ism',
+    ].filter(Boolean).join(', ');
+    await logAudit(auth, 'update', 'admin', id, `${user.name}: ${changes}`);
     return NextResponse.json(user);
   } catch (error) {
     logger.error('[PATCH /api/superadmin/admins/[id]]', error);
@@ -89,6 +94,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     }
 
     await prisma.user.delete({ where: { id } });
+    await logAudit(auth, 'delete', 'admin', id, `Admin o'chirildi (${target.role})`);
     return NextResponse.json({ ok: true });
   } catch (error) {
     logger.error('[DELETE /api/superadmin/admins/[id]]', error);

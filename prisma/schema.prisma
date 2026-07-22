@@ -22,6 +22,10 @@ model User {
   parentId  String?  // parent user ID — farzandni bog'lash uchun
   parent    User?    @relation("ParentChild", fields: [parentId], references: [id])
   children  User[]   @relation("ParentChild")
+  branchId  String?  // filial (multi-branch)
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+  salaryShare  Int?     // ustoz uchun: yig'ilgan to'lovdan ulush (%)
+  tokenVersion Int   @default(0) // majburiy logout uchun — bumping barcha eski tokenlarni bekor qiladi
   createdAt DateTime @default(now())
 
   teacherGroups Group[]
@@ -32,6 +36,7 @@ model User {
 
   @@index([role, status])
   @@index([parentId])
+  @@index([branchId])
 }
 
 model Group {
@@ -52,6 +57,8 @@ model Group {
   language    String   @default("uz") // uz, ru, en
   price       Int      @default(0)   // oylik kurs narxi (so'mda)
   lessonsPerMonth Int  @default(12)  // oyiga nechta dars
+  branchId    String?  // filial (multi-branch)
+  branch      Branch?  @relation(fields: [branchId], references: [id])
   createdAt   DateTime @default(now())
 
   students GroupStudent[]
@@ -59,6 +66,7 @@ model Group {
 
   @@index([teacherId])
   @@index([status])
+  @@index([branchId])
 }
 
 model GroupStudent {
@@ -110,9 +118,10 @@ model Payment {
   id        String   @id @default(cuid())
   studentId String
   student   User     @relation(fields: [studentId], references: [id])
-  amount    Int      // so'mda
+  amount    Int      // so'mda (refund uchun manfiy bo'lishi mumkin)
   month     String   // "2026-07" formatda
   method    String   @default("cash") // cash, card, transfer
+  type      String   @default("payment") // payment, refund, discount
   note      String?
   createdAt DateTime @default(now())
 
@@ -163,4 +172,50 @@ model Lead {
 
   @@index([status])
   @@index([createdAt])
+}
+
+// Audit jurnali — kim nima o'zgartirgani (javobgarlik/nazorat)
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  actorName String
+  actorRole String
+  action    String   // create, update, delete, reset-password, login-as, force-logout, ...
+  entity    String   // user, admin, payment, group, setting, branch, system
+  entityId  String?
+  summary   String   // o'qiladigan tavsif
+  createdAt DateTime @default(now())
+
+  @@index([entity, createdAt])
+  @@index([actorId])
+}
+
+// Tizim sozlamalari (key-value)
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// Filial (multi-branch)
+model Branch {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  phone     String?
+  createdAt DateTime @default(now())
+
+  users  User[]
+  groups Group[]
+}
+
+// SMS/Telegram tarqatma jurnali
+model SmsCampaign {
+  id             String   @id @default(cuid())
+  message        String
+  audience       String   // leads, students, debtors, all
+  channel        String   @default("sms") // sms, telegram
+  recipientCount Int      @default(0)
+  status         String   @default("queued") // queued, sent, failed
+  createdAt      DateTime @default(now())
 }

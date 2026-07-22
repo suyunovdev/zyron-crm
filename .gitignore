@@ -48,3 +48,6 @@ prisma/dev.db
 # SQLite WAL yordamchi fayllari (transient)
 *.db-wal
 *.db-shm
+
+# Backup fayllari (superadmin backup)
+backups/

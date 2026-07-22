@@ -20,6 +20,7 @@ interface SessionUser {
   name: string;
   login: string;
   role: string;
+  impersonatedBy?: { id: string; name: string };
 }
 
 interface DashboardLayoutProps {
@@ -783,6 +784,18 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
 
       {/* ──── Main content ──── */}
       <div className={`flex-1 flex flex-col h-screen min-w-0 overflow-hidden ${hasSidebar ? 'md:ml-[88px]' : ''}`}>
+        {/* Impersonation banner */}
+        {user.impersonatedBy && (
+          <div className="flex-shrink-0 flex items-center justify-center gap-3 bg-purple-600 text-white text-xs sm:text-sm py-1.5 px-4">
+            <span>👤 Siz <b>{user.name}</b> sifatida kirdingiz ({user.impersonatedBy.name} nomidan)</span>
+            <button
+              onClick={async () => { await fetch('/api/superadmin/impersonate', { method: 'DELETE' }); window.location.href = '/dashboard/admin'; }}
+              className="px-2.5 py-0.5 rounded bg-white/20 hover:bg-white/30 font-medium"
+            >
+              Qaytish
+            </button>
+          </div>
+        )}
         {/* Top bar */}
         <header className={`flex-shrink-0 z-20 h-14 flex items-center justify-between px-4 lg:px-6 ${
           theme === 'dark' ? 'bg-[#1a3a6a] border-b border-[#2660A4]/30' : 'bg-[#2660A4]'

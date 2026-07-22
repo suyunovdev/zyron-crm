@@ -1,10 +1,20 @@
 import { NextResponse } from 'next/server';
 import { getSession, type SessionUser } from './auth';
+import { prisma } from './db';
 
 export async function requireAuth(role?: string): Promise<SessionUser | NextResponse> {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Majburiy logout: token tokenVersion'i DB bilan mos kelmasa — sessiya bekor
+  const claimed = (session as SessionUser & { tokenVersion?: number }).tokenVersion;
+  if (claimed !== undefined) {
+    const u = await prisma.user.findUnique({ where: { id: session.id }, select: { tokenVersion: true, status: true } });
+    if (!u || u.tokenVersion !== claimed || u.status !== 'active') {
+      return NextResponse.json({ error: 'Sessiya bekor qilingan' }, { status: 401 });
+    }
   }
   if (role) {
     // superadmin has all admin privileges

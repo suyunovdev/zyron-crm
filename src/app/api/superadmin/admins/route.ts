@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { parseBody } from '@/lib/validate';
+import { logAudit } from '@/lib/audit';
 import { logger } from '@/lib/logger';
 
 // Faqat superadmin: admin va superadmin akkauntlarini boshqarish
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
       select: { id: true, login: true, name: true, role: true, status: true },
     });
 
+    await logAudit(auth, 'create', 'admin', user.id, `Yangi ${role} yaratildi: ${name} (${login})`);
     return NextResponse.json(user, { status: 201 });
   } catch (error) {
     logger.error('[POST /api/superadmin/admins]', error);

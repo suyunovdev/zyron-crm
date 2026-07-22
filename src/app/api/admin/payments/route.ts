@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { createNotification } from "@/lib/notify";
 import { logger } from '@/lib/logger';
 import { getPagination, paginated } from '@/lib/paginate';
+import { logAudit } from '@/lib/audit';
 
 export async function GET(req: NextRequest) {
   try {
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
   if (auth instanceof NextResponse) return auth;
 
   const body = await req.json();
-  const { studentId, amount, month, method, note } = body;
+  const { studentId, amount, month, method, note, type } = body;
 
   if (!studentId || !amount || !month) {
     return NextResponse.json(
@@ -61,12 +62,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // refund/discount — faqat superadmin (moliyaviy nazorat)
+  const payType = ['payment', 'refund', 'discount'].includes(type) ? type : 'payment';
+  if (payType !== 'payment' && auth.role !== 'superadmin') {
+    return NextResponse.json({ error: 'Refund/chegirma faqat superadmin tomonidan' }, { status: 403 });
+  }
+
   const payment = await prisma.payment.create({
     data: {
       studentId,
       amount: Number(amount),
       month,
       method: method || "cash",
+      type: payType,
       note: note || null,
     },
     include: {
@@ -91,8 +99,9 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(payment, { status: 201 });
 }
 
+// To'lovni o'chirish — faqat superadmin (moliyaviy nazorat)
 export async function DELETE(req: NextRequest) {
-  const auth = await requireAuth("admin");
+  const auth = await requireAuth("superadmin");
   if (auth instanceof NextResponse) return auth;
 
   const body = await req.json();
@@ -105,9 +114,10 @@ export async function DELETE(req: NextRequest) {
     );
   }
 
-  await prisma.payment.delete({
-    where: { id },
-  });
+  const payment = await prisma.payment.findUnique({ where: { id }, include: { student: { select: { name: true } } } });
+  await prisma.payment.delete({ where: { id } });
+  await logAudit(auth, 'delete', 'payment', id,
+    `To'lov o'chirildi: ${payment?.student.name || '?'} — ${payment?.amount?.toLocaleString() || 0} so'm`);
 
   return NextResponse.json({ success: true });
 }

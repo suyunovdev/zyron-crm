@@ -1,4 +1,4 @@
-import { Users, UsersRound, UserPlus, FolderOpen, ClipboardList, CreditCard, UserSearch, FileBarChart, LayoutDashboard, CalendarClock, Settings, UserCheck, ShieldCheck } from 'lucide-react';
+import { Users, UsersRound, UserPlus, FolderOpen, ClipboardList, CreditCard, UserSearch, FileBarChart, LayoutDashboard, CalendarClock, Settings, UserCheck, ShieldCheck, Wallet, ScrollText, SlidersHorizontal } from 'lucide-react';
 import type { NavItem } from '@/components/DashboardLayout';
 
 export const adminNav: NavItem[] = [
@@ -13,10 +13,13 @@ export const adminNav: NavItem[] = [
   { label: 'Oylik hisobot', href: '/dashboard/admin/reports', icon: FileBarChart, action: 'report-modal' },
 ];
 
-// Superadmin: adminNav + faqat superadminga ko'rinadigan "Adminlar" bandi
+// Superadmin: adminNav + faqat superadminga ko'rinadigan bandlar
 export const superadminNav: NavItem[] = [
   ...adminNav,
+  { label: 'Oylik', href: '/dashboard/admin/payroll', icon: Wallet },
   { label: 'Adminlar', href: '/dashboard/admin/admins', icon: ShieldCheck },
+  { label: 'Audit', href: '/dashboard/admin/audit', icon: ScrollText },
+  { label: 'Tizim', href: '/dashboard/admin/system', icon: SlidersHorizontal },
 ];
 
 export const teacherNav: NavItem[] = [

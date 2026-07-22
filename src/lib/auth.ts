@@ -11,10 +11,12 @@ export interface SessionUser {
   login: string;
   name: string;
   role: 'superadmin' | 'admin' | 'teacher' | 'student' | 'parent';
+  /** Impersonation (login-as) paytida — asl superadmin. */
+  impersonatedBy?: { id: string; name: string };
 }
 
-export async function createToken(user: SessionUser): Promise<string> {
-  return new SignJWT({ ...user })
+export async function createToken(user: SessionUser, extra?: Record<string, unknown>): Promise<string> {
+  return new SignJWT({ ...user, ...(extra || {}) })
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime('7d')
     .sign(JWT_SECRET);

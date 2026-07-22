@@ -75,8 +75,9 @@ export async function proxy(req: NextRequest) {
     }
 
     // Role-based access control
-    // Adminlar sahifasi — faqat superadmin
-    if (path.startsWith('/dashboard/admin/admins') && role !== 'superadmin') {
+    // Superadmin-only sahifalar
+    const superadminPaths = ['/dashboard/admin/admins', '/dashboard/admin/payroll', '/dashboard/admin/audit', '/dashboard/admin/system'];
+    if (superadminPaths.some(p => path.startsWith(p)) && role !== 'superadmin') {
       return NextResponse.redirect(new URL('/dashboard/admin', req.url));
     }
     if (path.startsWith('/dashboard/admin') && role !== 'admin' && role !== 'superadmin') {

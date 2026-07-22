@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     login: user.login,
     name: user.name,
     role: user.role as 'superadmin' | 'admin' | 'teacher' | 'student' | 'parent',
-  });
+  }, { tokenVersion: user.tokenVersion });
 
   const dashboardPath =
     (user.role === 'admin' || user.role === 'superadmin') ? '/dashboard/admin' :

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 // Get all users (with optional filters)
 export async function GET(req: NextRequest) {
@@ -95,7 +96,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ data: users, pagination });
   } catch (error) {
-    console.error("[GET /api/admin/users]", error);
+    logger.error("[GET /api/admin/users]", error);
     return NextResponse.json({ error: "Server xatosi" }, { status: 500 });
   }
 }

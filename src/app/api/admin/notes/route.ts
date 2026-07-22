@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(note, { status: 201 });
   } catch (error) {
-    console.error('[POST /api/admin/notes]', error);
+    logger.error('[POST /api/admin/notes]', error);
     return NextResponse.json({ error: 'Server xatosi' }, { status: 500 });
   }
 }
@@ -34,7 +35,7 @@ export async function DELETE(req: NextRequest) {
     await prisma.note.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error('[DELETE /api/admin/notes]', error);
+    logger.error('[DELETE /api/admin/notes]', error);
     return NextResponse.json({ error: 'Server xatosi' }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 // Admin can modify attendance
 export async function PATCH(req: NextRequest) {
@@ -60,7 +61,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ error: 'Parametrlar yetarli emas' }, { status: 400 });
   } catch (error) {
-    console.error('[PATCH /api/admin/attendance]', error);
+    logger.error('[PATCH /api/admin/attendance]', error);
     return NextResponse.json({ error: 'Server xatosi' }, { status: 500 });
   }
 }
@@ -81,7 +82,7 @@ export async function DELETE(req: NextRequest) {
     });
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error('[DELETE /api/admin/attendance]', error);
+    logger.error('[DELETE /api/admin/attendance]', error);
     return NextResponse.json({ error: 'Server xatosi' }, { status: 500 });
   }
 }

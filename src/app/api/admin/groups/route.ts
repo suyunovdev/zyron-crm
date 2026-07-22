@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { generateLessons } from '@/lib/generate-lessons';
+import { logger } from '@/lib/logger';
 
 // Get all groups
 export async function GET() {
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
         time: time || '14:00',
       });
     } catch (e) {
-      console.error('[Auto-generate lessons]', e);
+      logger.error('[Auto-generate lessons]', e);
     }
   }
 

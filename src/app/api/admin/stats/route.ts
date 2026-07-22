@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { computeDebtSummary } from '@/lib/billing';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -95,7 +96,7 @@ export async function GET() {
     umumiyQarzdorlik: debt.totalDebt, // haqiqiy qarz (billing.ts orqali hisoblanadi)
   });
   } catch (error) {
-    console.error("[GET /api/admin/stats]", error);
+    logger.error("[GET /api/admin/stats]", error);
     return NextResponse.json({ error: "Server xatosi" }, { status: 500 });
   }
 }

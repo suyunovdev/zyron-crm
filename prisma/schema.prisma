@@ -29,6 +29,9 @@ model User {
   attendances   Attendance[]
   payments      Payment[]
   notes         Note[]
+
+  @@index([role, status])
+  @@index([parentId])
 }
 
 model Group {
@@ -53,6 +56,9 @@ model Group {
 
   students GroupStudent[]
   lessons  Lesson[]
+
+  @@index([teacherId])
+  @@index([status])
 }
 
 model GroupStudent {
@@ -64,6 +70,7 @@ model GroupStudent {
   joinedAt  DateTime @default(now())
 
   @@unique([groupId, studentId])
+  @@index([studentId])
 }
 
 model Lesson {
@@ -78,6 +85,9 @@ model Lesson {
   createdAt     DateTime @default(now())
 
   attendances Attendance[]
+
+  @@index([groupId])
+  @@index([scheduledDate])
 }
 
 model Attendance {
@@ -93,6 +103,7 @@ model Attendance {
   markedAt  DateTime @default(now())
 
   @@unique([lessonId, studentId])
+  @@index([studentId, present])
 }
 
 model Payment {
@@ -104,6 +115,9 @@ model Payment {
   method    String   @default("cash") // cash, card, transfer
   note      String?
   createdAt DateTime @default(now())
+
+  @@index([studentId])
+  @@index([month])
 }
 
 model Note {
@@ -113,6 +127,8 @@ model Note {
   type      String   @default("comment") // comment, frozen, archived, status
   text      String
   createdAt DateTime @default(now())
+
+  @@index([studentId])
 }
 
 model Notification {
@@ -123,6 +139,8 @@ model Notification {
   read      Boolean  @default(false)
   link      String?  // sahifaga yo'naltirish
   createdAt DateTime @default(now())
+
+  @@index([read, createdAt])
 }
 
 model Lead {
@@ -142,4 +160,7 @@ model Lead {
   note        String?
   prepayment  Int?     // oldindan to'lov summasi
   createdAt   DateTime @default(now())
+
+  @@index([status])
+  @@index([createdAt])
 }

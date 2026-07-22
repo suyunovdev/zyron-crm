@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Zyron Academy — Aka-Uka Ta'lim Markazi CRM
 
-## Getting Started
+Ta'lim markazi uchun boshqaruv platformasi: o'quvchilar, ustozlar, guruhlar,
+davomat, to'lovlar, lidlar (CRM) va ota-ona kabineti.
 
-First, run the development server:
+## Texnologiyalar
+
+- **Next.js 16** (App Router, Turbopack) + React 19 + TypeScript
+- **Prisma 6** — lokalda SQLite, production'da PostgreSQL/Neon tavsiya etiladi
+- **jose** (JWT) + **bcryptjs** — autentifikatsiya
+- **Tailwind CSS 4**, framer-motion, lucide-react
+- **Vitest** — testlar
+
+## Rollar
+
+| Rol | Domen | Kirish |
+|-----|-------|--------|
+| `superadmin` / `admin` | `crm.*` | To'liq boshqaruv |
+| `teacher` | `crm.*` | O'z guruhlari, davomat |
+| `student` | `my.*` | O'z guruhlari, davomat, balans |
+| `parent` | `my.*` | Farzand(lar) nazorati |
+
+RBAC `src/proxy.ts` (middleware) va `requireAuth()` orqali ikki qatlamda ta'minlanadi.
+
+## Boshlash
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# 1. Bog'liqliklarni o'rnatish
+npm install
+
+# 2. Muhitni sozlash
+cp .env.example .env   # keyin qiymatlarni to'ldiring
+
+# 3. Bazani tayyorlash
+npx prisma migrate dev
+npm run db:seed        # demo ma'lumotlar
+
+# 4. Dev serverni ishga tushirish
+npm run dev            # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Demo loginlar (seed)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Rol | Login | Parol |
+|-----|-------|-------|
+| Admin | `admin` | `admin123` |
+| O'qituvchi | `shahboz` | `teacher123` |
+| O'quvchi | `zoir` | `student123` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Skriptlar
 
-## Learn More
+```bash
+npm run dev        # dev server (Turbopack)
+npm run build      # production build
+npm run start      # production server
+npm run lint       # ESLint
+npm run test       # Vitest (biznes-logika testlari)
+npm run db:seed    # bazani demo ma'lumot bilan to'ldirish
+npm run db:reset   # migratsiyani reset + seed
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Biznes-logika
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Billing** (`src/lib/billing.ts`) — yagona hisob-kitob manbasi.
+  Balans = jami to'langan − (qatnashgan darslar × oylik narx ÷ oyiga darslar).
+  `student/balance` va `admin/stats` shu manbadan foydalanadi (nomuvofiqlik yo'q).
+- **Davomat** — teacher dars boshlanishidan 15 min oldindan kun oxirigacha
+  (ertasi 00:00) belgilaydi. Muhlatdan keyin `cron/auto-absent` belgilanmaganlarni
+  "absent" qiladi; tuzatishni faqat admin qila oladi.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deploy
 
-## Deploy on Vercel
+Batafsil: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Qisqacha:
+1. Production'da `DATABASE_URL` ni PostgreSQL/Neon ga o'tkazing.
+2. `JWT_SECRET` va `CRON_SECRET` ni env'ga qo'ying (kuchli qiymatlar).
+3. `npm run build && npm run start` — PM2/systemd orqali (`ecosystem.config.js`).
+4. `cron/auto-absent` ni har 30 daqiqada chaqiradigan cron sozlang.

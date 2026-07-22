@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-utils";
 import { prisma } from "@/lib/db";
+import { logger } from '@/lib/logger';
 
 export async function GET(req: NextRequest) {
   try {
@@ -75,7 +76,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ students, teachers, groups });
   } catch (error) {
-    console.error("Search error:", error);
+    logger.error("Search error:", error);
     return NextResponse.json(
       { error: "Qidiruvda xatolik yuz berdi" },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-utils";
 import { prisma } from "@/lib/db";
 import { createNotification } from "@/lib/notify";
+import { logger } from '@/lib/logger';
 
 const VALID_STATUSES = ["new", "contacted", "trial", "enrolled", "rejected"];
 
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ leads });
   } catch (error) {
-    console.error("[GET /api/admin/leads]", error);
+    logger.error("[GET /api/admin/leads]", error);
     return NextResponse.json({ error: "Server xatosi" }, { status: 500 });
   }
 }
@@ -119,7 +120,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ lead });
   } catch (error) {
-    console.error("[PATCH /api/admin/leads]", error);
+    logger.error("[PATCH /api/admin/leads]", error);
     return NextResponse.json({ error: "Server xatosi" }, { status: 500 });
   }
 }
@@ -145,7 +146,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[DELETE /api/admin/leads]", error);
+    logger.error("[DELETE /api/admin/leads]", error);
     return NextResponse.json({ error: "Server xatosi" }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
+import { logger } from '@/lib/logger';
 
 export async function GET(
   _req: NextRequest,
@@ -83,7 +84,7 @@ export async function GET(
 
     return NextResponse.json(user);
   } catch (error) {
-    console.error('[GET /api/admin/users/[id]]', error);
+    logger.error('[GET /api/admin/users/[id]]', error);
     return NextResponse.json({ error: 'Server xatosi' }, { status: 500 });
   }
 }

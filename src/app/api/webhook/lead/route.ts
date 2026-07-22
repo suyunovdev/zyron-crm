@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { createNotification } from '@/lib/notify';
+import { logger } from '@/lib/logger';
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'aka-uka-lead-webhook-2026';
 
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, leadId: lead.leadId }, { status: 201 });
   } catch (error) {
-    console.error('[POST /api/webhook/lead]', error);
+    logger.error('[POST /api/webhook/lead]', error);
     return NextResponse.json({ error: 'Server xatosi' }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-utils";
 import { prisma } from "@/lib/db";
 import { createNotification } from "@/lib/notify";
+import { logger } from '@/lib/logger';
 
 export async function GET(req: NextRequest) {
   try {
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(payments);
   } catch (error) {
-    console.error("[GET /api/admin/payments]", error);
+    logger.error("[GET /api/admin/payments]", error);
     return NextResponse.json({ error: "Server xatosi" }, { status: 500 });
   }
 }

@@ -1,0 +1,24 @@
+# systemd unit (PM2 o'rniga muqobil).
+# O'rnatish:
+#   sudo cp deploy/zyron-academy.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now zyron-academy
+# Yo'l va User qiymatlarini o'z serveringizga moslang.
+
+[Unit]
+Description=Zyron Academy (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/zyron-academy
+Environment=NODE_ENV=production
+Environment=PORT=3000
+EnvironmentFile=/var/www/zyron-academy/.env
+ExecStart=/usr/bin/npm run start
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

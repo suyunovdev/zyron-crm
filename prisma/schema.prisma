@@ -219,3 +219,42 @@ model SmsCampaign {
   status         String   @default("queued") // queued, sent, failed
   createdAt      DateTime @default(now())
 }
+
+// Ticket — ustoz admin yoki ota-onaga so'rov/muammo yozadi (thread)
+// AuditLog kabi: User'ga relation yo'q, sof id maydonlar.
+model Ticket {
+  id               String   @id @default(cuid())
+  authorId         String   // ustoz (muallif)
+  authorName       String
+  recipientType    String   // admin | parent
+  recipientId      String?  // ota-ona user id (recipientType=parent bo'lsa)
+  relatedStudentId String?  // qaysi o'quvchi haqida (ixtiyoriy/kontekst)
+  relatedStudentName String?
+  category         String   // attendance, schedule, salary, student, technical, leave, other
+  subject          String
+  priority         String   @default("normal") // low, normal, high
+  status           String   @default("open")   // open, in_progress, resolved, closed
+  teacherUnread    Boolean  @default(false)     // ustoz uchun o'qilmagan javob bormi
+  recipientUnread  Boolean  @default(true)      // qabul qiluvchi uchun o'qilmagan bormi
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  messages TicketMessage[]
+
+  @@index([authorId])
+  @@index([recipientType, status])
+  @@index([recipientId])
+}
+
+model TicketMessage {
+  id         String   @id @default(cuid())
+  ticketId   String
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderId   String
+  senderName String
+  senderRole String
+  body       String
+  createdAt  DateTime @default(now())
+
+  @@index([ticketId])
+}

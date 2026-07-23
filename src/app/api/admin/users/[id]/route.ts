@@ -18,6 +18,7 @@ export async function GET(
       select: {
         id: true,
         login: true,
+        rawPass: true,
         name: true,
         phone: true,
         role: true,
@@ -26,6 +27,7 @@ export async function GET(
         level: true,
         avatar: true,
         createdAt: true,
+        parent: { select: { id: true, login: true, name: true, rawPass: true } },
         teacherGroups: {
           include: {
             students: { include: { student: { select: { id: true, name: true, status: true } } } },

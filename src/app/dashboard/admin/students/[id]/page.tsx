@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Phone, Loader2, Snowflake, Archive, RotateCcw,
   X, Pencil, Send, GraduationCap, CheckCircle, XCircle,
-  ChevronDown, ChevronRight, Printer, KeyRound,
+  ChevronDown, ChevronRight, Printer, KeyRound, Eye, EyeOff, Copy,
 } from 'lucide-react';
 import Link from 'next/link';
 import { computeBillable, groupCost } from '@/lib/billing-core';
@@ -33,9 +33,10 @@ interface Note {
   id: string; type: string; text: string; createdAt: string;
 }
 interface StudentDetail {
-  id: string; login: string; name: string; phone: string;
+  id: string; login: string; rawPass: string | null; name: string; phone: string;
   role: string; subject: string | null; status: string; level: string | null;
   avatar: string | null; createdAt: string;
+  parent: { id: string; login: string; name: string; rawPass: string | null } | null;
   groupStudents: GroupStudent[];
   payments: Payment[];
   attendances: AttendanceRecord[];
@@ -99,6 +100,7 @@ export default function StudentProfilePage() {
 
   const [showResetPassModal, setShowResetPassModal] = useState(false);
   const [resetPassValue, setResetPassValue] = useState('');
+  const [revealPass, setRevealPass] = useState(false);
   const [resetPassSubmitting, setResetPassSubmitting] = useState(false);
 
   const [statusChanging, setStatusChanging] = useState(false);
@@ -497,16 +499,47 @@ export default function StudentProfilePage() {
               )}
               <div className="flex items-center justify-between py-3 border-b border-slate-100 bg-slate-50/50 px-3">
                 <span className="text-sm text-slate-500">Login</span>
-                <span className="text-sm font-mono font-bold text-slate-800">{student.login}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-mono font-bold text-slate-800">{student.login}</span>
+                  <button onClick={() => navigator.clipboard?.writeText(student.login)} title="Nusxalash" className="text-slate-400 hover:text-blue-600"><Copy className="w-3.5 h-3.5" /></button>
+                </div>
               </div>
-              <div className="flex items-center justify-between py-3 border-b border-slate-100 bg-slate-50/50 px-3 rounded-b-lg">
+              <div className="flex items-center justify-between py-3 bg-slate-50/50 px-3 rounded-b-lg">
                 <span className="text-sm text-slate-500">Parol</span>
-                <button
-                  onClick={() => { setResetPassValue(''); setShowResetPassModal(true); }}
-                  className="flex items-center gap-1 text-xs font-semibold text-amber-600 hover:text-amber-700">
-                  <KeyRound className="w-3.5 h-3.5" /> Parolni yangilash
-                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-mono font-bold text-slate-800">{revealPass ? (student.rawPass || '—') : '••••••'}</span>
+                  <button onClick={() => setRevealPass(v => !v)} title={revealPass ? 'Yashirish' : "Ko'rsatish"} className="text-slate-400 hover:text-slate-700">
+                    {revealPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                  {student.rawPass && <button onClick={() => navigator.clipboard?.writeText(student.rawPass!)} title="Nusxalash" className="text-slate-400 hover:text-blue-600"><Copy className="w-3.5 h-3.5" /></button>}
+                  <button onClick={() => { setResetPassValue(''); setShowResetPassModal(true); }} title="Parolni yangilash" className="text-amber-600 hover:text-amber-700"><KeyRound className="w-3.5 h-3.5" /></button>
+                </div>
               </div>
+
+              {/* Ota-ona login/parol */}
+              {student.parent ? (
+                <div className="mt-2 rounded-lg border border-slate-100 overflow-hidden">
+                  <div className="bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">👪 Ota-ona — {student.parent.name}</div>
+                  <div className="flex items-center justify-between py-2.5 px-3 border-t border-slate-100">
+                    <span className="text-sm text-slate-500">Login</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-mono font-bold text-slate-800">{student.parent.login}</span>
+                      <button onClick={() => navigator.clipboard?.writeText(student.parent!.login)} title="Nusxalash" className="text-slate-400 hover:text-blue-600"><Copy className="w-3.5 h-3.5" /></button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between py-2.5 px-3 border-t border-slate-100">
+                    <span className="text-sm text-slate-500">Parol</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-mono font-bold text-slate-800">{revealPass ? (student.parent.rawPass || '—') : '••••••'}</span>
+                      {student.parent.rawPass && <button onClick={() => navigator.clipboard?.writeText(student.parent!.rawPass!)} title="Nusxalash" className="text-slate-400 hover:text-blue-600"><Copy className="w-3.5 h-3.5" /></button>}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2 text-xs text-slate-400 px-3 py-2 bg-amber-50 rounded-lg">
+                  👪 Ota-ona akkaunti bog&apos;lanmagan (eski o&apos;quvchi)
+                </div>
+              )}
               {/* Kurs info is shown in group card */}
             </div>
 

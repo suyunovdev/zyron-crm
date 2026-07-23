@@ -8,6 +8,7 @@ import {
   ChevronDown, ChevronRight, Printer, KeyRound,
 } from 'lucide-react';
 import Link from 'next/link';
+import { computeBillable, groupCost } from '@/lib/billing-core';
 
 // ─── Types ───
 interface Teacher { id: string; name: string }
@@ -26,7 +27,7 @@ interface Payment {
 }
 interface AttendanceRecord {
   id: string; present: boolean; markedAt: string;
-  lesson: { id: string; scheduledDate: string; scheduledTime: string; groupId: string };
+  lesson: { id: string; scheduledDate: string; scheduledTime: string; order: number; groupId: string };
 }
 interface Note {
   id: string; type: string; text: string; createdAt: string;
@@ -140,22 +141,23 @@ export default function StudentProfilePage() {
     return Math.round(activeGroup.price / activeGroup.lessonsPerMonth);
   }, [activeGroup]);
 
-  // Deductions: attended lessons cost per month
+  // Deductions: hisoblanadigan (billable) darslar oy bo'yicha — grace qoidasi (billing-core)
   const deductionsByMonth = useMemo(() => {
-    if (!student || !activeGroup) return new Map<string, { lessons: number; total: number }>();
     const map = new Map<string, { lessons: number; total: number }>();
-    const cost = activeGroup.price && activeGroup.lessonsPerMonth
-      ? Math.round(activeGroup.price / activeGroup.lessonsPerMonth)
-      : 0;
-    student.attendances
-      .filter(a => a.present && a.lesson.groupId === activeGroup.id)
-      .forEach(a => {
-        const monthKey = a.lesson.scheduledDate.slice(0, 7); // "2026-07"
-        const curr = map.get(monthKey) || { lessons: 0, total: 0 };
-        curr.lessons += 1;
-        curr.total += cost;
-        map.set(monthKey, curr);
-      });
+    if (!student || !activeGroup || !activeGroup.price || !activeGroup.lessonsPerMonth) return map;
+    const cost = Math.round(activeGroup.price / activeGroup.lessonsPerMonth);
+    const recs = student.attendances
+      .filter(a => a.lesson.groupId === activeGroup.id)
+      .sort((a, b) => a.lesson.scheduledDate.localeCompare(b.lesson.scheduledDate) || a.lesson.order - b.lesson.order)
+      .map(a => ({ scheduledDate: a.lesson.scheduledDate, present: a.present }));
+    const { billableDates } = computeBillable(recs);
+    billableDates.forEach(d => {
+      const monthKey = d.slice(0, 7); // "2026-07"
+      const curr = map.get(monthKey) || { lessons: 0, total: 0 };
+      curr.lessons += 1;
+      curr.total += cost;
+      map.set(monthKey, curr);
+    });
     return map;
   }, [student, activeGroup]);
 
@@ -165,14 +167,17 @@ export default function StudentProfilePage() {
       .filter(p => p.month === currentMonth)
       .reduce((s, p) => s + p.amount, 0);
     const total = student.payments.reduce((s, p) => s + p.amount, 0);
-    // Total deducted from all attended lessons across all groups
+    // Jami hisoblangan — grace qoidasi (billing-core), student/admin-stats bilan bir xil
     let deducted = 0;
     student.groupStudents.forEach(gs => {
       const g = gs.group;
       if (!g.price || !g.lessonsPerMonth) return;
-      const perLesson = Math.round(g.price / g.lessonsPerMonth);
-      const attended = student.attendances.filter(a => a.present && a.lesson.groupId === g.id).length;
-      deducted += attended * perLesson;
+      const recs = student.attendances
+        .filter(a => a.lesson.groupId === g.id)
+        .sort((a, b) => a.lesson.scheduledDate.localeCompare(b.lesson.scheduledDate) || a.lesson.order - b.lesson.order)
+        .map(a => ({ scheduledDate: a.lesson.scheduledDate, present: a.present }));
+      const { billableCount } = computeBillable(recs);
+      deducted += groupCost(billableCount, g.price, g.lessonsPerMonth);
     });
     return { thisMonth, total, deducted, balance: total - deducted };
   }, [student, currentMonth]);

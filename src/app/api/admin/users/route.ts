@@ -6,6 +6,7 @@ import { requireAuth } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { parseBody } from '@/lib/validate';
 import { canManageRole } from '@/lib/roles';
+import { computeBillable, groupCost } from '@/lib/billing-core';
 
 const CreateUserSchema = z.object({
   login: z.string().min(1).max(64),
@@ -64,8 +65,8 @@ export async function GET(req: NextRequest) {
         ...(isStudent ? {
           payments: { select: { amount: true, month: true } },
           attendances: {
-            where: { present: true },
-            select: { lesson: { select: { groupId: true } } },
+            select: { present: true, lesson: { select: { groupId: true, scheduledDate: true, order: true } } },
+            orderBy: [{ lesson: { scheduledDate: 'asc' } }, { lesson: { order: 'asc' } }],
           },
         } : {}),
       },
@@ -82,20 +83,24 @@ export async function GET(req: NextRequest) {
 
       const enriched = users.map(u => {
         const payments = (u as Record<string, unknown>).payments as { amount: number; month: string }[] || [];
-        const attendances = (u as Record<string, unknown>).attendances as { lesson: { groupId: string } }[] || [];
+        const attendances = (u as Record<string, unknown>).attendances as
+          { present: boolean; lesson: { groupId: string; scheduledDate: string } }[] || [];
 
         const totalPaid = payments.reduce((s: number, p: { amount: number }) => s + p.amount, 0);
         const paidThisMonth = payments
           .filter((p: { month: string }) => p.month === currentMonth)
           .reduce((s: number, p: { amount: number }) => s + p.amount, 0);
 
+        // Guruh bo'yicha billable (grace qoidasi — billing.ts bilan bir xil), attendances xronologik
         let totalDeducted = 0;
         u.groupStudents.forEach((gs: { group: { id: string; price: number | null; lessonsPerMonth: number | null } }) => {
           const g = gs.group;
           if (!g.price || !g.lessonsPerMonth) return;
-          const perLesson = Math.round(g.price / g.lessonsPerMonth);
-          const attended = attendances.filter((a: { lesson: { groupId: string } }) => a.lesson.groupId === g.id).length;
-          totalDeducted += attended * perLesson;
+          const recs = attendances
+            .filter(a => a.lesson.groupId === g.id)
+            .map(a => ({ scheduledDate: a.lesson.scheduledDate, present: a.present }));
+          const { billableCount } = computeBillable(recs);
+          totalDeducted += groupCost(billableCount, g.price, g.lessonsPerMonth);
         });
 
         const balance = totalPaid - totalDeducted;

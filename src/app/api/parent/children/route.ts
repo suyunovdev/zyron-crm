@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
+import { computeStudentBalance } from '@/lib/billing';
 
 // Parent's children — with groups, attendance, payments, balance, rankings
 export async function GET() {
@@ -57,19 +58,10 @@ export async function GET() {
     },
   });
 
-  const enriched = children.map(child => {
-    const totalPaid = child.payments.reduce((s, p) => s + p.amount, 0);
-
-    let totalCost = 0;
-    child.groupStudents.forEach(gs => {
-      const g = gs.group;
-      if (!g.price || !g.lessonsPerMonth) return;
-      const perLesson = Math.round(g.price / g.lessonsPerMonth);
-      const attended = child.attendances.filter(a => a.present && a.lesson.groupId === g.id).length;
-      totalCost += attended * perLesson;
-    });
-
-    const balance = totalPaid - totalCost;
+  const enriched = await Promise.all(children.map(async child => {
+    // Balans — yagona billing manbasidan (grace qoidasi bilan, student/admin bilan bir xil)
+    const bal = await computeStudentBalance(child.id);
+    const { totalPaid, totalCost, balance } = bal;
 
     // Attendance stats
     const totalPresent = child.attendances.filter(a => a.present).length;
@@ -129,7 +121,7 @@ export async function GET() {
       attendance: { present: totalPresent, total: totalMarked, pct: attendancePct },
       recentPayments: child.payments.slice(0, 5),
     };
-  });
+  }));
 
   return NextResponse.json(enriched);
 }

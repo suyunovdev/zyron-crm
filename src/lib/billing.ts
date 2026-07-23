@@ -1,48 +1,20 @@
 import { prisma } from '@/lib/db';
+import { computeBillable, groupCost } from '@/lib/billing-core';
 
 /**
  * Yagona hisob-kitob (billing) manbasi.
  *
- * Model: "per-lesson" — o'quvchi qatnashgan har bir dars uchun
- * (guruhning oylik narxi ÷ oyiga darslar soni) miqdorida hisoblanadi.
+ * Model: "joy band" (reserved seat) — o'quvchi kelgan yoki sababsiz ketma-ket <=3
+ * yo'qlik qilgan har bir dars uchun (narx ÷ oyiga darslar) hisoblanadi (billing-core).
  * Balans = jami to'langan − jami hisoblangan (running ledger, butun davr).
  *
- * MUHIM: student/balance va admin/stats AYNAN shu funksiyalardan foydalanadi,
- * shunda o'quvchi va admin bir xil raqamni ko'radi (nomuvofiqlik bo'lmaydi).
+ * MUHIM: student/balance, admin/stats, admin o'quvchilar ro'yxati/detali va
+ * parent/children AYNAN shu sof yadrodan (billing-core) foydalanadi — hamma joyda
+ * bir xil balans.
  */
 
-/** Bitta dars narxi (so'mda). lessonsPerMonth <= 0 bo'lsa 0. */
-export function perLessonRate(price: number, lessonsPerMonth: number): number {
-  return lessonsPerMonth > 0 ? price / lessonsPerMonth : 0;
-}
-
-/** Sababsiz ketma-ket yo'qlik uchun "grace" chegarasi (shu songacha hisoblanadi). */
-export const ABSENCE_GRACE = 3;
-
-/**
- * "Joy band" (reserved seat) modeli — qaysi darslar hisoblanadigan (billable):
- *  - present → hisoblanadi, ketma-ketlik nolga tushadi;
- *  - yo'qlik (present=false) → ketma-ketlik +1; agar <= ABSENCE_GRACE bo'lsa hisoblanadi,
- *    aks holda hisoblanmaydi.
- * records XRONOLOGIK tartibda (lesson scheduledDate, keyin order) berilishi shart.
- * currentAbsenceStreak > ABSENCE_GRACE → o'quvchi hozir "tushib qolgan" (avto-muzlatish sharti).
- */
-export function computeBillable(
-  records: { scheduledDate: string; present: boolean }[],
-): { billableDates: string[]; billableCount: number; currentAbsenceStreak: number } {
-  let streak = 0;
-  const billableDates: string[] = [];
-  for (const r of records) {
-    if (r.present) {
-      streak = 0;
-      billableDates.push(r.scheduledDate);
-    } else {
-      streak++;
-      if (streak <= ABSENCE_GRACE) billableDates.push(r.scheduledDate);
-    }
-  }
-  return { billableDates, billableCount: billableDates.length, currentAbsenceStreak: streak };
-}
+// Sof yadroni re-export qilamiz (eski `from '@/lib/billing'` importlari ishlashi uchun)
+export { perLessonRate, computeBillable, groupCost, ABSENCE_GRACE } from '@/lib/billing-core';
 
 export interface GroupBalance {
   groupId: string;
@@ -74,7 +46,6 @@ export async function computeStudentBalance(studentId: string): Promise<StudentB
 
   for (const gs of groupStudents) {
     const { group } = gs;
-    const rate = perLessonRate(group.price, group.lessonsPerMonth);
 
     // Xronologik davomat yozuvlari (present + yo'qlik) — grace qoidasi uchun
     const records = await prisma.attendance.findMany({
@@ -86,7 +57,7 @@ export async function computeStudentBalance(studentId: string): Promise<StudentB
       records.map(r => ({ scheduledDate: r.lesson.scheduledDate, present: r.present })),
     );
 
-    const cost = Math.round(billableCount * rate);
+    const cost = groupCost(billableCount, group.price, group.lessonsPerMonth);
     totalCost += cost;
 
     groups.push({
@@ -166,9 +137,8 @@ export async function computeDebtSummary(): Promise<DebtSummary> {
   const studentIds = new Set<string>();
   for (const m of memberships) {
     studentIds.add(m.studentId);
-    const rate = perLessonRate(m.group.price, m.group.lessonsPerMonth);
-    const attended = attendedByStudentGroup.get(`${m.studentId}:${m.group.id}`) || 0;
-    const cost = Math.round(attended * rate);
+    const billable = attendedByStudentGroup.get(`${m.studentId}:${m.group.id}`) || 0;
+    const cost = groupCost(billable, m.group.price, m.group.lessonsPerMonth);
     costByStudent.set(m.studentId, (costByStudent.get(m.studentId) || 0) + cost);
   }
   // To'lov qilgan, lekin guruhsiz o'quvchilar ham hisobga olinsin (balans musbat bo'ladi)

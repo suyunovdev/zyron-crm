@@ -60,6 +60,7 @@ export async function GET(
                 id: true,
                 scheduledDate: true,
                 scheduledTime: true,
+                order: true,
                 groupId: true,
               },
             },

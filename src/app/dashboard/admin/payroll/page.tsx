@@ -10,23 +10,29 @@ interface Row {
 
 const fmt = (n: number) => n.toLocaleString('uz-UZ');
 
+function currentMonth() {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
+}
+
 export default function PayrollPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [totals, setTotals] = useState({ salary: 0, revenue: 0 });
+  const [month, setMonth] = useState(currentMonth);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState('');
   const [edits, setEdits] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
-    const res = await fetch('/api/superadmin/payroll');
+    const res = await fetch(`/api/superadmin/payroll?month=${month}`);
     if (res.ok) {
       const d = await res.json();
       setRows(d.payroll);
       setTotals({ salary: d.totalSalary, revenue: d.totalRevenue });
     }
     setLoading(false);
-  }, []);
+  }, [month]);
   useEffect(() => { load(); }, [load]);
 
   const saveShare = async (teacherId: string) => {
@@ -45,11 +51,15 @@ export default function PayrollPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-          <Wallet className="w-6 h-6 text-emerald-600" /> Ustozlar oyligi
-        </h1>
-        <p className="text-sm text-slate-500 mt-0.5">Guruh tushumidan ulush asosida (qatnashuvga bog'liq)</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+            <Wallet className="w-6 h-6 text-emerald-600" /> Ustozlar oyligi
+          </h1>
+          <p className="text-sm text-slate-500 mt-0.5">Tanlangan oy tushumidan ulush asosida (qatnashuvga bog&apos;liq)</p>
+        </div>
+        <input type="month" value={month} onChange={e => setMonth(e.target.value)}
+          className="rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-700" />
       </div>
 
       {loading ? (

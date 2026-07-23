@@ -21,8 +21,9 @@ export interface TeacherPayroll {
  * Barcha ustozlar oyligini hisoblaydi.
  * Guruh tushumi = qatnashgan darslar × (narx ÷ oyiga darslar), student/balance bilan bir xil model.
  * @param defaultShare ustozda salaryShare bo'lmasa ishlatiladigan standart ulush (%)
+ * @param month        "2026-07" formatda — faqat o'sha oy darslari hisoblanadi (bo'sh bo'lsa butun davr)
  */
-export async function computePayroll(defaultShare = 0): Promise<TeacherPayroll[]> {
+export async function computePayroll(defaultShare = 0, month?: string): Promise<TeacherPayroll[]> {
   const teachers = await prisma.user.findMany({
     where: { role: 'teacher' },
     select: {
@@ -34,9 +35,12 @@ export async function computePayroll(defaultShare = 0): Promise<TeacherPayroll[]
     },
   });
 
-  // Har bir guruh uchun qatnashgan darslar soni (present)
+  // Har bir guruh uchun qatnashgan darslar soni (present) — oy bo'yicha filtrlangan
   const presentRows = await prisma.attendance.findMany({
-    where: { present: true },
+    where: {
+      present: true,
+      ...(month ? { lesson: { scheduledDate: { startsWith: month } } } : {}),
+    },
     select: { lesson: { select: { groupId: true } } },
   });
   const attendedByGroup = new Map<string, number>();

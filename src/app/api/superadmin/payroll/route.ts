@@ -8,16 +8,20 @@ import { getSetting } from '@/lib/settings';
 import { logAudit } from '@/lib/audit';
 import { logger } from '@/lib/logger';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const auth = await requireAuth('superadmin');
     if (auth instanceof NextResponse) return auth;
 
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const month = new URL(req.url).searchParams.get('month') || currentMonth;
+
     const defaultShare = parseInt(await getSetting('defaultSalaryShare')) || 0;
-    const payroll = await computePayroll(defaultShare);
+    const payroll = await computePayroll(defaultShare, month);
     const totalSalary = payroll.reduce((s, p) => s + p.salary, 0);
     const totalRevenue = payroll.reduce((s, p) => s + p.revenue, 0);
-    return NextResponse.json({ payroll, totalSalary, totalRevenue, defaultShare });
+    return NextResponse.json({ payroll, totalSalary, totalRevenue, defaultShare, month });
   } catch (error) {
     logger.error('[GET /api/superadmin/payroll]', error);
     return NextResponse.json({ error: 'Server xatosi' }, { status: 500 });

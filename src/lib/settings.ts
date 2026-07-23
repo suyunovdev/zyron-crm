@@ -5,7 +5,7 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   centerName: 'Aka-Uka Ta\'lim Markazi',
   defaultPrice: '400000',
   defaultLessonsPerMonth: '12',
-  defaultSalaryShare: '40', // ustoz standart ulushi (%)
+  defaultSalaryShare: '70', // ustoz standart ulushi (%)
   currency: 'so\'m',
 };
 

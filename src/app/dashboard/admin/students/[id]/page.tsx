@@ -8,6 +8,7 @@ import {
   ChevronDown, ChevronRight, Printer, KeyRound, Eye, EyeOff, Copy,
 } from 'lucide-react';
 import Link from 'next/link';
+import QRCode from 'qrcode';
 import { computeBillable, groupCost } from '@/lib/billing-core';
 
 // ─── Types ───
@@ -101,6 +102,8 @@ export default function StudentProfilePage() {
   const [showResetPassModal, setShowResetPassModal] = useState(false);
   const [resetPassValue, setResetPassValue] = useState('');
   const [revealPass, setRevealPass] = useState(false);
+  const [studentQR, setStudentQR] = useState('');
+  const [parentQR, setParentQR] = useState('');
   const [resetPassSubmitting, setResetPassSubmitting] = useState(false);
 
   const [statusChanging, setStatusChanging] = useState(false);
@@ -121,6 +124,18 @@ export default function StudentProfilePage() {
   }, [studentId]);
 
   useEffect(() => { fetchStudent(); }, [fetchStudent]);
+
+  // Student va ota-ona QR kodlarini bir vaqtda generatsiya qilish
+  useEffect(() => {
+    if (!student) { setStudentQR(''); setParentQR(''); return; }
+    const opts = { width: 220, margin: 1 } as const;
+    const credText = (login: string, pass: string | null) =>
+      `Aka-Uka platformasi\nLogin: ${login}\nParol: ${pass || '—'}`;
+    Promise.all([
+      QRCode.toDataURL(credText(student.login, student.rawPass), opts),
+      student.parent ? QRCode.toDataURL(credText(student.parent.login, student.parent.rawPass), opts) : Promise.resolve(''),
+    ]).then(([sq, pq]) => { setStudentQR(sq); setParentQR(pq); }).catch(() => {});
+  }, [student]);
 
   const activeGroup = student?.groupStudents?.[activeGroupIdx]?.group || null;
 
@@ -538,6 +553,33 @@ export default function StudentProfilePage() {
               ) : (
                 <div className="mt-2 text-xs text-slate-400 px-3 py-2 bg-amber-50 rounded-lg">
                   👪 Ota-ona akkaunti bog&apos;lanmagan (eski o&apos;quvchi)
+                </div>
+              )}
+
+              {/* QR kodlar — student va ota-ona (bir vaqtda) */}
+              {(studentQR || parentQR) && (
+                <div className="mt-3 rounded-lg border border-slate-100 overflow-hidden">
+                  <div className="bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">📱 QR kodlar (skanerlab kirish ma&apos;lumotlarini olish)</div>
+                  <div className="flex items-start justify-around gap-3 p-3">
+                    {studentQR && (
+                      <div className="text-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={studentQR} alt="O'quvchi QR" className="w-28 h-28 mx-auto rounded" />
+                        <p className="text-[11px] font-medium text-slate-600 mt-1">O&apos;quvchi</p>
+                        <button onClick={() => { const a = document.createElement('a'); a.href = studentQR; a.download = `${student.login}-qr.png`; a.click(); }}
+                          className="text-[10px] text-blue-600 hover:text-blue-800">Yuklab olish</button>
+                      </div>
+                    )}
+                    {parentQR && (
+                      <div className="text-center">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={parentQR} alt="Ota-ona QR" className="w-28 h-28 mx-auto rounded" />
+                        <p className="text-[11px] font-medium text-slate-600 mt-1">Ota-ona</p>
+                        <button onClick={() => { const a = document.createElement('a'); a.href = parentQR; a.download = `${student.parent?.login}-qr.png`; a.click(); }}
+                          className="text-[10px] text-blue-600 hover:text-blue-800">Yuklab olish</button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               {/* Kurs info is shown in group card */}

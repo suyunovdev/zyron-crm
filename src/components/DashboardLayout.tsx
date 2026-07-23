@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { GraduationCap, Menu, X, LogOut, ChevronDown, Settings, Search, Users, UserPlus, FolderOpen, Moon, Sun, Calendar, Loader2, Banknote, CreditCard, ArrowRightLeft, BarChart3, UserCheck, UserX, Snowflake, Archive, BookOpen, ChevronUp, Download, Bell, Check, CheckCheck, Trash2, UserRoundPlus, CircleDollarSign, Globe } from 'lucide-react';
+import { GraduationCap, Menu, X, LogOut, ChevronDown, Settings, Search, Users, UserPlus, FolderOpen, Moon, Sun, Calendar, Loader2, Banknote, CreditCard, ArrowRightLeft, BarChart3, UserCheck, UserX, Snowflake, Archive, BookOpen, ChevronUp, Download, Bell, Check, CheckCheck, Trash2, UserRoundPlus, CircleDollarSign, Globe, UserCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 
@@ -561,6 +561,7 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [teacherPay, setTeacherPay] = useState<{ salary: number; todayEarning: number; month: string } | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -596,6 +597,15 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, [user, fetchNotifications]);
+
+  // Ustoz maoshi (profil dropdown uchun)
+  useEffect(() => {
+    if (user?.role !== 'teacher') return;
+    fetch('/api/teacher/salary')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setTeacherPay({ salary: d.salary, todayEarning: d.todayEarning, month: d.month }); })
+      .catch(() => {});
+  }, [user]);
 
   const markAllRead = async () => {
     await fetch('/api/admin/notifications', {
@@ -1106,6 +1116,28 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
                     <p className="text-sm font-semibold text-slate-900">{user.name}</p>
                     <p className="text-xs text-slate-400">{user.login}</p>
                   </div>
+                  {/* Ustoz maoshi */}
+                  {user.role === 'teacher' && teacherPay && (
+                    <div className="px-4 py-2.5 border-b border-slate-100 bg-emerald-50/50">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-500">Bugungi maosh</span>
+                        <span className="text-sm font-bold text-emerald-700">{teacherPay.todayEarning.toLocaleString('uz-UZ')} so&apos;m</span>
+                      </div>
+                      <div className="flex items-center justify-between mt-0.5">
+                        <span className="text-xs text-slate-500">Bu oy ({teacherPay.month})</span>
+                        <span className="text-xs font-semibold text-slate-700">{teacherPay.salary.toLocaleString('uz-UZ')} so&apos;m</span>
+                      </div>
+                    </div>
+                  )}
+                  {user.role === 'teacher' && (
+                    <Link
+                      href="/dashboard/teacher/profile"
+                      onClick={() => setProfileOpen(false)}
+                      className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                    >
+                      <UserCircle className="w-4 h-4" /> Profil va maosh
+                    </Link>
+                  )}
                   <Link
                     href={`/dashboard/${user.role}/settings`}
                     onClick={() => setProfileOpen(false)}

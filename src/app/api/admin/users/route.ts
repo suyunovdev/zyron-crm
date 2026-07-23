@@ -7,10 +7,12 @@ import { logger } from '@/lib/logger';
 import { parseBody } from '@/lib/validate';
 import { canManageRole } from '@/lib/roles';
 import { computeBillable, groupCost } from '@/lib/billing-core';
+import { loginBase, randomPassword, uniqueLogin, ensureUnique, parentNameFrom } from '@/lib/credentials';
 
 const CreateUserSchema = z.object({
-  login: z.string().min(1).max(64),
-  password: z.string().min(4).max(128),
+  // login/password ixtiyoriy — berilmasa avtomatik generatsiya qilinadi
+  login: z.string().min(1).max(64).optional(),
+  password: z.string().min(4).max(128).optional(),
   name: z.string().min(1).max(120),
   role: z.enum(['superadmin', 'admin', 'teacher', 'student', 'parent']),
   phone: z.string().max(32).optional().nullable(),
@@ -133,16 +135,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Bu rolda foydalanuvchi yaratishga ruxsatingiz yo\'q' }, { status: 403 });
   }
 
-  const existing = await prisma.user.findUnique({ where: { login } });
-  if (existing) {
-    return NextResponse.json({ error: 'Bu login allaqachon mavjud' }, { status: 409 });
+  // Login: berilgan bo'lsa unikallik tekshiriladi, aks holda avtomatik unique generatsiya
+  let finalLogin: string;
+  if (login) {
+    const existing = await prisma.user.findUnique({ where: { login } });
+    if (existing) return NextResponse.json({ error: 'Bu login allaqachon mavjud' }, { status: 409 });
+    finalLogin = login;
+  } else {
+    finalLogin = await uniqueLogin(loginBase(name));
   }
+  const finalPass = password || randomPassword();
 
   const user = await prisma.user.create({
     data: {
-      login,
-      password: bcrypt.hashSync(password, 10),
-      rawPass: password,
+      login: finalLogin,
+      password: bcrypt.hashSync(finalPass, 10),
+      rawPass: finalPass,
       name,
       phone: phone || null,
       role,
@@ -151,7 +159,30 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ id: user.id, login: user.login, name: user.name, role: user.role }, { status: 201 });
+  // O'quvchi yaratilsa — ota-ona akkaunti ham avtomatik (unique login/parol) va bog'lanadi
+  let parent: { id: string; login: string; name: string; password: string } | null = null;
+  if (role === 'student') {
+    const parentLogin = await ensureUnique(`${finalLogin}_ota`);
+    const parentPass = randomPassword();
+    const p = await prisma.user.create({
+      data: {
+        login: parentLogin,
+        password: bcrypt.hashSync(parentPass, 10),
+        rawPass: parentPass,
+        name: parentNameFrom(name),
+        phone: phone || null,
+        role: 'parent',
+      },
+    });
+    await prisma.user.update({ where: { id: user.id }, data: { parentId: p.id } });
+    parent = { id: p.id, login: p.login, name: p.name, password: parentPass };
+  }
+
+  return NextResponse.json({
+    id: user.id, login: user.login, name: user.name, role: user.role,
+    password: finalPass,
+    parent,
+  }, { status: 201 });
 }
 
 // Update user (status, info)

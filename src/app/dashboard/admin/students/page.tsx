@@ -63,6 +63,10 @@ export default function StudentsPage() {
   const [formData, setFormData] = useState<FormData>({ name: '', login: '', password: '', phone: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [createdCreds, setCreatedCreds] = useState<{
+    login: string; name: string; password: string;
+    parent: { login: string; name: string; password: string } | null;
+  } | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 20;
@@ -88,14 +92,16 @@ export default function StudentsPage() {
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, role: 'student' }),
+        // login/parol yuborilmaydi — server avtomatik generatsiya qiladi (student + ota-ona)
+        body: JSON.stringify({ name: formData.name, phone: formData.phone || undefined, role: 'student' }),
       });
+      const d = await res.json();
       if (!res.ok) {
-        const d = await res.json();
         setError(d.error || 'Xatolik yuz berdi');
       } else {
         setShowModal(false);
         setFormData({ name: '', login: '', password: '', phone: '' });
+        setCreatedCreds(d); // generatsiya qilingan login/parollarni ko'rsatamiz
         fetchStudents();
       }
     } catch {
@@ -433,29 +439,9 @@ export default function StudentsPage() {
                   placeholder="Abdullayev Ali"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Login *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.login}
-                    onChange={e => setFormData(p => ({ ...p, login: e.target.value }))}
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    placeholder="ali01"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Parol *</label>
-                  <input
-                    type="password"
-                    required
-                    value={formData.password}
-                    onChange={e => setFormData(p => ({ ...p, password: e.target.value }))}
-                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    placeholder="********"
-                  />
-                </div>
+              <div className="flex items-start gap-2 bg-blue-50 text-blue-700 text-xs px-3 py-2.5 rounded-lg">
+                <span>🔑</span>
+                <span>Login va parol <b>avtomatik</b> yaratiladi — o&apos;quvchi uchun ham, ota-ona uchun ham (unique).</span>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Telefon</label>
@@ -484,6 +470,51 @@ export default function StudentsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Generatsiya qilingan login/parollar */}
+      {createdCreds && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setCreatedCreds(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div className="text-center mb-5">
+              <div className="mx-auto w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mb-2 text-xl">✅</div>
+              <h2 className="text-lg font-bold text-slate-900">O&apos;quvchi yaratildi</h2>
+              <p className="text-xs text-slate-500 mt-1">Login va parollarni saqlab oling — ularni topshiring</p>
+            </div>
+
+            {[
+              { title: "👤 O'quvchi", who: createdCreds },
+              ...(createdCreds.parent ? [{ title: '👪 Ota-ona', who: createdCreds.parent }] : []),
+            ].map((blk, i) => (
+              <div key={i} className="mb-3 rounded-xl border border-slate-200 overflow-hidden">
+                <div className="bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-600">{blk.title} — {blk.who.name}</div>
+                {([['Login', blk.who.login], ['Parol', blk.who.password]] as const).map(([label, val]) => (
+                  <div key={label} className="flex items-center justify-between px-4 py-2.5 border-t border-slate-100">
+                    <span className="text-sm text-slate-500">{label}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-semibold text-slate-800">{val}</span>
+                      <button onClick={() => navigator.clipboard?.writeText(val)} title="Nusxalash"
+                        className="text-xs text-blue-600 hover:text-blue-800">Nusxa</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+
+            <button onClick={() => {
+              const c = createdCreds;
+              const txt = `O'quvchi: ${c.login} / ${c.password}` + (c.parent ? `\nOta-ona: ${c.parent.login} / ${c.parent.password}` : '');
+              navigator.clipboard?.writeText(txt);
+            }} className="w-full mb-2 px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50">
+              Hammasini nusxalash
+            </button>
+            <button onClick={() => setCreatedCreds(null)}
+              className="w-full bg-emerald-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-700">
+              Yopish
+            </button>
           </div>
         </div>
       )}

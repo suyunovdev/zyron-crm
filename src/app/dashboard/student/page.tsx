@@ -293,7 +293,7 @@ export default function StudentDashboardPage() {
                       <div key={g.groupId} className="flex items-center justify-between text-sm bg-slate-50 dark:bg-slate-700/50 rounded-lg px-3 py-2">
                         <span className="text-slate-600 dark:text-slate-300">{g.groupName}</span>
                         <span className="text-slate-500 dark:text-slate-400 text-xs">
-                          {g.attendedLessons} dars = {g.cost.toLocaleString()} so&apos;m
+                          {g.attendedLessons} hisoblangan dars = {g.cost.toLocaleString()} so&apos;m
                         </span>
                       </div>
                     ))}

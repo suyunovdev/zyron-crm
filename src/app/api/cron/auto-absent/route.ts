@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { attendanceWindow } from '@/lib/api-utils';
+import { checkDropout } from '@/lib/attendance-guard';
 
 // Cron endpoint: belgilanmagan o'quvchilarni avtomatik "absent" qiladi.
 // Muhlat teacher davomat oynasi bilan mos: dars kuni oxiri (ertasi 00:00)
@@ -61,6 +62,8 @@ export async function GET(req: NextRequest) {
         },
       });
       totalMarked++;
+      // Sababsiz >3 ketma-ket yo'qlik → avto-muzlatish (cron actor'siz)
+      await checkDropout(gs.studentId, lesson.groupId);
     }
   }
 

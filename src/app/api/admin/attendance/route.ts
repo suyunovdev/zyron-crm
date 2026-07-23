@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
+import { checkDropout } from '@/lib/attendance-guard';
 import { logger } from '@/lib/logger';
 
 // Admin can modify attendance
@@ -25,6 +26,10 @@ export async function PATCH(req: NextRequest) {
         update: { present, ...scores, markedAt: new Date() },
         create: { lessonId, studentId, present, ...scores },
       });
+      if (!present) {
+        const l = await prisma.lesson.findUnique({ where: { id: lessonId }, select: { groupId: true } });
+        if (l) await checkDropout(studentId, l.groupId, auth);
+      }
       return NextResponse.json(attendance);
     }
 
@@ -56,6 +61,7 @@ export async function PATCH(req: NextRequest) {
         update: { present, ...scores, markedAt: new Date() },
         create: { lessonId: lesson.id, studentId, present, ...scores },
       });
+      if (!present) await checkDropout(studentId, groupId, auth);
       return NextResponse.json(attendance);
     }
 

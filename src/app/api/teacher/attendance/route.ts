@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAuth, attendanceWindow } from '@/lib/api-utils';
 import { parseBody } from '@/lib/validate';
+import { checkDropout } from '@/lib/attendance-guard';
 
 const score = z.coerce.number().int().min(0).max(5).optional();
 const AttendanceSchema = z.object({
@@ -57,6 +58,9 @@ export async function POST(req: NextRequest) {
     update: { present, ...scores, markedAt: new Date() },
     create: { lessonId, studentId, present, ...scores },
   });
+
+  // Sababsiz >3 ketma-ket yo'qlik → avto-muzlatish
+  if (!present) await checkDropout(studentId, lesson.groupId, auth);
 
   return NextResponse.json(attendance);
 }

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { perLessonRate } from '@/lib/billing';
+import { perLessonRate, computeBillable } from '@/lib/billing';
 
 /** Ustoz oyligi = guruh tushumi × ulush%. Sof funksiya (test qilinadi). */
 export function teacherSalary(revenue: number, sharePercent: number): number {
@@ -35,17 +35,25 @@ export async function computePayroll(defaultShare = 0, month?: string): Promise<
     },
   });
 
-  // Har bir guruh uchun qatnashgan darslar soni (present) — oy bo'yicha filtrlangan
-  const presentRows = await prisma.attendance.findMany({
-    where: {
-      present: true,
-      ...(month ? { lesson: { scheduledDate: { startsWith: month } } } : {}),
-    },
-    select: { lesson: { select: { groupId: true } } },
+  // Butun tarix davomatlari (grace streak butun tarixni talab qiladi), xronologik.
+  // Billable darslar keyin o'z oyiga yoziladi.
+  const rows = await prisma.attendance.findMany({
+    select: { studentId: true, present: true, lesson: { select: { groupId: true, scheduledDate: true, order: true } } },
+    orderBy: [{ lesson: { scheduledDate: 'asc' } }, { lesson: { order: 'asc' } }],
   });
-  const attendedByGroup = new Map<string, number>();
-  for (const r of presentRows) {
-    attendedByGroup.set(r.lesson.groupId, (attendedByGroup.get(r.lesson.groupId) || 0) + 1);
+  const recByKey = new Map<string, { groupId: string; recs: { scheduledDate: string; present: boolean }[] }>();
+  for (const r of rows) {
+    const key = `${r.studentId}:${r.lesson.groupId}`;
+    let e = recByKey.get(key);
+    if (!e) { e = { groupId: r.lesson.groupId, recs: [] }; recByKey.set(key, e); }
+    e.recs.push({ scheduledDate: r.lesson.scheduledDate, present: r.present });
+  }
+  // Guruh bo'yicha, tanlangan oyga tushadigan billable darslar soni
+  const monthBillableByGroup = new Map<string, number>();
+  for (const { groupId, recs } of recByKey.values()) {
+    const { billableDates } = computeBillable(recs);
+    const inMonth = month ? billableDates.filter(d => d.startsWith(month)).length : billableDates.length;
+    if (inMonth) monthBillableByGroup.set(groupId, (monthBillableByGroup.get(groupId) || 0) + inMonth);
   }
 
   const result: TeacherPayroll[] = [];
@@ -53,7 +61,7 @@ export async function computePayroll(defaultShare = 0, month?: string): Promise<
     const share = t.salaryShare ?? defaultShare;
     let revenue = 0;
     const groups = t.teacherGroups.map(g => {
-      const attended = attendedByGroup.get(g.id) || 0;
+      const attended = monthBillableByGroup.get(g.id) || 0;
       const gRev = Math.round(attended * perLessonRate(g.price, g.lessonsPerMonth));
       revenue += gRev;
       return { id: g.id, name: g.name, revenue: gRev };

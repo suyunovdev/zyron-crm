@@ -171,7 +171,7 @@ export default function LoginPage() {
               <div className="w-8 h-1 bg-white rounded-full" />
               <div className="w-8 h-1 bg-white/40 rounded-full" />
             </div>
-            <p className="text-white/50 text-xs mt-6">Online darslar platformasi</p>
+            <p className="text-white/50 text-xs mt-6">Ta&apos;lim markazi boshqaruv tizimi</p>
           </div>
         </div>
       </div>

@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Aka-Uka Ta'lim Markazi - Online Dars Platformasi",
-  description: "Aka-Uka Ta'lim Markazi - Ishtixon tumanidagi zamonaviy ta'lim markazi. Google Meet orqali online darslar.",
+  title: "Aka-Uka Ta'lim Markazi — Boshqaruv tizimi",
+  description: "Aka-Uka Ta'lim Markazi (Ishtixon) boshqaruv tizimi: o'quvchilar, guruhlar, davomat va to'lovlar.",
 };
 
 export default function RootLayout({

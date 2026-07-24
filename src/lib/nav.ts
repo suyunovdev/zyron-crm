@@ -1,4 +1,4 @@
-import { Users, UsersRound, UserPlus, FolderOpen, ClipboardList, CreditCard, UserSearch, FileBarChart, LayoutDashboard, CalendarClock, Settings, UserCheck, ShieldCheck, Wallet, ScrollText, SlidersHorizontal, Ticket } from 'lucide-react';
+import { Users, UsersRound, UserPlus, FolderOpen, ClipboardList, CreditCard, UserSearch, FileBarChart, LayoutDashboard, CalendarClock, Settings, UserCheck, ShieldCheck, Wallet, ScrollText, SlidersHorizontal, Ticket, BarChart3, Building2, Send, UserCog, DatabaseBackup, ShieldAlert, Skull } from 'lucide-react';
 import type { NavItem } from '@/components/DashboardLayout';
 
 export const adminNav: NavItem[] = [
@@ -20,7 +20,15 @@ export const superadminNav: NavItem[] = [
   { label: 'Oylik', href: '/dashboard/admin/payroll', icon: Wallet },
   { label: 'Adminlar', href: '/dashboard/admin/admins', icon: ShieldCheck },
   { label: 'Audit', href: '/dashboard/admin/audit', icon: ScrollText },
-  { label: 'Tizim', href: '/dashboard/admin/system', icon: SlidersHorizontal },
+  // Tizim boshqaruvi bo'limlari — har biri alohida sidebar bandi
+  { label: 'Sozlamalar', href: '/dashboard/admin/system/settings', icon: SlidersHorizontal },
+  { label: 'Analitika', href: '/dashboard/admin/system/analytics', icon: BarChart3 },
+  { label: 'Filiallar', href: '/dashboard/admin/system/branches', icon: Building2 },
+  { label: 'Tarqatma', href: '/dashboard/admin/system/broadcast', icon: Send },
+  { label: 'Kirish', href: '/dashboard/admin/system/impersonate', icon: UserCog },
+  { label: 'Zaxira', href: '/dashboard/admin/system/backup', icon: DatabaseBackup },
+  { label: 'Xavfsizlik', href: '/dashboard/admin/system/security', icon: ShieldAlert },
+  { label: 'Xavfli zona', href: '/dashboard/admin/system/danger', icon: Skull },
 ];
 
 export const teacherNav: NavItem[] = [

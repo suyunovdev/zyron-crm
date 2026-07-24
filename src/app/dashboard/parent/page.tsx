@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Users, BookOpen, Wallet, Clock, CalendarDays, MapPin, Video, Trophy, Medal, Loader2,
+  Users, Wallet, Clock, CalendarDays, MapPin, Trophy, Medal, Loader2,
 } from 'lucide-react';
 import { fmtDate } from '@/lib/date';
 
@@ -178,12 +178,6 @@ export default function ParentDashboardPage() {
                                 <Trophy className="w-3.5 h-3.5" /> {isOpen ? 'Yopish' : 'Reyting'}
                               </button>
                             </div>
-                            {g.meetLink && (
-                              <a href={g.meetLink} target="_blank" rel="noopener noreferrer"
-                                className="mt-3 inline-flex items-center gap-1.5 text-xs text-emerald-600 font-semibold hover:text-emerald-700">
-                                <Video className="w-3.5 h-3.5" /> Darsga kirish linki
-                              </a>
-                            )}
                           </div>
 
                           {isOpen && (

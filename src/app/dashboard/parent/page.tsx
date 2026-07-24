@@ -2,19 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Users, BookOpen, Check, X, Wallet, TrendingUp,
-  Clock, CalendarDays, MapPin, AlertTriangle, Video, Trophy, Medal,
+  Users, BookOpen, Wallet, Clock, CalendarDays, MapPin, Video, Trophy, Medal, Loader2,
 } from 'lucide-react';
 
 interface LeaderboardEntry {
   rank: number; name: string; present: number; total: number; pct: number;
   totalScore: number; maxScore: number; isChild: boolean;
 }
-
-interface GroupRanking {
-  childRank: number; totalStudents: number; leaderboard: LeaderboardEntry[];
-}
-
+interface GroupRanking { childRank: number; totalStudents: number; leaderboard: LeaderboardEntry[] }
 interface GroupInfo {
   id: string; name: string; subject: string; price: number; lessonsPerMonth: number;
   time?: string; dayType?: string; room?: string; meetLink?: string; mode?: string;
@@ -22,30 +17,13 @@ interface GroupInfo {
   _count: { students: number; lessons: number };
   ranking: GroupRanking;
 }
-
 interface Child {
-  id: string;
-  name: string;
-  status: string;
-  groups: GroupInfo[];
+  id: string; name: string; status: string; groups: GroupInfo[];
   balance: { totalPaid: number; totalCost: number; balance: number };
   attendance: { present: number; total: number; pct: number };
   recentPayments: { amount: number; month: string; method: string; createdAt: string }[];
 }
-
 interface SessionUser { name: string }
-
-function tzNow(): Date {
-  return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tashkent' }));
-}
-
-function getGreeting(): string {
-  const h = tzNow().getHours();
-  if (h < 6) return 'Tun yaxshi';
-  if (h < 12) return 'Xayrli tong';
-  if (h < 18) return 'Xayrli kun';
-  return 'Xayrli kech';
-}
 
 const METHOD_LABELS: Record<string, string> = { cash: 'Naqd', card: 'Karta', transfer: "O'tkazma" };
 
@@ -82,18 +60,18 @@ export default function ParentDashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-10 h-10 border-[3px] border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <Loader2 className="w-7 h-7 animate-spin text-blue-500" />
       </div>
     );
   }
 
+  const debt = child ? child.balance.balance < 0 : false;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <p className="text-sm text-slate-400">{getGreeting()} 👋</p>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{firstName}!</h1>
-      </div>
+    <div className="space-y-5 max-w-3xl mx-auto">
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+        Assalomu alaykum{firstName ? `, ${firstName}` : ''}
+      </h1>
 
       {children.length === 0 ? (
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-12 text-center">
@@ -103,15 +81,15 @@ export default function ParentDashboardPage() {
         </div>
       ) : (
         <>
-          {/* Child selector */}
+          {/* Bir nechta farzand bo'lsa — tanlash */}
           {children.length > 1 && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {children.map(c => (
                 <button key={c.id} onClick={() => setSelectedChild(c.id)}
                   className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                     selectedChild === c.id
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
-                      : 'bg-white dark:bg-slate-800 text-slate-600 border border-slate-200 dark:border-slate-700 hover:border-blue-300'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 border border-slate-200 dark:border-slate-700'
                   }`}>
                   {c.name}
                 </button>
@@ -121,105 +99,70 @@ export default function ParentDashboardPage() {
 
           {child && (
             <>
-              {/* Stats cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Davomat */}
-                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-5">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
-                      <Check className="w-5 h-5 text-emerald-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400 font-medium">Davomat</p>
-                      <p className={`text-xl font-extrabold ${
-                        child.attendance.pct >= 80 ? 'text-emerald-600' : child.attendance.pct >= 50 ? 'text-amber-600' : 'text-red-600'
-                      }`}>{child.attendance.pct}%</p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-slate-400">{child.attendance.present} keldi / {child.attendance.total} jami</p>
+              {/* ── Balans / Qarz (eng muhim) ── */}
+              <div className={`rounded-2xl p-6 border ${
+                debt
+                  ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/40'
+                  : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/40'
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <Wallet className={`w-5 h-5 ${debt ? 'text-red-600' : 'text-emerald-600'}`} />
+                  <span className={`text-sm font-semibold ${debt ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
+                    {child.name} — {debt ? 'qarzi' : 'balansi'}
+                  </span>
                 </div>
+                <p className={`text-4xl font-extrabold ${debt ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-300'}`}>
+                  {Math.abs(child.balance.balance).toLocaleString()} <span className="text-xl font-bold">so&apos;m</span>
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+                  {debt ? 'Iltimos, to’lovni amalga oshiring yoki administrator bilan bog’laning.' : 'Hisob joyida.'}
+                </p>
+              </div>
 
-                {/* Balans */}
-                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-5">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                      child.balance.balance >= 0 ? 'bg-blue-100 dark:bg-blue-900/30' : 'bg-red-100 dark:bg-red-900/30'
-                    }`}>
-                      <Wallet className={`w-5 h-5 ${child.balance.balance >= 0 ? 'text-blue-600' : 'text-red-600'}`} />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400 font-medium">Balans</p>
-                      <p className={`text-xl font-extrabold ${child.balance.balance >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                        {child.balance.balance.toLocaleString()} <span className="text-sm">so&apos;m</span>
-                      </p>
-                    </div>
-                  </div>
-                  {child.balance.balance < 0 && (
-                    <p className="text-xs text-red-500 flex items-center gap-1">
-                      <AlertTriangle className="w-3 h-3" /> Qarzdorlik mavjud
-                    </p>
-                  )}
+              {/* ── Ixcham statlar: Davomat · To'langan · Guruhlar ── */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-4 text-center">
+                  <p className={`text-2xl font-extrabold ${
+                    child.attendance.pct >= 80 ? 'text-emerald-600' : child.attendance.pct >= 50 ? 'text-amber-600' : 'text-red-600'
+                  }`}>{child.attendance.pct}%</p>
+                  <p className="text-xs text-slate-400 mt-1">Davomat</p>
                 </div>
-
-                {/* To'langan */}
-                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-5">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 bg-violet-100 dark:bg-violet-900/30 rounded-xl flex items-center justify-center">
-                      <TrendingUp className="w-5 h-5 text-violet-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400 font-medium">Jami to&apos;langan</p>
-                      <p className="text-xl font-extrabold text-slate-800 dark:text-white">
-                        {child.balance.totalPaid.toLocaleString()} <span className="text-sm text-slate-400">so&apos;m</span>
-                      </p>
-                    </div>
-                  </div>
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-4 text-center">
+                  <p className="text-2xl font-extrabold text-slate-800 dark:text-white">{child.groups.length}</p>
+                  <p className="text-xs text-slate-400 mt-1">Guruh</p>
                 </div>
-
-                {/* Guruhlar */}
-                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-5">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
-                      <BookOpen className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400 font-medium">Guruhlar</p>
-                      <p className="text-xl font-extrabold text-slate-800 dark:text-white">{child.groups.length} <span className="text-sm text-slate-400">ta</span></p>
-                    </div>
-                  </div>
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-4 text-center">
+                  <p className="text-lg font-extrabold text-slate-800 dark:text-white leading-tight">{child.balance.totalPaid.toLocaleString()}</p>
+                  <p className="text-xs text-slate-400 mt-1">To&apos;langan (so&apos;m)</p>
                 </div>
               </div>
 
-              {/* Groups with Rankings */}
+              {/* ── Guruhlar ── */}
               <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-blue-500" /> {child.name} guruhlari
-                </h2>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-3">Guruhlar</h2>
                 {child.groups.length === 0 ? (
                   <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-8 text-center text-sm text-slate-400">
                     Guruhlar mavjud emas
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {child.groups.map(g => {
                       const dayLabel = g.dayType === 'toq' ? 'Dush/Chor/Jum' : g.dayType === 'juft' ? 'Sesh/Pay/Shan' : '';
                       const r = g.ranking;
-                      const rankBadge = getRankBadge(r.childRank);
                       const isOpen = openRanking === g.id;
-
                       return (
-                        <div key={g.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+                        <div key={g.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
                           <div className="p-5">
-                            <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-start justify-between mb-2">
                               <div>
                                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">{g.name}</h3>
                                 <p className="text-xs text-slate-400">{g.subject}</p>
                               </div>
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                g.mode === 'online' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
-                              }`}>
-                                {g.mode === 'online' ? '🌐 Online' : '🏫 Offline'}
-                              </span>
+                              {r.childRank > 0 && (
+                                <span className="text-xs text-slate-500 dark:text-slate-400">
+                                  Reyting: <span className="font-bold text-slate-800 dark:text-white">{r.childRank}</span>/{r.totalStudents}
+                                </span>
+                              )}
                             </div>
                             <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-slate-500 mb-3">
                               <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {g.teacher.name}</span>
@@ -227,31 +170,11 @@ export default function ParentDashboardPage() {
                               {dayLabel && <span className="flex items-center gap-1"><CalendarDays className="w-3 h-3" /> {dayLabel}</span>}
                               {g.room && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {g.room}</span>}
                             </div>
-
-                            {/* Child's rank badge */}
-                            {r.childRank > 0 && (
-                              <div className="flex items-center gap-3 mb-3 p-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-100 dark:border-amber-800/30">
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold ${rankBadge.cls}`}>
-                                  {rankBadge.icon}
-                                </div>
-                                <div>
-                                  <p className="text-xs text-slate-500 dark:text-slate-400">Farzandingiz o&apos;rni</p>
-                                  <p className="text-sm font-bold text-slate-800 dark:text-white">
-                                    {r.childRank}-o&apos;rin <span className="text-slate-400 font-normal">/ {r.totalStudents} o&apos;quvchi</span>
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-
                             <div className="flex items-center gap-3 text-xs pt-3 border-t border-slate-100 dark:border-slate-700">
                               <span className="text-slate-400">Narx: <span className="font-bold text-slate-700 dark:text-slate-200">{g.price?.toLocaleString()} so&apos;m/oy</span></span>
-                              <span className="text-slate-400">Darslar: <span className="font-bold text-slate-700 dark:text-slate-200">{g._count.lessons}</span></span>
-                              <button
-                                onClick={() => setOpenRanking(isOpen ? null : g.id)}
-                                className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 transition-colors"
-                              >
-                                <Trophy className="w-3.5 h-3.5" />
-                                {isOpen ? 'Yopish' : 'Reyting'}
+                              <button onClick={() => setOpenRanking(isOpen ? null : g.id)}
+                                className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-700/50 dark:text-slate-300 transition-colors">
+                                <Trophy className="w-3.5 h-3.5" /> {isOpen ? 'Yopish' : 'Reyting'}
                               </button>
                             </div>
                             {g.meetLink && (
@@ -262,12 +185,11 @@ export default function ParentDashboardPage() {
                             )}
                           </div>
 
-                          {/* Leaderboard */}
                           {isOpen && (
                             <div className="border-t border-slate-100 dark:border-slate-700">
                               <div className="px-5 py-3 bg-slate-50/50 dark:bg-slate-700/30">
                                 <p className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                                  <Medal className="w-4 h-4 text-amber-500" /> Davomat reytingi — {g.name}
+                                  <Medal className="w-4 h-4 text-amber-500" /> Davomat reytingi
                                 </p>
                               </div>
                               <div className="divide-y divide-slate-50 dark:divide-slate-700">
@@ -275,36 +197,12 @@ export default function ParentDashboardPage() {
                                   const badge = getRankBadge(entry.rank);
                                   return (
                                     <div key={entry.rank}
-                                      className={`px-5 py-2.5 flex items-center gap-3 ${
-                                        entry.isChild
-                                          ? 'bg-blue-50/70 dark:bg-blue-900/20 border-l-3 border-blue-500'
-                                          : 'hover:bg-slate-50/50 dark:hover:bg-slate-700/20'
-                                      }`}
-                                    >
-                                      <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${badge.cls}`}>
-                                        {badge.icon}
-                                      </span>
-                                      <div className="flex-1 min-w-0">
-                                        <p className={`text-sm truncate ${
-                                          entry.isChild ? 'font-bold text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-slate-300'
-                                        }`}>
-                                          {entry.name}
-                                          {entry.isChild && <span className="ml-1.5 text-[10px] text-blue-500">(Farzandingiz)</span>}
-                                        </p>
-                                      </div>
-                                      <div className="text-right flex items-center gap-3">
-                                        <div>
-                                          <p className={`text-sm font-bold ${
-                                            entry.totalScore > 0 ? 'text-amber-600' : 'text-slate-300'
-                                          }`}>{entry.totalScore}<span className="text-[10px] text-slate-400 font-normal"> ball</span></p>
-                                        </div>
-                                        <div>
-                                          <p className={`text-sm font-bold ${
-                                            entry.pct >= 80 ? 'text-emerald-600' : entry.pct >= 50 ? 'text-amber-600' : 'text-red-500'
-                                          }`}>{entry.pct}%</p>
-                                          <p className="text-[10px] text-slate-400">{entry.present}/{entry.total}</p>
-                                        </div>
-                                      </div>
+                                      className={`px-5 py-2.5 flex items-center gap-3 ${entry.isChild ? 'bg-blue-50/70 dark:bg-blue-900/20' : ''}`}>
+                                      <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${badge.cls}`}>{badge.icon}</span>
+                                      <p className={`flex-1 min-w-0 text-sm truncate ${entry.isChild ? 'font-bold text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-slate-300'}`}>
+                                        {entry.name}{entry.isChild && <span className="ml-1.5 text-[10px] text-blue-500">(Farzandingiz)</span>}
+                                      </p>
+                                      <span className={`text-sm font-bold ${entry.pct >= 80 ? 'text-emerald-600' : entry.pct >= 50 ? 'text-amber-600' : 'text-red-500'}`}>{entry.pct}%</span>
                                     </div>
                                   );
                                 })}
@@ -318,26 +216,18 @@ export default function ParentDashboardPage() {
                 )}
               </div>
 
-              {/* Recent payments */}
+              {/* ── So'nggi to'lovlar ── */}
               {child.recentPayments.length > 0 && (
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                    <Wallet className="w-5 h-5 text-violet-500" /> So&apos;nggi to&apos;lovlar
-                  </h2>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-3">So&apos;nggi to&apos;lovlar</h2>
                   <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700">
                     {child.recentPayments.map((p, i) => (
                       <div key={i} className="px-5 py-3 flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-semibold text-slate-800 dark:text-white">
-                            {p.amount.toLocaleString()} so&apos;m
-                          </p>
-                          <p className="text-xs text-slate-400">
-                            {p.month} &middot; {METHOD_LABELS[p.method] || p.method}
-                          </p>
+                          <p className="text-sm font-semibold text-slate-800 dark:text-white">{p.amount.toLocaleString()} so&apos;m</p>
+                          <p className="text-xs text-slate-400">{p.month} &middot; {METHOD_LABELS[p.method] || p.method}</p>
                         </div>
-                        <span className="text-xs text-slate-400">
-                          {new Date(p.createdAt).toLocaleDateString('uz-UZ')}
-                        </span>
+                        <span className="text-xs text-slate-400">{new Date(p.createdAt).toLocaleDateString('uz-UZ')}</span>
                       </div>
                     ))}
                   </div>

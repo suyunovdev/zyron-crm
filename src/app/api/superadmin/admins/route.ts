@@ -14,16 +14,20 @@ export async function GET() {
     const auth = await requireAuth('superadmin');
     if (auth instanceof NextResponse) return auth;
 
-    const admins = await prisma.user.findMany({
-      where: { role: { in: ['admin', 'superadmin'] } },
-      select: {
-        id: true, login: true, name: true, phone: true, role: true,
-        status: true, rawPass: true, createdAt: true,
-      },
-      orderBy: [{ role: 'asc' }, { createdAt: 'asc' }],
-    });
+    const [admins, branches] = await Promise.all([
+      prisma.user.findMany({
+        where: { role: { in: ['admin', 'superadmin'] } },
+        select: {
+          id: true, login: true, name: true, phone: true, role: true,
+          status: true, rawPass: true, createdAt: true,
+          branch: { select: { id: true, name: true } },
+        },
+        orderBy: [{ role: 'asc' }, { createdAt: 'asc' }],
+      }),
+      prisma.branch.findMany({ select: { id: true, name: true }, orderBy: { createdAt: 'asc' } }),
+    ]);
 
-    return NextResponse.json({ admins, currentUserId: auth.id });
+    return NextResponse.json({ admins, branches, currentUserId: auth.id });
   } catch (error) {
     logger.error('[GET /api/superadmin/admins]', error);
     return NextResponse.json({ error: 'Server xatosi' }, { status: 500 });
@@ -36,6 +40,7 @@ const CreateAdminSchema = z.object({
   name: z.string().min(1).max(120),
   phone: z.string().max(32).optional().nullable(),
   role: z.enum(['admin', 'superadmin']),
+  branchId: z.string().optional().nullable(), // admin uchun filial (ixtiyoriy)
 });
 
 export async function POST(req: NextRequest) {
@@ -45,11 +50,19 @@ export async function POST(req: NextRequest) {
 
     const parsed = await parseBody(req, CreateAdminSchema);
     if (parsed instanceof NextResponse) return parsed;
-    const { login, password, name, phone, role } = parsed;
+    const { login, password, name, phone, role, branchId } = parsed;
 
     const existing = await prisma.user.findUnique({ where: { login } });
     if (existing) {
       return NextResponse.json({ error: 'Bu login allaqachon mavjud' }, { status: 409 });
+    }
+
+    // Filial berilgan bo'lsa mavjudligini tekshiramiz
+    let branchName = '';
+    if (branchId) {
+      const branch = await prisma.branch.findUnique({ where: { id: branchId }, select: { name: true } });
+      if (!branch) return NextResponse.json({ error: 'Filial topilmadi' }, { status: 400 });
+      branchName = branch.name;
     }
 
     const user = await prisma.user.create({
@@ -61,11 +74,13 @@ export async function POST(req: NextRequest) {
         phone: phone || null,
         role,
         status: 'active',
+        branchId: branchId || null,
       },
       select: { id: true, login: true, name: true, role: true, status: true },
     });
 
-    await logAudit(auth, 'create', 'admin', user.id, `Yangi ${role} yaratildi: ${name} (${login})`);
+    await logAudit(auth, 'create', 'admin', user.id,
+      `Yangi ${role} yaratildi: ${name} (${login})${branchName ? ` — ${branchName} filiali` : ''}`);
     return NextResponse.json(user, { status: 201 });
   } catch (error) {
     logger.error('[POST /api/superadmin/admins]', error);

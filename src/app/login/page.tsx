@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
 
 export default function LoginPage() {
@@ -45,12 +45,6 @@ export default function LoginPage() {
     }
   };
 
-  const demoAccounts = [
-    { role: 'Admin', login: 'admin', password: 'admin123' },
-    { role: "O'qituvchi", login: 'shahboz', password: 'teacher123' },
-    { role: "O'quvchi", login: 'zoir', password: 'student123' },
-  ];
-
   return (
     <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background blobs */}
@@ -63,92 +57,94 @@ export default function LoginPage() {
       {/* Main card */}
       <div className="w-full max-w-4xl relative z-10 flex rounded-3xl overflow-hidden shadow-2xl shadow-black/40">
         {/* Left side — Form */}
-        <div className="w-full md:w-1/2 bg-white p-8 md:p-10">
+        <div className="w-full md:w-1/2 bg-white p-8 md:p-10 flex flex-col">
           {/* Logo */}
           <div className="mb-10">
-            <Image src="/logo-horizontal.png" alt="Aka-Uka Ta'lim Markazi" width={180} height={56} className="object-contain" />
+            <Image src="/logo-horizontal.png" alt="Aka-Uka Ta'lim Markazi" width={180} height={56} className="object-contain" priority />
           </div>
 
-          <h1 className="text-2xl font-bold text-slate-900 mb-1">Xush Kelibsiz</h1>
-          <p className="text-sm text-slate-400 mb-8">Online ta&apos;lim platformasiga kirish</p>
+          <div className="flex-1 flex flex-col justify-center w-full max-w-sm mx-auto md:mx-0">
+            <h1 className="text-2xl font-bold text-slate-900 mb-1.5">Xush kelibsiz</h1>
+            <p className="text-sm text-slate-400 mb-8">Hisobingizga kirish uchun login va parolingizni kiriting.</p>
 
-          {error && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-5 text-sm">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              {error}
-            </div>
-          )}
+            {error && (
+              <div role="alert" className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-5 text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                <span className="text-red-500">*</span> Login
-              </label>
-              <input
-                type="text"
-                value={login}
-                onChange={(e) => setLogin(e.target.value)}
-                placeholder="Loginingizni kiriting"
-                className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-slate-900"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                <span className="text-red-500">*</span> Parol
-              </label>
-              <div className="relative">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label htmlFor="login" className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Login <span className="text-red-500">*</span>
+                </label>
                 <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Parolni kiriting"
-                  className="w-full px-4 pr-12 py-3 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all text-slate-900"
+                  id="login"
+                  name="username"
+                  type="text"
+                  autoComplete="username"
+                  autoFocus
+                  value={login}
+                  onChange={(e) => setLogin(e.target.value)}
+                  placeholder="Loginingizni kiriting"
+                  className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-[#2660A4] focus:ring-2 focus:ring-[#2660A4]/20 outline-none transition-all text-slate-900"
                   required
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
               </div>
-            </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#2660A4] text-white py-3.5 rounded-lg font-bold text-base hover:bg-[#1d4e87] transition-all shadow-lg shadow-[#2660A4]/25 disabled:opacity-50"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Kirish...
-                </span>
-              ) : 'Kirish'}
-            </button>
-          </form>
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Parol <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Parolni kiriting"
+                    className="w-full px-4 pr-12 py-3 rounded-lg border border-slate-200 focus:border-[#2660A4] focus:ring-2 focus:ring-[#2660A4]/20 outline-none transition-all text-slate-900"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Parolni yashirish' : 'Parolni ko\'rsatish'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
 
-          {/* Demo accounts */}
-          <div className="mt-6">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex-1 h-px bg-slate-200" />
-              <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Demo akkauntlar</span>
-              <div className="flex-1 h-px bg-slate-200" />
-            </div>
-            <div className="flex gap-2">
-              {demoAccounts.map((acc) => (
-                <button
-                  key={acc.login}
-                  onClick={() => { setLogin(acc.login); setPassword(acc.password); setError(''); }}
-                  className="flex-1 px-3 py-2 rounded-lg bg-slate-50 hover:bg-blue-50 border border-slate-100 hover:border-blue-200 transition-all text-center"
-                >
-                  <span className="text-xs font-semibold text-slate-700">{acc.role}</span>
-                </button>
-              ))}
-            </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-[#2660A4] text-white py-3.5 rounded-lg font-bold text-base hover:bg-[#1d4e87] transition-all shadow-lg shadow-[#2660A4]/25 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Kirilmoqda...
+                  </span>
+                ) : 'Kirish'}
+              </button>
+            </form>
+
+            {/* Parolni unutish — self-service reset yo'q, admin bilan bog'lanish */}
+            <p className="text-center text-xs text-slate-400 mt-6">
+              Login yoki parolni unutdingizmi?{' '}
+              <span className="text-slate-500 font-medium">Markaz administratori bilan bog&apos;laning.</span>
+            </p>
+          </div>
+
+          {/* Xavfsizlik izohi */}
+          <div className="mt-8 flex items-center justify-center gap-1.5 text-slate-400">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span className="text-[11px] font-medium">Xavfsiz, shifrlangan ulanish</span>
           </div>
         </div>
 

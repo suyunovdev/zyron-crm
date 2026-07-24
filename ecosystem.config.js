@@ -19,6 +19,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3000, // nginx upstream shu portga mos bo'lsin
+        TZ: 'Asia/Tashkent', // ilova vaqti O'zbekiston (server Europe/Berlin bo'lsa ham)
       },
     },
   ],

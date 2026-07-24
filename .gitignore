@@ -57,3 +57,6 @@ backups/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# vaqtinchalik test/skript fayllari
+_*.mjs

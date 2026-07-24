@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { computeStudentBalance } from '@/lib/billing';
+import { todayTz } from '@/lib/date';
 
 // Parent's children — with groups, attendance, payments, balance, rankings
 export async function GET() {
@@ -58,10 +59,32 @@ export async function GET() {
     },
   });
 
+  const today = todayTz();
+
   const enriched = await Promise.all(children.map(async child => {
     // Balans — yagona billing manbasidan (grace qoidasi bilan, student/admin bilan bir xil)
     const bal = await computeStudentBalance(child.id);
     const { totalPaid, totalCost, balance } = bal;
+
+    // O'tilgan mavzular — farzand guruhlaridagi so'nggi (bugungi + oldingi) darslar
+    const groupIds = child.groupStudents.map(gs => gs.group.id);
+    const lessonRows = groupIds.length ? await prisma.lesson.findMany({
+      where: { groupId: { in: groupIds }, scheduledDate: { lte: today } },
+      select: {
+        topic: true, scheduledDate: true,
+        group: { select: { name: true } },
+        attendances: { where: { studentId: child.id }, select: { present: true } },
+      },
+      orderBy: [{ scheduledDate: 'desc' }, { order: 'desc' }],
+      take: 6,
+    }) : [];
+    const recentLessons = lessonRows.map(l => ({
+      topic: l.topic || null,
+      date: l.scheduledDate,
+      groupName: l.group.name,
+      present: l.attendances.length ? l.attendances[0].present : null,
+      isToday: l.scheduledDate === today,
+    }));
 
     // Attendance stats
     const totalPresent = child.attendances.filter(a => a.present).length;
@@ -119,6 +142,7 @@ export async function GET() {
       groups: groupsWithRanking,
       balance: { totalPaid, totalCost, balance },
       attendance: { present: totalPresent, total: totalMarked, pct: attendancePct },
+      recentLessons,
       recentPayments: child.payments.slice(0, 5),
     };
   }));

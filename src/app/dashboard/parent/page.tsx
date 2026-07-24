@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Users, Wallet, Clock, CalendarDays, MapPin, Trophy, Medal, Loader2,
+  Users, Wallet, Clock, CalendarDays, MapPin, Trophy, Medal, Loader2, BookOpen,
 } from 'lucide-react';
-import { fmtDate } from '@/lib/date';
+import { fmtDate, fmtDayMonth } from '@/lib/date';
 
 interface LeaderboardEntry {
   rank: number; name: string; present: number; total: number; pct: number;
@@ -18,10 +18,12 @@ interface GroupInfo {
   _count: { students: number; lessons: number };
   ranking: GroupRanking;
 }
+interface RecentLesson { topic: string | null; date: string; groupName: string; present: boolean | null; isToday: boolean }
 interface Child {
   id: string; name: string; status: string; groups: GroupInfo[];
   balance: { totalPaid: number; totalCost: number; balance: number };
   attendance: { present: number; total: number; pct: number };
+  recentLessons: RecentLesson[];
   recentPayments: { amount: number; month: string; method: string; createdAt: string }[];
 }
 interface SessionUser { name: string }
@@ -137,6 +139,39 @@ export default function ParentDashboardPage() {
                   <p className="text-xs text-slate-400 mt-1">To&apos;langan (so&apos;m)</p>
                 </div>
               </div>
+
+              {/* ── O'tilgan mavzular (bugungisi ajratilgan) ── */}
+              {child.recentLessons.length > 0 && (
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-blue-500" /> O&apos;tilgan mavzular
+                  </h2>
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700 overflow-hidden">
+                    {child.recentLessons.map((l, i) => (
+                      <div key={i} className={`px-5 py-3 flex items-center gap-3 ${l.isToday ? 'bg-blue-50/60 dark:bg-blue-900/15' : ''}`}>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm truncate ${l.topic ? 'font-semibold text-slate-800 dark:text-white' : 'text-slate-400 italic'}`}>
+                            {l.topic || 'Mavzu belgilanmagan'}
+                          </p>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            {l.groupName} &middot;{' '}
+                            {l.isToday
+                              ? <span className="text-blue-600 dark:text-blue-400 font-semibold">Bugun</span>
+                              : fmtDayMonth(l.date)}
+                          </p>
+                        </div>
+                        {l.present !== null && (
+                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full flex-none ${
+                            l.present ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-50 text-red-500 dark:bg-red-900/30 dark:text-red-400'
+                          }`}>
+                            {l.present ? 'Keldi' : 'Kelmadi'}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* ── Guruhlar ── */}
               <div>

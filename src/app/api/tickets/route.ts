@@ -7,11 +7,12 @@ import { isAdminRole } from '@/lib/roles';
 import { TICKET_CATEGORIES } from '@/lib/tickets';
 import { createNotification } from '@/lib/notify';
 import { logger } from '@/lib/logger';
+import { scopedBranchId } from '@/lib/branch-scope';
 
-// Rol bo'yicha ticket ro'yxati filtri
-function scopeFor(user: { id: string; role: string }) {
+// Rol bo'yicha ticket ro'yxati filtri. Admin uchun filial cheklovi (bId) qo'llanadi.
+function scopeFor(user: { id: string; role: string }, bId: string | null) {
   if (user.role === 'teacher') return { authorId: user.id };
-  if (isAdminRole(user.role)) return { recipientType: 'admin' };
+  if (isAdminRole(user.role)) return { recipientType: 'admin', ...(bId ? { branchId: bId } : {}) };
   if (user.role === 'parent') return { recipientId: user.id };
   return { id: '__none__' }; // boshqa rollar uchun hech narsa
 }
@@ -21,8 +22,11 @@ export async function GET() {
     const auth = await requireAuth();
     if (auth instanceof NextResponse) return auth;
 
+    // Filial admini faqat o'z filiali ustozlaridan kelgan ticketlarni ko'radi
+    const bId = isAdminRole(auth.role) ? await scopedBranchId(auth) : null;
+
     const tickets = await prisma.ticket.findMany({
-      where: scopeFor(auth),
+      where: scopeFor(auth, bId),
       orderBy: { updatedAt: 'desc' },
       include: {
         messages: { orderBy: { createdAt: 'desc' }, take: 1 },
@@ -65,6 +69,10 @@ export async function POST(req: NextRequest) {
     if (parsed instanceof NextResponse) return parsed;
     const { recipientType, studentId, category, subject, priority, message } = parsed;
 
+    // Muallif ustozning filiali — ticketga yoziladi (filial admini shu bo'yicha ko'radi)
+    const author = await prisma.user.findUnique({ where: { id: auth.id }, select: { branchId: true } });
+    const branchId = author?.branchId ?? null;
+
     let recipientId: string | null = null;
     let relatedStudentId: string | null = null;
     let relatedStudentName: string | null = null;
@@ -90,7 +98,7 @@ export async function POST(req: NextRequest) {
       data: {
         authorId: auth.id, authorName: auth.name,
         recipientType, recipientId, relatedStudentId, relatedStudentName,
-        category, subject, priority,
+        category, subject, priority, branchId,
         teacherUnread: false, recipientUnread: true,
         messages: { create: { senderId: auth.id, senderName: auth.name, senderRole: 'teacher', body: message } },
       },
@@ -103,6 +111,7 @@ export async function POST(req: NextRequest) {
         title: 'Yangi ticket (ustozdan)',
         message: `${auth.name}: ${subject}`,
         link: `/dashboard/admin/tickets`,
+        branchId,
       });
     }
     // Ota-ona uchun bildirishnoma badge orqali ko'rinadi (parent'da qo'ng'iroq yo'q)

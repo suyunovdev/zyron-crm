@@ -8,12 +8,28 @@ import { isAdminRole } from '@/lib/roles';
 import { createNotification } from '@/lib/notify';
 import { logAudit } from '@/lib/audit';
 import { logger } from '@/lib/logger';
+import { scopedBranchId } from '@/lib/branch-scope';
+import type { SessionUser } from '@/lib/auth';
 
 async function loadTicket(id: string) {
   return prisma.ticket.findUnique({
     where: { id },
     include: { messages: { orderBy: { createdAt: 'asc' } } },
   });
+}
+
+/**
+ * Filial admini boshqa filial ticketiga kira olmasligini ta'minlaydi.
+ * Cheklovga tushsa NextResponse (403) qaytaradi, aks holda null.
+ */
+async function branchGuard(auth: SessionUser, role: string | null, ticketBranchId: string | null): Promise<NextResponse | null> {
+  if (role === 'recipient' && isAdminRole(auth.role)) {
+    const bId = await scopedBranchId(auth);
+    if (bId && ticketBranchId !== bId) {
+      return NextResponse.json({ error: 'Bu ticket boshqa filialga tegishli' }, { status: 403 });
+    }
+  }
+  return null;
 }
 
 // Thread ko'rish + o'qilgan deb belgilash
@@ -27,6 +43,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
     const role = ticketRole(auth, ticket);
     if (!role) return NextResponse.json({ error: 'Ruxsat yo\'q' }, { status: 403 });
+    const guard = await branchGuard(auth, role, ticket.branchId);
+    if (guard) return guard;
 
     // O'qilgan deb belgilash
     if (role === 'author' && ticket.teacherUnread) {
@@ -55,6 +73,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const role = ticketRole(auth, ticket);
     if (!role) return NextResponse.json({ error: 'Ruxsat yo\'q' }, { status: 403 });
+    const guard = await branchGuard(auth, role, ticket.branchId);
+    if (guard) return guard;
 
     const parsed = await parseBody(req, ReplySchema);
     if (parsed instanceof NextResponse) return parsed;
@@ -78,6 +98,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       await createNotification({
         type: 'system', title: 'Ticketda yangi javob',
         message: `${auth.name}: ${ticket.subject}`, link: '/dashboard/admin/tickets',
+        branchId: ticket.branchId,
       });
     }
 
@@ -102,6 +123,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const role = ticketRole(auth, ticket);
     const canManageStatus = role === 'author' || (role === 'recipient' && isAdminRole(auth.role));
     if (!canManageStatus) return NextResponse.json({ error: 'Ruxsat yo\'q' }, { status: 403 });
+    const guard = await branchGuard(auth, role, ticket.branchId);
+    if (guard) return guard;
 
     const parsed = await parseBody(req, StatusSchema);
     if (parsed instanceof NextResponse) return parsed;

@@ -1,9 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, ShieldCheck, Users, UsersRound } from 'lucide-react';
 import Image from 'next/image';
+
+// Subdomen bo'yicha auditoriya matni:
+//  crm.* → xodimlar (admin, o'qituvchi) · my.* → o'quvchi va ota-ona
+const COPY = {
+  staff: {
+    badge: 'Xodimlar kabineti',
+    Icon: Users,
+    sub: 'Xodimlar boshqaruv paneliga kirish uchun ma’lumotlaringizni kiriting.',
+    tag: 'Ta’lim markazi boshqaruv tizimi',
+  },
+  client: {
+    badge: 'O’quvchi va ota-ona kabineti',
+    Icon: UsersRound,
+    sub: 'Farzandingiz o’qishi, davomati va to’lovlarini kuzatish uchun kabinetga kiring.',
+    tag: 'O’quvchi va ota-ona kabineti',
+  },
+};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,6 +29,14 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [audience, setAudience] = useState<'staff' | 'client'>('staff');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hostname.startsWith('my.')) {
+      setAudience('client');
+    }
+  }, []);
+  const c = COPY[audience];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,8 +89,11 @@ export default function LoginPage() {
           </div>
 
           <div className="flex-1 flex flex-col justify-center w-full max-w-sm mx-auto md:mx-0">
+            <span className="inline-flex items-center gap-1.5 self-start text-[11px] font-semibold text-[#2660A4] bg-[#2660A4]/10 px-2.5 py-1 rounded-full mb-3">
+              <c.Icon className="w-3.5 h-3.5" /> {c.badge}
+            </span>
             <h1 className="text-2xl font-bold text-slate-900 mb-1.5">Xush kelibsiz</h1>
-            <p className="text-sm text-slate-400 mb-8">Hisobingizga kirish uchun login va parolingizni kiriting.</p>
+            <p className="text-sm text-slate-400 mb-8">{c.sub}</p>
 
             {error && (
               <div role="alert" className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-5 text-sm">
@@ -171,7 +199,7 @@ export default function LoginPage() {
               <div className="w-8 h-1 bg-white rounded-full" />
               <div className="w-8 h-1 bg-white/40 rounded-full" />
             </div>
-            <p className="text-white/50 text-xs mt-6">Ta&apos;lim markazi boshqaruv tizimi</p>
+            <p className="text-white/50 text-xs mt-6">{c.tag}</p>
           </div>
         </div>
       </div>

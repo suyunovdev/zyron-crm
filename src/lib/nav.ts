@@ -1,4 +1,4 @@
-import { Users, UsersRound, UserPlus, FolderOpen, ClipboardList, CreditCard, UserSearch, FileBarChart, LayoutDashboard, CalendarClock, Settings, UserCheck, ShieldCheck, Wallet, ScrollText, Ticket, BarChart3, Building2 } from 'lucide-react';
+import { Users, UsersRound, UserPlus, FolderOpen, ClipboardList, CreditCard, UserSearch, FileBarChart, LayoutDashboard, CalendarClock, Settings, UserCheck, ShieldCheck, Wallet, ScrollText, BarChart3, Building2 } from 'lucide-react';
 import type { NavItem } from '@/components/DashboardLayout';
 
 export const adminNav: NavItem[] = [
@@ -10,7 +10,6 @@ export const adminNav: NavItem[] = [
   { label: 'Ota-onalar', href: '/dashboard/admin/parents', icon: UserCheck },
   { label: "To'lovlar", href: '/dashboard/admin/payments', icon: CreditCard },
   { label: 'Jadval', href: '/dashboard/admin/schedule', icon: CalendarClock },
-  { label: 'Ticketlar', href: '/dashboard/admin/tickets', icon: Ticket },
   { label: 'Oylik hisobot', href: '/dashboard/admin/reports', icon: FileBarChart, action: 'report-modal' },
 ];
 
@@ -28,7 +27,6 @@ export const superadminNav: NavItem[] = [
 export const teacherNav: NavItem[] = [
   { label: 'Asosiy', href: '/dashboard/teacher', icon: LayoutDashboard },
   { label: 'Guruhlar', href: '/dashboard/teacher/groups', icon: FolderOpen },
-  { label: 'Ticketlar', href: '/dashboard/teacher/tickets', icon: Ticket },
 ];
 
 export const studentNav: NavItem[] = [
@@ -38,5 +36,4 @@ export const studentNav: NavItem[] = [
 
 export const parentNav: NavItem[] = [
   { label: 'Asosiy', href: '/dashboard/parent', icon: LayoutDashboard },
-  { label: 'Ticketlar', href: '/dashboard/parent/tickets', icon: Ticket },
 ];

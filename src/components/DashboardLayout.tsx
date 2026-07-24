@@ -563,7 +563,6 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [teacherPay, setTeacherPay] = useState<{ salary: number; todayEarning: number; month: string } | null>(null);
-  const [ticketUnread, setTicketUnread] = useState(0);
   const searchRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -609,14 +608,6 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
       .catch(() => {});
   }, [user]);
 
-  // O'qilmagan ticketlar soni (nav badge) — barcha rollar
-  useEffect(() => {
-    if (!user) return;
-    const load = () => fetch('/api/tickets/unread').then(r => r.ok ? r.json() : null).then(d => { if (d) setTicketUnread(d.count); }).catch(() => {});
-    load();
-    const iv = setInterval(load, 30000);
-    return () => clearInterval(iv);
-  }, [user]);
 
   const markAllRead = async () => {
     await fetch('/api/admin/notifications', {
@@ -715,7 +706,6 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
           <nav className="flex-1 py-3 px-1.5 overflow-y-auto space-y-1">
             {navItems.map((item) => {
               const isActive = pathname === item.href && !item.action;
-              const badge = item.href.endsWith('/tickets') && ticketUnread > 0;
               return (
                 <Link
                   key={item.href}
@@ -731,9 +721,6 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
                 >
                   <div className="relative">
                     <item.icon className="w-6 h-6" strokeWidth={1.6} />
-                    {badge && (
-                      <span className="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">{ticketUnread}</span>
-                    )}
                   </div>
                   <span className="text-[11px] font-medium leading-tight">{item.label}</span>
                 </Link>
@@ -786,9 +773,6 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
                     )}
                     <item.icon className={`w-[18px] h-[18px] ${isActive && !item.action ? 'text-blue-400' : ''}`} />
                     {item.label}
-                    {item.href.endsWith('/tickets') && ticketUnread > 0 && (
-                      <span className="ml-auto min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">{ticketUnread}</span>
-                    )}
                   </Link>
                 );
               })}

@@ -1,4 +1,4 @@
-import { Users, UsersRound, UserPlus, FolderOpen, ClipboardList, CreditCard, UserSearch, FileBarChart, LayoutDashboard, CalendarClock, Settings, UserCheck, ShieldCheck, Wallet, ScrollText, SlidersHorizontal, Ticket, BarChart3, Building2, Send, UserCog } from 'lucide-react';
+import { Users, UsersRound, UserPlus, FolderOpen, ClipboardList, CreditCard, UserSearch, FileBarChart, LayoutDashboard, CalendarClock, Settings, UserCheck, ShieldCheck, Wallet, ScrollText, Ticket, BarChart3, Building2 } from 'lucide-react';
 import type { NavItem } from '@/components/DashboardLayout';
 
 export const adminNav: NavItem[] = [
@@ -21,11 +21,8 @@ export const superadminNav: NavItem[] = [
   { label: 'Adminlar', href: '/dashboard/admin/admins', icon: ShieldCheck },
   { label: 'Audit', href: '/dashboard/admin/audit', icon: ScrollText },
   // Tizim boshqaruvi bo'limlari — har biri alohida sidebar bandi
-  { label: 'Sozlamalar', href: '/dashboard/admin/system/settings', icon: SlidersHorizontal },
   { label: 'Analitika', href: '/dashboard/admin/system/analytics', icon: BarChart3 },
   { label: 'Filiallar', href: '/dashboard/admin/system/branches', icon: Building2 },
-  { label: 'Tarqatma', href: '/dashboard/admin/system/broadcast', icon: Send },
-  { label: 'Kirish', href: '/dashboard/admin/system/impersonate', icon: UserCog },
 ];
 
 export const teacherNav: NavItem[] = [

@@ -17,6 +17,7 @@ import {
   Banknote,
   CreditCard,
   Loader2,
+  Building2,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -54,6 +55,19 @@ interface SessionUser {
   role: string;
 }
 
+interface BranchStat {
+  id: string;
+  name: string;
+  activeStudents: number;
+  totalStudents: number;
+  groups: number;
+  teachers: number;
+  monthRevenue: number;
+  debt: number;
+  debtors: number;
+  collectionRate: number;
+}
+
 interface Group {
   id: string;
   name: string;
@@ -73,6 +87,7 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [user, setUser] = useState<SessionUser | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [branches, setBranches] = useState<BranchStat[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -80,10 +95,13 @@ export default function AdminDashboardPage() {
       fetch('/api/admin/stats').then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/api/auth/me').then(r => r.ok ? r.json() : null).catch(() => null),
       fetch('/api/admin/groups').then(r => r.ok ? r.json() : []).catch(() => []),
-    ]).then(([statsData, userData, groupsData]) => {
+      // Filiallar bo'limi — faqat superadmin uchun (aks holda 403 → bo'sh)
+      fetch('/api/superadmin/branch-stats').then(r => r.ok ? r.json() : { branches: [] }).catch(() => ({ branches: [] })),
+    ]).then(([statsData, userData, groupsData, branchData]) => {
       if (statsData && !statsData.error) setStats(statsData);
       if (userData?.user) setUser(userData.user);
       setGroups(Array.isArray(groupsData) ? groupsData : []);
+      setBranches(Array.isArray(branchData?.branches) ? branchData.branches : []);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
@@ -203,6 +221,66 @@ export default function AdminDashboardPage() {
               </div>
             </Link>
           </div>
+
+          {/* ── Filiallar (superadmin) ── */}
+          {branches.length > 0 && (
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-slate-500" /> Filiallar
+                <span className="text-sm font-medium text-slate-400">({branches.length})</span>
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {branches.map(b => {
+                  const rate = b.collectionRate;
+                  const barColor = rate >= 80 ? 'bg-emerald-500' : rate >= 50 ? 'bg-amber-500' : 'bg-red-500';
+                  const rateColor = rate >= 80 ? 'text-emerald-600' : rate >= 50 ? 'text-amber-600' : 'text-red-600';
+                  return (
+                    <div key={b.id} className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-all">
+                      <div className="flex items-start justify-between gap-2 mb-4">
+                        <p className="font-bold text-slate-900 truncate">{b.name}</p>
+                        <span className={`text-sm font-bold ${rateColor} shrink-0`}>{rate}%</span>
+                      </div>
+
+                      {/* Mini ko'rsatkichlar */}
+                      <div className="grid grid-cols-3 gap-2 mb-4 text-center">
+                        <div>
+                          <p className="text-lg font-bold text-slate-900">{b.activeStudents}</p>
+                          <p className="text-[11px] text-slate-400">O&apos;quvchi</p>
+                        </div>
+                        <div className="border-x border-slate-100">
+                          <p className="text-lg font-bold text-slate-900">{b.groups}</p>
+                          <p className="text-[11px] text-slate-400">Guruh</p>
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-slate-900">{b.teachers}</p>
+                          <p className="text-[11px] text-slate-400">Ustoz</p>
+                        </div>
+                      </div>
+
+                      {/* To'lov intizomi progress */}
+                      <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
+                        <span>To&apos;lov intizomi</span>
+                        <span>{b.debtors > 0 ? `${b.debtors} qarzdor` : 'Qarzdor yo’q'}</span>
+                      </div>
+                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-4">
+                        <div className={`h-full ${barColor} rounded-full transition-all`} style={{ width: `${rate}%` }} />
+                      </div>
+
+                      {/* Moliya */}
+                      <div className="flex items-center justify-between text-xs pt-3 border-t border-slate-100">
+                        <span className="text-slate-400">Bu oy tushum</span>
+                        <span className="font-semibold text-slate-700">{formatAmount(b.monthRevenue)} so&apos;m</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs mt-1.5">
+                        <span className="text-slate-400">Qarzdorlik</span>
+                        <span className={`font-semibold ${b.debt > 0 ? 'text-red-600' : 'text-slate-700'}`}>{formatAmount(b.debt)} so&apos;m</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* ── Small stat cards row ── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

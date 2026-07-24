@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
+import { parseBody } from '@/lib/validate';
+
+const Schema = z.object({
+  currentPassword: z.string().min(1, 'joriy parol kerak').max(128),
+  newPassword: z.string().min(4, 'kamida 4 belgi').max(128),
+});
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
@@ -9,10 +16,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { currentPassword, newPassword } = await req.json();
-  if (!currentPassword || !newPassword) {
-    return NextResponse.json({ error: 'Joriy va yangi parol kerak' }, { status: 400 });
-  }
+  const parsed = await parseBody(req, Schema);
+  if (parsed instanceof NextResponse) return parsed;
+  const { currentPassword, newPassword } = parsed;
 
   const user = await prisma.user.findUnique({ where: { id: session.id } });
   if (!user) {

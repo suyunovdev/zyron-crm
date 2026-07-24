@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
+import { parseBody } from '@/lib/validate';
 import { logger } from '@/lib/logger';
+
+const NoteSchema = z.object({
+  studentId: z.string().min(1),
+  type: z.string().max(40).optional(),
+  text: z.string().min(1, 'matn kerak').max(2000),
+});
 
 export async function POST(req: NextRequest) {
   try {
     const auth = await requireAuth('admin');
     if (auth instanceof NextResponse) return auth;
 
-    const { studentId, type, text } = await req.json();
-    if (!studentId || !text) {
-      return NextResponse.json({ error: 'studentId va text kerak' }, { status: 400 });
-    }
+    const parsed = await parseBody(req, NoteSchema);
+    if (parsed instanceof NextResponse) return parsed;
+    const { studentId, type, text } = parsed;
 
     const note = await prisma.note.create({
       data: { studentId, type: type || 'comment', text },

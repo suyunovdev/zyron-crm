@@ -1,8 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
+import { parseBody } from '@/lib/validate';
 import { generateLessons } from '@/lib/generate-lessons';
 import { logger } from '@/lib/logger';
+
+const CreateGroupSchema = z.object({
+  name: z.string().min(1, 'nomi kerak').max(120),
+  subject: z.string().min(1, 'fani kerak').max(80),
+  teacherId: z.string().min(1, 'o\'qituvchi kerak'),
+  schedule: z.string().max(200).optional(),
+  meetLink: z.string().max(300).optional(),
+  maxStudents: z.coerce.number().int().min(1).max(100).optional(),
+  startDate: z.string().max(20).optional().nullable(),
+  room: z.string().max(40).optional().nullable(),
+  dayType: z.enum(['toq', 'juft', 'boshqa']).optional(),
+  time: z.string().max(10).optional().nullable(),
+  price: z.coerce.number().int().min(0).optional(),
+  lessonsPerMonth: z.coerce.number().int().min(1).max(60).optional(),
+  mode: z.enum(['offline', 'online']).optional(),
+});
 
 // Get all groups
 export async function GET() {
@@ -26,10 +44,9 @@ export async function POST(req: NextRequest) {
   const auth = await requireAuth('admin');
   if (auth instanceof NextResponse) return auth;
 
-  const { name, subject, teacherId, schedule, meetLink, maxStudents, startDate, room, dayType, time, price, lessonsPerMonth, mode } = await req.json();
-  if (!name || !subject || !teacherId) {
-    return NextResponse.json({ error: 'Nomi, fani va o\'qituvchi kerak' }, { status: 400 });
-  }
+  const parsed = await parseBody(req, CreateGroupSchema);
+  if (parsed instanceof NextResponse) return parsed;
+  const { name, subject, teacherId, schedule, meetLink, maxStudents, startDate, room, dayType, time, price, lessonsPerMonth, mode } = parsed;
 
   const group = await prisma.group.create({
     data: {
@@ -38,14 +55,14 @@ export async function POST(req: NextRequest) {
       teacherId,
       schedule: schedule || '',
       meetLink: meetLink || '',
-      maxStudents: maxStudents ? parseInt(maxStudents) : 15,
+      maxStudents: maxStudents ?? 15,
       startDate: startDate || null,
       room: room || null,
       dayType: dayType || 'toq',
       time: time || null,
       mode: mode || 'offline',
-      price: price ? parseInt(price) : 0,
-      lessonsPerMonth: lessonsPerMonth ? parseInt(lessonsPerMonth) : 12,
+      price: price ?? 0,
+      lessonsPerMonth: lessonsPerMonth ?? 12,
     },
     include: { teacher: { select: { name: true } } },
   });

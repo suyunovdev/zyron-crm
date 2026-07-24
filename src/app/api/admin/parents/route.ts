@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
+import { parseBody } from '@/lib/validate';
+
+const CreateParentSchema = z.object({
+  login: z.string().min(1).max(64),
+  password: z.string().min(4).max(128),
+  name: z.string().min(1).max(120),
+  phone: z.string().max(32).optional().nullable(),
+});
 
 // GET all parents with their children
 export async function GET() {
@@ -27,11 +36,9 @@ export async function POST(req: NextRequest) {
   const auth = await requireAuth('admin');
   if (auth instanceof NextResponse) return auth;
 
-  const { login, password, name, phone } = await req.json();
-
-  if (!login || !password || !name) {
-    return NextResponse.json({ error: 'login, password, name kerak' }, { status: 400 });
-  }
+  const parsed = await parseBody(req, CreateParentSchema);
+  if (parsed instanceof NextResponse) return parsed;
+  const { login, password, name, phone } = parsed;
 
   const existing = await prisma.user.findUnique({ where: { login } });
   if (existing) {

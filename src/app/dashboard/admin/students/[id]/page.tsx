@@ -637,7 +637,7 @@ export default function StudentProfilePage() {
           </div>
 
           {/* ── Stats row (4 cards like Mars IT) ── */}
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <div className="bg-white rounded-xl border border-slate-200 p-3 text-center">
               <p className="text-lg font-bold text-slate-900">{bizBilan}</p>
               <p className="text-[9px] text-slate-400 uppercase tracking-wider leading-tight mt-0.5">

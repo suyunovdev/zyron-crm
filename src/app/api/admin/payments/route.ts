@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { requireAuth } from "@/lib/api-utils";
+import { parseBody } from "@/lib/validate";
 import { prisma } from "@/lib/db";
 import { createNotification } from "@/lib/notify";
 import { logger } from '@/lib/logger';
@@ -48,22 +50,25 @@ export async function GET(req: NextRequest) {
   }
 }
 
+const PaymentSchema = z.object({
+  studentId: z.string().min(1),
+  amount: z.coerce.number().int().refine(v => v !== 0, 'summa 0 bo\'lmasin'),
+  month: z.string().regex(/^\d{4}-\d{2}$/, 'oy formati YYYY-MM'),
+  method: z.enum(['cash', 'card', 'transfer']).optional(),
+  note: z.string().max(500).optional().nullable(),
+  type: z.enum(['payment', 'refund', 'discount']).optional(),
+});
+
 export async function POST(req: NextRequest) {
   const auth = await requireAuth("admin");
   if (auth instanceof NextResponse) return auth;
 
-  const body = await req.json();
-  const { studentId, amount, month, method, note, type } = body;
-
-  if (!studentId || !amount || !month) {
-    return NextResponse.json(
-      { error: "studentId, amount va month majburiy" },
-      { status: 400 }
-    );
-  }
+  const parsed = await parseBody(req, PaymentSchema);
+  if (parsed instanceof NextResponse) return parsed;
+  const { studentId, amount, month, method, note, type } = parsed;
 
   // refund/discount — faqat superadmin (moliyaviy nazorat)
-  const payType = ['payment', 'refund', 'discount'].includes(type) ? type : 'payment';
+  const payType = ['payment', 'refund', 'discount'].includes(type || '') ? type : 'payment';
   if (payType !== 'payment' && auth.role !== 'superadmin') {
     return NextResponse.json({ error: 'Refund/chegirma faqat superadmin tomonidan' }, { status: 403 });
   }

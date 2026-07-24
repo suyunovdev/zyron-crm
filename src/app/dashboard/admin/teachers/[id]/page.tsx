@@ -161,7 +161,7 @@ export default function TeacherProfilePage() {
       </div>
 
       {/* ── Stats row ── */}
-      <div className="grid grid-cols-4 gap-4 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
         <div className="bg-white rounded-xl border border-slate-200 p-4">
           <p className="text-xs text-slate-400 mb-1">Guruhlar soni</p>
           <p className="text-2xl font-bold text-slate-900">{activeGroups.length}</p>
@@ -249,7 +249,8 @@ export default function TeacherProfilePage() {
           </div>
         ) : (
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <table className="w-full">
+           <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px]">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
                   <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase">#</th>
@@ -277,6 +278,7 @@ export default function TeacherProfilePage() {
                 ))}
               </tbody>
             </table>
+           </div>
           </div>
         )
       )}

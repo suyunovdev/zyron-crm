@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { SlidersHorizontal, BarChart3, Building2, Send, UserCog, DatabaseBackup, ShieldAlert, Skull, Loader2, Plus, Trash2, Download } from 'lucide-react';
+import { SlidersHorizontal, BarChart3, Building2, Send, UserCog, DatabaseBackup, ShieldAlert, Skull, Loader2, Plus, Trash2, Download, UserPlus, X } from 'lucide-react';
 
 type Tab = 'settings' | 'analytics' | 'branches' | 'broadcast' | 'impersonate' | 'backup' | 'security' | 'danger';
 const TABS: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
@@ -124,6 +124,7 @@ function AnalyticsTab() {
 function BranchesTab() {
   const [list, setList] = useState<any[]>([]);
   const [name, setName] = useState('');
+  const [adminFor, setAdminFor] = useState<{ id: string; name: string } | null>(null);
   const load = useCallback(() => fetch('/api/superadmin/branches').then(r => r.json()).then(d => setList(d.branches)), []);
   useEffect(() => { load(); }, [load]);
   const add = async () => { if (!name) return; await fetch('/api/superadmin/branches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); setName(''); load(); };
@@ -137,11 +138,77 @@ function BranchesTab() {
       <div className={card}>
         {list.length === 0 ? <p className="text-sm text-slate-400 text-center py-4">Filial yo’q</p> :
           list.map(b => (
-            <div key={b.id} className="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0">
-              <div><p className="font-medium text-slate-800">{b.name}</p><p className="text-xs text-slate-400">{b._count.users} xodim • {b._count.groups} guruh</p></div>
-              <button onClick={() => del(b.id)} className="p-1.5 rounded text-red-500 hover:bg-red-50"><Trash2 className="w-4 h-4" /></button>
+            <div key={b.id} className="flex justify-between items-center py-3 border-b border-slate-50 last:border-0 gap-3">
+              <div className="min-w-0"><p className="font-medium text-slate-800 truncate">{b.name}</p><p className="text-xs text-slate-400">{b._count.users} xodim • {b._count.groups} guruh</p></div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button onClick={() => setAdminFor({ id: b.id, name: b.name })}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2660A4]/10 text-[#2660A4] text-xs font-medium hover:bg-[#2660A4]/20">
+                  <UserPlus className="w-3.5 h-3.5" /> Admin qo’shish
+                </button>
+                <button onClick={() => del(b.id)} className="p-1.5 rounded text-red-500 hover:bg-red-50"><Trash2 className="w-4 h-4" /></button>
+              </div>
             </div>
           ))}
+      </div>
+      {adminFor && <BranchAdminModal branch={adminFor} onClose={() => setAdminFor(null)} onCreated={() => { setAdminFor(null); load(); }} />}
+    </div>
+  );
+}
+
+function BranchAdminModal({ branch, onClose, onCreated }: { branch: { id: string; name: string }; onClose: () => void; onCreated: () => void }) {
+  const [form, setForm] = useState({ name: '', login: '', phone: '', password: '' });
+  const [err, setErr] = useState('');
+  const [creds, setCreds] = useState<{ login: string; password: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    setErr('');
+    if (!form.name || !form.login || form.password.length < 4) { setErr('Ism, login va parol (kamida 4 belgi)'); return; }
+    setSaving(true);
+    const res = await fetch('/api/superadmin/admins', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...form, role: 'admin', branchId: branch.id }),
+    });
+    setSaving(false);
+    if (!res.ok) { setErr((await res.json()).error || 'Xato'); return; }
+    setCreds({ login: form.login, password: form.password });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 bg-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><Building2 className="w-5 h-5 text-[#2660A4]" /> {branch.name} — admin</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
+        </div>
+        {creds ? (
+          <div className="px-6 py-5 text-center">
+            <div className="mx-auto w-11 h-11 rounded-full bg-emerald-100 flex items-center justify-center mb-2 text-lg">✅</div>
+            <p className="font-semibold text-slate-900 mb-3">Admin yaratildi</p>
+            <div className="rounded-xl border border-slate-200 text-left">
+              <div className="flex justify-between px-4 py-2.5 border-b border-slate-100"><span className="text-sm text-slate-500">Login</span><span className="font-mono font-semibold">{creds.login}</span></div>
+              <div className="flex justify-between px-4 py-2.5"><span className="text-sm text-slate-500">Parol</span><span className="font-mono font-semibold">{creds.password}</span></div>
+            </div>
+            <button onClick={onCreated} className="w-full mt-4 bg-emerald-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-700">Yopish</button>
+          </div>
+        ) : (
+          <>
+            <div className="px-6 py-4 space-y-3">
+              {err && <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{err}</div>}
+              {([['name', 'To\'liq ism'], ['login', 'Login'], ['phone', 'Telefon (ixtiyoriy)'], ['password', 'Parol']] as const).map(([k, label]) => (
+                <div key={k}>
+                  <label className="text-xs font-medium text-slate-500">{label}</label>
+                  <input value={form[k]} onChange={e => setForm(s => ({ ...s, [k]: e.target.value }))} className={input} />
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200">
+              <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100">Bekor</button>
+              <button onClick={submit} disabled={saving} className={btn}>{saving && <Loader2 className="w-4 h-4 animate-spin" />} Yaratish</button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

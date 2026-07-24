@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { GraduationCap, Menu, X, LogOut, ChevronDown, Settings, Search, Users, UserPlus, FolderOpen, Moon, Sun, Calendar, Loader2, Banknote, CreditCard, ArrowRightLeft, BarChart3, UserCheck, UserX, Snowflake, Archive, BookOpen, ChevronUp, Download, Bell, Check, CheckCheck, Trash2, UserRoundPlus, CircleDollarSign, Globe, UserCircle, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { GraduationCap, Menu, X, LogOut, ChevronDown, Settings, Search, Users, UserPlus, FolderOpen, Moon, Sun, Calendar, Loader2, Banknote, CreditCard, ArrowRightLeft, BarChart3, UserCheck, UserX, Snowflake, Archive, BookOpen, ChevronUp, Download, Bell, Check, CheckCheck, Trash2, UserRoundPlus, CircleDollarSign, Globe, UserCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 
@@ -553,7 +553,6 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
   const { theme, toggleTheme } = useTheme();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{ students: any[]; teachers: any[]; groups: any[] } | null>(null);
@@ -608,11 +607,6 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
       .then(d => { if (d) setTeacherPay({ salary: d.salary, todayEarning: d.todayEarning, month: d.month }); })
       .catch(() => {});
   }, [user]);
-
-  // Sidebar yig'iq holatini localStorage'dan tiklash
-  useEffect(() => {
-    try { if (localStorage.getItem('sidebar-collapsed') === '1') setCollapsed(true); } catch {}
-  }, []);
 
   // O'qilmagan ticketlar soni (nav badge) — barcha rollar
   useEffect(() => {
@@ -695,12 +689,6 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
     }
   };
 
-  const toggleCollapsed = () => setCollapsed(c => {
-    const n = !c;
-    try { localStorage.setItem('sidebar-collapsed', n ? '1' : '0'); } catch {}
-    return n;
-  });
-
   if (!user) return null;
 
   const isAdmin = user.role === 'admin' || user.role === 'superadmin';
@@ -708,23 +696,22 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
 
   return (
     <div className={`min-h-screen flex ${theme === 'dark' ? 'bg-[#0b1120]' : 'bg-[#f8f9fb]'}`}>
-      {/* ──── Sidebar - Desktop (yig'iladigan) ──── */}
+      {/* ──── Sidebar - Desktop (ikonka + yorliq, vertikal) ──── */}
       {hasSidebar && (
-        <aside className={`hidden md:flex flex-col fixed inset-y-0 left-0 z-30 border-r transition-all duration-200 ${
-          collapsed ? 'w-[84px]' : 'w-[236px]'
-        } ${theme === 'dark' ? 'bg-[#0f172a] border-[#1e293b]' : 'bg-white border-slate-200'}`}>
+        <aside className={`hidden md:flex w-[150px] flex-col fixed inset-y-0 left-0 z-30 border-r ${
+          theme === 'dark' ? 'bg-[#0f172a] border-[#1e293b]' : 'bg-white border-slate-200'
+        }`}>
           {/* Logo */}
-          <div className={`h-14 flex items-center gap-2.5 border-b ${collapsed ? 'justify-center px-0' : 'px-4'} ${
+          <div className={`py-4 flex items-center justify-center border-b ${
             theme === 'dark' ? 'border-[#1e293b]' : 'border-slate-200'
           }`}>
-            <Link href="/" className="flex items-center gap-2.5">
-              <Image src="/logo-vertical.png" alt="Aka-Uka" width={40} height={40} className="object-contain shrink-0" />
-              {!collapsed && <span className={`text-sm font-bold ${theme === 'dark' ? 'text-slate-100' : 'text-slate-800'}`}>Aka-Uka</span>}
+            <Link href="/">
+              <Image src="/logo-vertical.png" alt="Aka-Uka" width={50} height={50} className="object-contain" />
             </Link>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 py-3 px-2 overflow-y-auto space-y-0.5">
+          <nav className="flex-1 py-3 px-1.5 overflow-y-auto space-y-1">
             {navItems.map((item) => {
               const isActive = pathname === item.href && !item.action;
               const badge = item.href.endsWith('/tickets') && ticketUnread > 0;
@@ -733,46 +720,31 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
                   key={item.href}
                   href={item.action ? '#' : item.href}
                   onClick={(e) => handleNavClick(item, e)}
-                  title={collapsed ? item.label : undefined}
-                  className={`flex items-center rounded-xl transition-all ${collapsed ? 'justify-center py-3' : 'gap-3 px-3 py-2.5'} ${
+                  className={`flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl text-center transition-all ${
                     isActive
-                      ? 'bg-[#2660A4] text-white shadow-sm'
+                      ? theme === 'dark' ? 'bg-[#2660A4]/25 text-white' : 'bg-[#2660A4]/10 text-[#2660A4] font-semibold'
                       : theme === 'dark'
                         ? 'text-slate-400 hover:bg-[#1e293b] hover:text-slate-200'
-                        : 'text-slate-600 hover:bg-[#2660A4]/10 hover:text-[#2660A4]'
+                        : 'text-[#2660A4] hover:bg-[#2660A4]/[0.07]'
                   }`}
                 >
-                  <div className="relative shrink-0">
-                    <item.icon className="w-5 h-5" strokeWidth={1.5} />
+                  <div className="relative">
+                    <item.icon className="w-6 h-6" strokeWidth={1.6} />
                     {badge && (
-                      <span className="absolute -top-1.5 -right-2 min-w-[15px] h-[15px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">{ticketUnread}</span>
+                      <span className="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">{ticketUnread}</span>
                     )}
                   </div>
-                  {!collapsed && <span className="text-sm font-medium truncate flex-1">{item.label}</span>}
-                  {!collapsed && badge && (
-                    <span className="min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">{ticketUnread}</span>
-                  )}
+                  <span className="text-[11px] font-medium leading-tight">{item.label}</span>
                 </Link>
               );
             })}
           </nav>
 
-          {/* Yig'ish/ochish tugmasi */}
-          <button
-            onClick={toggleCollapsed}
-            title={collapsed ? 'Ochish' : 'Yig\'ish'}
-            className={`flex items-center gap-2 border-t transition-colors ${collapsed ? 'justify-center py-3' : 'px-4 py-3'} ${
-              theme === 'dark' ? 'border-[#1e293b] text-slate-400 hover:bg-[#1e293b]' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
-            }`}
-          >
-            {collapsed ? <ChevronsRight className="w-5 h-5" /> : <><ChevronsLeft className="w-5 h-5" /><span className="text-sm font-medium">Yig&apos;ish</span></>}
-          </button>
-
           {/* Version */}
-          <div className={`py-2.5 border-t text-center ${collapsed ? 'px-1' : 'px-4'} ${theme === 'dark' ? 'border-[#1e293b]' : 'border-slate-200'}`}>
+          <div className={`py-2.5 border-t text-center ${theme === 'dark' ? 'border-[#1e293b]' : 'border-slate-200'}`}>
             <div className="flex items-center justify-center gap-1.5">
               <span className="w-2 h-2 bg-[#22AA79] rounded-full animate-pulse" />
-              {!collapsed && <span className="text-[10px] font-medium text-[#22AA79]">Online · v1.0.0</span>}
+              <span className="text-[10px] font-medium text-[#22AA79]">Online · v1.0.0</span>
             </div>
           </div>
         </aside>
@@ -825,7 +797,7 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
       )}
 
       {/* ──── Main content ──── */}
-      <div className={`flex-1 flex flex-col h-screen min-w-0 overflow-hidden transition-all duration-200 ${hasSidebar ? (collapsed ? 'md:ml-[84px]' : 'md:ml-[236px]') : ''}`}>
+      <div className={`flex-1 flex flex-col h-screen min-w-0 overflow-hidden ${hasSidebar ? 'md:ml-[150px]' : ''}`}>
         {/* Impersonation banner */}
         {user.impersonatedBy && (
           <div className="flex-shrink-0 flex items-center justify-center gap-3 bg-purple-600 text-white text-xs sm:text-sm py-1.5 px-4">

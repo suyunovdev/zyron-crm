@@ -5,6 +5,8 @@ export async function createNotification(data: {
   title: string;
   message: string;
   link?: string;
+  /** Filial (multi-branch) — null/undefined = global (barcha adminlarga ko'rinadi). */
+  branchId?: string | null;
 }) {
   return prisma.notification.create({ data });
 }

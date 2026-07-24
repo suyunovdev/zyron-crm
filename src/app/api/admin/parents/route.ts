@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { parseBody } from '@/lib/validate';
+import { scopedBranchId } from '@/lib/branch-scope';
 
 const CreateParentSchema = z.object({
   login: z.string().min(1).max(64),
@@ -17,8 +18,10 @@ export async function GET() {
   const auth = await requireAuth('admin');
   if (auth instanceof NextResponse) return auth;
 
+  const bId = await scopedBranchId(auth);
+
   const parents = await prisma.user.findMany({
-    where: { role: 'parent' },
+    where: { role: 'parent', ...(bId ? { branchId: bId } : {}) },
     select: {
       id: true, login: true, name: true, phone: true, status: true, createdAt: true,
       children: {
@@ -45,6 +48,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Bu login allaqachon mavjud' }, { status: 409 });
   }
 
+  const bId = await scopedBranchId(auth);
+
   const user = await prisma.user.create({
     data: {
       login,
@@ -53,6 +58,7 @@ export async function POST(req: NextRequest) {
       name,
       phone: phone || null,
       role: 'parent',
+      branchId: bId || null,
     },
   });
 
@@ -68,6 +74,15 @@ export async function PATCH(req: NextRequest) {
 
   if (!parentId || !studentId || !action) {
     return NextResponse.json({ error: 'parentId, studentId, action kerak' }, { status: 400 });
+  }
+
+  // Filial cheklovi: ota-ona ham, o'quvchi ham shu filialdan bo'lishi shart
+  const bId = await scopedBranchId(auth);
+  if (bId) {
+    const both = await prisma.user.findMany({ where: { id: { in: [parentId, studentId] } }, select: { branchId: true } });
+    if (both.length < 2 || both.some(u => u.branchId !== bId)) {
+      return NextResponse.json({ error: 'Foydalanuvchi boshqa filialga tegishli' }, { status: 403 });
+    }
   }
 
   if (action === 'link') {

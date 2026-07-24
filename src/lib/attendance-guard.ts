@@ -24,7 +24,7 @@ export async function checkDropout(studentId: string, groupId: string, actor?: S
     );
     if (currentAbsenceStreak <= ABSENCE_GRACE) return;
 
-    const student = await prisma.user.findUnique({ where: { id: studentId }, select: { name: true, status: true } });
+    const student = await prisma.user.findUnique({ where: { id: studentId }, select: { name: true, status: true, branchId: true } });
     if (!student || student.status !== 'active') return; // faqat aktivni muzlatamiz
 
     const group = await prisma.group.findUnique({ where: { id: groupId }, select: { name: true } });
@@ -39,6 +39,7 @@ export async function checkDropout(studentId: string, groupId: string, actor?: S
       title: 'O\'quvchi avto-muzlatildi',
       message: `${student.name} — ${groupName}da ${currentAbsenceStreak} ketma-ket sababsiz yo'qlik`,
       link: `/dashboard/admin/students/${studentId}`,
+      branchId: student.branchId,
     });
     if (actor) {
       await logAudit(actor, 'auto-freeze', 'user', studentId,

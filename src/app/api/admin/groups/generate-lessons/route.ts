@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { generateLessons, generateLessonsForMonth } from '@/lib/generate-lessons';
+import { scopedBranchId } from '@/lib/branch-scope';
 
 /**
  * POST /api/admin/groups/generate-lessons
@@ -25,11 +26,17 @@ export async function POST(req: NextRequest) {
 
     const group = await prisma.group.findUnique({
       where: { id: groupId },
-      select: { id: true, dayType: true, time: true, startDate: true, name: true },
+      select: { id: true, dayType: true, time: true, startDate: true, name: true, branchId: true },
     });
 
     if (!group) {
       return NextResponse.json({ error: 'Guruh topilmadi' }, { status: 404 });
+    }
+
+    // Filial cheklovi: boshqa filial guruhiga dars generatsiya qilib bo'lmaydi
+    const bId = await scopedBranchId(auth);
+    if (bId && group.branchId !== bId) {
+      return NextResponse.json({ error: 'Bu guruh boshqa filialga tegishli' }, { status: 403 });
     }
 
     // Bitta oy uchun

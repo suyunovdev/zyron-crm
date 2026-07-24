@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { createNotification } from "@/lib/notify";
 import { logger } from '@/lib/logger';
 import { getPagination } from '@/lib/paginate';
+import { scopedBranchId } from '@/lib/branch-scope';
 
 const VALID_STATUSES = ["new", "contacted", "trial", "enrolled", "rejected"];
 
@@ -19,6 +20,10 @@ export async function GET(req: NextRequest) {
     if (status && VALID_STATUSES.includes(status)) {
       where.status = status;
     }
+
+    // Filial cheklovi: faqat o'z filiali lidlari
+    const bId = await scopedBranchId(auth);
+    if (bId) where.branchId = bId;
 
     // Opt-in pagination: ?page/?limit bo'lsa meta qo'shiladi (leads kaliti saqlanadi)
     const pg = getPagination(searchParams);
@@ -56,6 +61,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Filialga biriktirilgan admin — lid avto o'sha filialga
+  const bId = await scopedBranchId(auth);
+
   // Generate short LeadID like "a0084"
   const randomId = Math.random().toString(36).substring(2, 6);
   const prefix = name.charAt(0).toLowerCase();
@@ -75,6 +83,7 @@ export async function POST(req: NextRequest) {
       source: source || null,
       note: note || null,
       prepayment: prepayment ? parseInt(prepayment) : null,
+      branchId: bId || null,
     },
   });
 
@@ -83,6 +92,7 @@ export async function POST(req: NextRequest) {
     title: 'Yangi lid qo\'shildi',
     message: `${name} — ${phone}`,
     link: '/dashboard/admin/leads',
+    branchId: bId,
   });
 
   return NextResponse.json({ lead }, { status: 201 });
@@ -110,6 +120,14 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    // Filial cheklovi: boshqa filial lidini o'zgartirib bo'lmaydi
+    const bId = await scopedBranchId(auth);
+    if (bId) {
+      const existing = await prisma.lead.findUnique({ where: { id }, select: { branchId: true } });
+      if (!existing) return NextResponse.json({ error: 'Lid topilmadi' }, { status: 404 });
+      if (existing.branchId !== bId) return NextResponse.json({ error: 'Bu lid boshqa filialga tegishli' }, { status: 403 });
+    }
+
     const data: Record<string, string> = { status };
     if (note !== undefined) {
       data.note = note;
@@ -126,6 +144,7 @@ export async function PATCH(req: NextRequest) {
         title: 'Lid ro\'yxatdan o\'tdi',
         message: `${lead.name} o'quvchiga aylandi`,
         link: '/dashboard/admin/students',
+        branchId: lead.branchId,
       });
     }
 
@@ -149,6 +168,14 @@ export async function DELETE(req: NextRequest) {
         { error: "ID majburiy" },
         { status: 400 }
       );
+    }
+
+    // Filial cheklovi: boshqa filial lidini o'chirib bo'lmaydi
+    const bId = await scopedBranchId(auth);
+    if (bId) {
+      const existing = await prisma.lead.findUnique({ where: { id }, select: { branchId: true } });
+      if (!existing) return NextResponse.json({ error: 'Lid topilmadi' }, { status: 404 });
+      if (existing.branchId !== bId) return NextResponse.json({ error: 'Bu lid boshqa filialga tegishli' }, { status: 403 });
     }
 
     await prisma.lead.delete({

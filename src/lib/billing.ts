@@ -92,13 +92,15 @@ export interface DebtSummary {
  * Barcha FAOL o'quvchilarning qarzdorligini bitta agregatsiyada hisoblaydi
  * (admin/stats uchun). computeStudentBalance bilan bir xil formula — 3 ta so'rov.
  */
-export async function computeDebtSummary(): Promise<DebtSummary> {
+export async function computeDebtSummary(branchId?: string | null): Promise<DebtSummary> {
   // Frozen o'quvchilar ham hisobga olinadi (avto-muzlatilgan qarzi yo'qolmasin); archived emas.
   const activeStatuses = ['active', 'frozen'];
+  // Filial cheklovi (bo'sh bo'lsa — barcha filiallar)
+  const studentWhere = { role: 'student', status: { in: activeStatuses }, ...(branchId ? { branchId } : {}) };
 
   // 1) O'quvchi → guruh (narx/dars soni)
   const memberships = await prisma.groupStudent.findMany({
-    where: { student: { role: 'student', status: { in: activeStatuses } } },
+    where: { student: studentWhere },
     select: {
       studentId: true,
       group: { select: { id: true, price: true, lessonsPerMonth: true } },
@@ -107,7 +109,7 @@ export async function computeDebtSummary(): Promise<DebtSummary> {
 
   // 2) Barcha davomat yozuvlari (present + yo'qlik), xronologik — grace qoidasi uchun
   const rows = await prisma.attendance.findMany({
-    where: { student: { role: 'student', status: { in: activeStatuses } } },
+    where: { student: studentWhere },
     select: { studentId: true, present: true, lesson: { select: { groupId: true, scheduledDate: true, order: true } } },
     orderBy: [{ lesson: { scheduledDate: 'asc' } }, { lesson: { order: 'asc' } }],
   });
@@ -124,9 +126,10 @@ export async function computeDebtSummary(): Promise<DebtSummary> {
     attendedByStudentGroup.set(key, computeBillable(recs).billableCount);
   }
 
-  // 3) To'lovlar: studentId bo'yicha yig'indi
+  // 3) To'lovlar: studentId bo'yicha yig'indi (filial cheklovi bilan)
   const paymentSums = await prisma.payment.groupBy({
     by: ['studentId'],
+    where: branchId ? { student: { branchId } } : {},
     _sum: { amount: true },
   });
   const paidByStudent = new Map<string, number>();

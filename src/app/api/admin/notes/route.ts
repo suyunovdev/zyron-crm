@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { parseBody } from '@/lib/validate';
 import { logger } from '@/lib/logger';
+import { scopedBranchId } from '@/lib/branch-scope';
 
 const NoteSchema = z.object({
   studentId: z.string().min(1),
@@ -19,6 +20,14 @@ export async function POST(req: NextRequest) {
     const parsed = await parseBody(req, NoteSchema);
     if (parsed instanceof NextResponse) return parsed;
     const { studentId, type, text } = parsed;
+
+    // Filial cheklovi: boshqa filial o'quvchisiga izoh yozib bo'lmaydi
+    const bId = await scopedBranchId(auth);
+    if (bId) {
+      const s = await prisma.user.findUnique({ where: { id: studentId }, select: { branchId: true } });
+      if (!s) return NextResponse.json({ error: 'O\'quvchi topilmadi' }, { status: 404 });
+      if (s.branchId !== bId) return NextResponse.json({ error: 'O\'quvchi boshqa filialga tegishli' }, { status: 403 });
+    }
 
     const note = await prisma.note.create({
       data: { studentId, type: type || 'comment', text },
@@ -38,6 +47,14 @@ export async function DELETE(req: NextRequest) {
 
     const { id } = await req.json();
     if (!id) return NextResponse.json({ error: 'id kerak' }, { status: 400 });
+
+    // Filial cheklovi: boshqa filial o'quvchisi izohini o'chirib bo'lmaydi
+    const bId = await scopedBranchId(auth);
+    if (bId) {
+      const n = await prisma.note.findUnique({ where: { id }, select: { student: { select: { branchId: true } } } });
+      if (!n) return NextResponse.json({ error: 'Izoh topilmadi' }, { status: 404 });
+      if (n.student.branchId !== bId) return NextResponse.json({ error: 'Boshqa filialga tegishli' }, { status: 403 });
+    }
 
     await prisma.note.delete({ where: { id } });
     return NextResponse.json({ ok: true });

@@ -147,9 +147,11 @@ model Notification {
   message   String
   read      Boolean  @default(false)
   link      String?  // sahifaga yo'naltirish
+  branchId  String?  // filial (multi-branch) — null = global (barcha adminlarga)
   createdAt DateTime @default(now())
 
   @@index([read, createdAt])
+  @@index([branchId])
 }
 
 model Lead {
@@ -168,10 +170,12 @@ model Lead {
   status      String   @default("new") // new, contacted, trial, enrolled, rejected
   note        String?
   prepayment  Int?     // oldindan to'lov summasi
+  branchId    String?  // filial (multi-branch)
   createdAt   DateTime @default(now())
 
   @@index([status])
   @@index([createdAt])
+  @@index([branchId])
 }
 
 // Audit jurnali — kim nima o'zgartirgani (javobgarlik/nazorat)

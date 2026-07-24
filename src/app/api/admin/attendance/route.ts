@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { checkDropout } from '@/lib/attendance-guard';
 import { logger } from '@/lib/logger';
+import { scopedBranchId } from '@/lib/branch-scope';
 
 // Admin can modify attendance
 export async function PATCH(req: NextRequest) {
@@ -11,6 +12,13 @@ export async function PATCH(req: NextRequest) {
     if (auth instanceof NextResponse) return auth;
 
     const { lessonId, studentId, present, groupId, date, time, scoreAttend, scoreHomework, scoreActivity } = await req.json();
+
+    // Filial cheklovi: boshqa filial o'quvchisi davomatini o'zgartirib bo'lmaydi
+    const bId = await scopedBranchId(auth);
+    if (bId && studentId) {
+      const s = await prisma.user.findUnique({ where: { id: studentId }, select: { branchId: true } });
+      if (!s || s.branchId !== bId) return NextResponse.json({ error: 'O\'quvchi boshqa filialga tegishli' }, { status: 403 });
+    }
 
     // 0-5 oralig'iga cheklangan ballar (berilganlarigina)
     const clamp = (v: number) => Math.min(5, Math.max(0, Number(v)));
@@ -81,6 +89,13 @@ export async function DELETE(req: NextRequest) {
     const { lessonId, studentId } = await req.json();
     if (!lessonId || !studentId) {
       return NextResponse.json({ error: 'lessonId va studentId kerak' }, { status: 400 });
+    }
+
+    // Filial cheklovi: boshqa filial o'quvchisi davomatini o'chirib bo'lmaydi
+    const bId = await scopedBranchId(auth);
+    if (bId) {
+      const s = await prisma.user.findUnique({ where: { id: studentId }, select: { branchId: true } });
+      if (!s || s.branchId !== bId) return NextResponse.json({ error: 'O\'quvchi boshqa filialga tegishli' }, { status: 403 });
     }
 
     await prisma.attendance.delete({

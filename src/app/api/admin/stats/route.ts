@@ -2,12 +2,19 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { computeDebtSummary } from '@/lib/billing';
+import { scopedBranchId } from '@/lib/branch-scope';
 import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
     const auth = await requireAuth('admin');
     if (auth instanceof NextResponse) return auth;
+
+    // Filial cheklovi: filial admini faqat o'z filiali statistikasini ko'radi
+    const bId = await scopedBranchId(auth);
+    const uB = bId ? { branchId: bId } : {};                 // User (o'quvchi/ustoz)
+    const gB = bId ? { branchId: bId } : {};                 // Group
+    const sRel = bId ? { student: { branchId: bId } } : {};  // student relatsiyasi orqali
 
     const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -33,34 +40,35 @@ export async function GET() {
     todayPayments,
     debt,
   ] = await Promise.all([
-    prisma.user.count({ where: { role: 'student' } }),
-    prisma.user.count({ where: { role: 'student', status: 'active' } }),
-    prisma.user.count({ where: { role: 'student', status: 'frozen' } }),
-    prisma.user.count({ where: { role: 'student', status: 'archived' } }),
-    prisma.user.count({ where: { role: 'teacher' } }),
-    prisma.user.count({ where: { role: 'teacher', status: 'active' } }),
-    prisma.group.count(),
-    prisma.group.count({ where: { status: 'active' } }),
-    prisma.group.count({ where: { status: 'archived' } }),
-    prisma.lesson.count(),
-    prisma.attendance.count(),
-    prisma.attendance.count({ where: { present: true } }),
-    prisma.lead.count(),
-    prisma.lead.count({ where: { status: 'enrolled' } }),
+    prisma.user.count({ where: { role: 'student', ...uB } }),
+    prisma.user.count({ where: { role: 'student', status: 'active', ...uB } }),
+    prisma.user.count({ where: { role: 'student', status: 'frozen', ...uB } }),
+    prisma.user.count({ where: { role: 'student', status: 'archived', ...uB } }),
+    prisma.user.count({ where: { role: 'teacher', ...uB } }),
+    prisma.user.count({ where: { role: 'teacher', status: 'active', ...uB } }),
+    prisma.group.count({ where: { ...gB } }),
+    prisma.group.count({ where: { status: 'active', ...gB } }),
+    prisma.group.count({ where: { status: 'archived', ...gB } }),
+    prisma.lesson.count({ where: bId ? { group: { branchId: bId } } : {} }),
+    prisma.attendance.count({ where: { ...sRel } }),
+    prisma.attendance.count({ where: { present: true, ...sRel } }),
+    prisma.lead.count({ where: { ...uB } }),
+    prisma.lead.count({ where: { status: 'enrolled', ...uB } }),
     // All payments for current month
     prisma.payment.findMany({
-      where: { month: currentMonth },
+      where: { month: currentMonth, ...sRel },
       select: { amount: true },
     }),
     // Today's payments
     prisma.payment.findMany({
       where: {
         createdAt: { gte: todayStart, lte: todayEnd },
+        ...sRel,
       },
       select: { amount: true },
     }),
     // Qarzdorlik (yagona billing manbasidan — student/balance bilan bir xil)
-    computeDebtSummary(),
+    computeDebtSummary(bId),
   ]);
 
   const umumiyTushum = allPayments.reduce((s, p) => s + p.amount, 0);

@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { canManageRole } from '@/lib/roles';
+import { scopedBranchId } from '@/lib/branch-scope';
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth('admin');
@@ -25,6 +26,12 @@ export async function POST(req: NextRequest) {
   // Admin/superadmin parolini faqat superadmin tiklay oladi (akkaunt egallab olishning oldini oladi)
   if (!canManageRole(auth.role, user.role)) {
     return NextResponse.json({ error: 'Bu foydalanuvchi parolini tiklashga ruxsatingiz yo\'q' }, { status: 403 });
+  }
+
+  // Filial cheklovi: boshqa filial foydalanuvchisi parolini tiklab bo'lmaydi
+  const bId = await scopedBranchId(auth);
+  if (bId && user.branchId !== bId) {
+    return NextResponse.json({ error: 'Bu foydalanuvchi boshqa filialga tegishli' }, { status: 403 });
   }
 
   await prisma.user.update({

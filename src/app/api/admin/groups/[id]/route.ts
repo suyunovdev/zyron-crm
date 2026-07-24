@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+import { scopedBranchId } from '@/lib/branch-scope';
 
 export async function GET(
   _req: NextRequest,
@@ -30,6 +31,12 @@ export async function GET(
 
     if (!group) {
       return NextResponse.json({ error: 'Guruh topilmadi' }, { status: 404 });
+    }
+
+    // Filial cheklovi: boshqa filial guruhini ko'rib bo'lmaydi
+    const bId = await scopedBranchId(auth);
+    if (bId && group.branchId !== bId) {
+      return NextResponse.json({ error: 'Bu guruh boshqa filialga tegishli' }, { status: 403 });
     }
 
     return NextResponse.json(group);

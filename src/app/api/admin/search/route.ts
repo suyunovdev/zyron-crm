@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/api-utils";
 import { prisma } from "@/lib/db";
 import { logger } from '@/lib/logger';
+import { scopedBranchId } from '@/lib/branch-scope';
 
 export async function GET(req: NextRequest) {
   try {
@@ -18,10 +19,15 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Filial cheklovi: qidiruv natijalari ham faqat o'z filialidan
+    const bId = await scopedBranchId(auth);
+    const bWhere = bId ? { branchId: bId } : {};
+
     const [students, teachers, groups] = await Promise.all([
       prisma.user.findMany({
         where: {
           role: "student",
+          ...bWhere,
           OR: [
             { name: { contains: q } },
             { login: { contains: q } },
@@ -40,6 +46,7 @@ export async function GET(req: NextRequest) {
       prisma.user.findMany({
         where: {
           role: "teacher",
+          ...bWhere,
           OR: [
             { name: { contains: q } },
             { login: { contains: q } },
@@ -56,6 +63,7 @@ export async function GET(req: NextRequest) {
 
       prisma.group.findMany({
         where: {
+          ...bWhere,
           OR: [
             { name: { contains: q } },
             { subject: { contains: q } },

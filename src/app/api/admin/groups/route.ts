@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/api-utils';
 import { parseBody } from '@/lib/validate';
 import { generateLessons } from '@/lib/generate-lessons';
 import { logger } from '@/lib/logger';
+import { scopedBranchId } from '@/lib/branch-scope';
 
 const CreateGroupSchema = z.object({
   name: z.string().min(1, 'nomi kerak').max(120),
@@ -27,7 +28,10 @@ export async function GET() {
   const auth = await requireAuth('admin');
   if (auth instanceof NextResponse) return auth;
 
+  const bId = await scopedBranchId(auth);
+
   const groups = await prisma.group.findMany({
+    where: bId ? { branchId: bId } : {},
     include: {
       teacher: { select: { id: true, name: true } },
       students: { include: { student: { select: { id: true, name: true, login: true, rawPass: true, status: true } } } },
@@ -48,6 +52,15 @@ export async function POST(req: NextRequest) {
   if (parsed instanceof NextResponse) return parsed;
   const { name, subject, teacherId, schedule, meetLink, maxStudents, startDate, room, dayType, time, price, lessonsPerMonth, mode } = parsed;
 
+  // Filial cheklovi: o'qituvchi shu filialdan bo'lishi shart, guruh o'sha filialga
+  const bId = await scopedBranchId(auth);
+  if (bId) {
+    const t = await prisma.user.findUnique({ where: { id: teacherId }, select: { branchId: true } });
+    if (!t || t.branchId !== bId) {
+      return NextResponse.json({ error: 'O\'qituvchi boshqa filialga tegishli' }, { status: 403 });
+    }
+  }
+
   const group = await prisma.group.create({
     data: {
       name,
@@ -63,6 +76,7 @@ export async function POST(req: NextRequest) {
       mode: mode || 'offline',
       price: price ?? 0,
       lessonsPerMonth: lessonsPerMonth ?? 12,
+      branchId: bId || null,
     },
     include: { teacher: { select: { name: true } } },
   });
@@ -95,6 +109,24 @@ export async function PATCH(req: NextRequest) {
 
   const { id, name, schedule, meetLink, status, maxStudents, startDate, room, dayType, time, price, lessonsPerMonth, mode, addStudentId, removeStudentId, moveStudentId, toGroupId } = await req.json();
   if (!id) return NextResponse.json({ error: 'id kerak' }, { status: 400 });
+
+  // Filial cheklovi: guruh (va tegishli o'quvchi/nishon guruh) shu filialdan bo'lishi shart
+  const bId = await scopedBranchId(auth);
+  if (bId) {
+    const inBranch = async (gid: string) => {
+      const g = await prisma.group.findUnique({ where: { id: gid }, select: { branchId: true } });
+      return !!g && g.branchId === bId;
+    };
+    const studentInBranch = async (sid: string) => {
+      const u = await prisma.user.findUnique({ where: { id: sid }, select: { branchId: true } });
+      return !!u && u.branchId === bId;
+    };
+    if (!(await inBranch(id))) return NextResponse.json({ error: 'Guruh boshqa filialga tegishli' }, { status: 403 });
+    if (toGroupId && !(await inBranch(toGroupId))) return NextResponse.json({ error: 'Nishon guruh boshqa filialga tegishli' }, { status: 403 });
+    for (const sid of [addStudentId, removeStudentId, moveStudentId].filter(Boolean)) {
+      if (!(await studentInBranch(sid))) return NextResponse.json({ error: 'O\'quvchi boshqa filialga tegishli' }, { status: 403 });
+    }
+  }
 
   // Move student from this group to another
   if (moveStudentId && toGroupId) {

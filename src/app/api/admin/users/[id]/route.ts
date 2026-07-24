@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
+import { scopedBranchId } from '@/lib/branch-scope';
 
 export async function GET(
   _req: NextRequest,
@@ -26,6 +27,7 @@ export async function GET(
         status: true,
         level: true,
         avatar: true,
+        branchId: true,
         createdAt: true,
         parent: { select: { id: true, login: true, name: true, rawPass: true } },
         teacherGroups: {
@@ -83,6 +85,12 @@ export async function GET(
 
     if (!user) {
       return NextResponse.json({ error: 'Foydalanuvchi topilmadi' }, { status: 404 });
+    }
+
+    // Filial cheklovi: boshqa filial foydalanuvchisini ko'rib bo'lmaydi
+    const bId = await scopedBranchId(auth);
+    if (bId && user.branchId !== bId) {
+      return NextResponse.json({ error: 'Bu foydalanuvchi boshqa filialga tegishli' }, { status: 403 });
     }
 
     return NextResponse.json(user);

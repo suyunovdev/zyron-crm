@@ -8,6 +8,7 @@ import { parseBody } from '@/lib/validate';
 import { canManageRole } from '@/lib/roles';
 import { computeBillable, groupCost } from '@/lib/billing-core';
 import { loginBase, randomPassword, uniqueLogin, ensureUnique, parentNameFrom } from '@/lib/credentials';
+import { scopedBranchId } from '@/lib/branch-scope';
 
 const CreateUserSchema = z.object({
   // login/password ixtiyoriy — berilmasa avtomatik generatsiya qilinadi
@@ -32,7 +33,11 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(req.nextUrl.searchParams.get('limit') || '50');
     const search = req.nextUrl.searchParams.get('search') || '';
 
+    // Filial cheklovi: filialga biriktirilgan admin faqat o'z filialini ko'radi
+    const bId = await scopedBranchId(auth);
+
     const where: Record<string, unknown> = {};
+    if (bId) where.branchId = bId;
     if (role) where.role = role;
     if (status) where.status = status;
     if (search) {
@@ -135,6 +140,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Bu rolda foydalanuvchi yaratishga ruxsatingiz yo\'q' }, { status: 403 });
   }
 
+  // Filialga biriktirilgan admin — yaratilgan foydalanuvchi avto o'sha filialga
+  const bId = await scopedBranchId(auth);
+
   // Login: berilgan bo'lsa unikallik tekshiriladi, aks holda avtomatik unique generatsiya
   let finalLogin: string;
   if (login) {
@@ -156,6 +164,7 @@ export async function POST(req: NextRequest) {
       role,
       subject: subject || null,
       level: level || null,
+      branchId: bId || null,
     },
   });
 
@@ -172,6 +181,7 @@ export async function POST(req: NextRequest) {
         name: parentNameFrom(name),
         phone: phone || null,
         role: 'parent',
+        branchId: bId || null,
       },
     });
     await prisma.user.update({ where: { id: user.id }, data: { parentId: p.id } });
@@ -194,10 +204,15 @@ export async function PATCH(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id kerak' }, { status: 400 });
 
   // Nishon foydalanuvchi admin/superadmin bo'lsa — faqat superadmin tahrirlaydi
-  const target = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+  const target = await prisma.user.findUnique({ where: { id }, select: { role: true, branchId: true } });
   if (!target) return NextResponse.json({ error: 'Foydalanuvchi topilmadi' }, { status: 404 });
   if (!canManageRole(auth.role, target.role)) {
     return NextResponse.json({ error: 'Bu foydalanuvchini tahrirlashga ruxsatingiz yo\'q' }, { status: 403 });
+  }
+  // Filial cheklovi: boshqa filial foydalanuvchisini tahrirlab bo'lmaydi
+  const bId = await scopedBranchId(auth);
+  if (bId && target.branchId !== bId) {
+    return NextResponse.json({ error: 'Bu foydalanuvchi boshqa filialga tegishli' }, { status: 403 });
   }
 
   const data: Record<string, unknown> = {};

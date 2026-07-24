@@ -7,6 +7,7 @@ import { createNotification } from "@/lib/notify";
 import { logger } from '@/lib/logger';
 import { getPagination, paginated } from '@/lib/paginate';
 import { logAudit } from '@/lib/audit';
+import { scopedBranchId } from '@/lib/branch-scope';
 
 export async function GET(req: NextRequest) {
   try {
@@ -26,6 +27,10 @@ export async function GET(req: NextRequest) {
     if (studentId) {
       where.studentId = studentId;
     }
+
+    // Filial cheklovi: faqat o'z filiali o'quvchilarining to'lovlari
+    const bId = await scopedBranchId(auth);
+    if (bId) where.student = { branchId: bId };
 
     const include = {
       student: { select: { id: true, name: true, login: true } },
@@ -73,6 +78,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Refund/chegirma faqat superadmin tomonidan' }, { status: 403 });
   }
 
+  // Filial cheklovi: o'quvchi shu filialdan bo'lishi shart
+  const student = await prisma.user.findUnique({ where: { id: studentId }, select: { branchId: true } });
+  if (!student) return NextResponse.json({ error: 'O\'quvchi topilmadi' }, { status: 404 });
+  const bId = await scopedBranchId(auth);
+  if (bId && student.branchId !== bId) {
+    return NextResponse.json({ error: 'O\'quvchi boshqa filialga tegishli' }, { status: 403 });
+  }
+
   const payment = await prisma.payment.create({
     data: {
       studentId,
@@ -99,6 +112,7 @@ export async function POST(req: NextRequest) {
     title: 'Yangi to\'lov qabul qilindi',
     message: `${payment.student.name} — ${Number(amount).toLocaleString()} so'm (${methodLabel})`,
     link: '/dashboard/admin/payments',
+    branchId: student.branchId,
   });
 
   return NextResponse.json(payment, { status: 201 });

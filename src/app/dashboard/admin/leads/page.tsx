@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import {
   Plus, Trash2, ChevronDown, Phone, User, TrendingUp, X, Loader2, Search, UserPlus,
 } from "lucide-react";
+import { fmtDate } from "@/lib/date";
 
 interface Lead {
   id: string;
@@ -350,7 +351,7 @@ export default function LeadsPage() {
                         )}
                       </td>
                       <td className="px-5 py-3.5 text-sm text-slate-500">
-                        {new Date(lead.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }).replace(/ /g, '.')}
+                        {fmtDate(lead.createdAt)}
                       </td>
                       <td className="px-5 py-3.5">
                         <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded text-xs font-mono">

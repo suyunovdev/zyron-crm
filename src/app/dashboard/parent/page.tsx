@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import {
   Users, BookOpen, Wallet, Clock, CalendarDays, MapPin, Video, Trophy, Medal, Loader2,
 } from 'lucide-react';
+import { fmtDate } from '@/lib/date';
 
 interface LeaderboardEntry {
   rank: number; name: string; present: number; total: number; pct: number;
@@ -227,7 +228,7 @@ export default function ParentDashboardPage() {
                           <p className="text-sm font-semibold text-slate-800 dark:text-white">{p.amount.toLocaleString()} so&apos;m</p>
                           <p className="text-xs text-slate-400">{p.month} &middot; {METHOD_LABELS[p.method] || p.method}</p>
                         </div>
-                        <span className="text-xs text-slate-400">{new Date(p.createdAt).toLocaleDateString('uz-UZ')}</span>
+                        <span className="text-xs text-slate-400">{fmtDate(p.createdAt)}</span>
                       </div>
                     ))}
                   </div>

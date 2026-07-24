@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Ticket as TicketIcon, Plus, X, Send, ArrowLeft, Loader2, CircleDot } from 'lucide-react';
 import { CATEGORY_LABELS, STATUS_LABELS, TICKET_CATEGORIES } from '@/lib/tickets';
+import { fmtDateTime } from '@/lib/date';
 
 interface TicketListItem {
   id: string; subject: string; category: string; priority: string; status: string;
@@ -19,7 +20,7 @@ const STATUS_CLS: Record<string, string> = {
 const PRIORITY_CLS: Record<string, string> = {
   low: 'text-slate-400', normal: 'text-slate-500', high: 'text-red-600 font-semibold',
 };
-const timeAgo = (s: string) => new Date(s).toLocaleString('uz-UZ', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+const timeAgo = (s: string) => fmtDateTime(s);
 
 export default function TicketsView({ canCreate = false }: { canCreate?: boolean }) {
   const [tickets, setTickets] = useState<TicketListItem[]>([]);

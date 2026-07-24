@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { UserCircle, Wallet, CalendarDays, Loader2, TrendingUp } from 'lucide-react';
+import { fmtWeekdayDay } from '@/lib/date';
 
 interface Daily { date: string; billableCount: number; revenue: number; earning: number; }
 interface Detail {
@@ -12,7 +13,7 @@ interface Detail {
 
 const fmt = (n: number) => (n || 0).toLocaleString('uz-UZ');
 function currentMonth() { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`; }
-const dayLabel = (d: string) => new Date(d).toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', weekday: 'short' });
+const dayLabel = (d: string) => fmtWeekdayDay(d);
 
 export default function TeacherProfilePage() {
   const [d, setD] = useState<Detail | null>(null);

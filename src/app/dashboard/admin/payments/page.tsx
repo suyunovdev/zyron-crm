@@ -12,6 +12,7 @@ import {
   Banknote,
   ArrowRightLeft,
 } from "lucide-react";
+import { fmtDate } from "@/lib/date";
 
 interface Student {
   id: string;
@@ -360,7 +361,7 @@ export default function AdminPaymentsPage() {
                         {payment.note || "—"}
                       </td>
                       <td className="px-4 py-3 text-slate-500">
-                        {new Date(payment.createdAt).toLocaleDateString("uz-UZ")}
+                        {fmtDate(payment.createdAt)}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button

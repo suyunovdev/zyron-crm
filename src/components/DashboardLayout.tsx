@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { GraduationCap, Menu, X, LogOut, ChevronDown, Settings, Search, Users, UserPlus, FolderOpen, Moon, Sun, Calendar, Loader2, Banknote, CreditCard, ArrowRightLeft, BarChart3, UserCheck, UserX, Snowflake, Archive, BookOpen, ChevronUp, Download, Bell, Check, CheckCheck, Trash2, UserRoundPlus, CircleDollarSign, Globe, UserCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
+import { fmtDate } from '@/lib/date';
 
 export interface NavItem {
   label: string;
@@ -543,7 +544,7 @@ function getTimeAgo(dateStr: string): string {
   if (diff < 3600) return `${Math.floor(diff / 60)} daqiqa oldin`;
   if (diff < 86400) return `${Math.floor(diff / 3600)} soat oldin`;
   if (diff < 604800) return `${Math.floor(diff / 86400)} kun oldin`;
-  return date.toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', year: 'numeric' });
+  return fmtDate(date);
 }
 
 // ─── Main Layout ───

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { ScrollText, Loader2 } from 'lucide-react';
+import { fmtDateTime } from '@/lib/date';
 
 interface Log {
   id: string; actorName: string; actorRole: string; action: string;
@@ -29,7 +30,7 @@ export default function AuditPage() {
   }, [entity]);
   useEffect(() => { load(); }, [load]);
 
-  const fmt = (s: string) => new Date(s).toLocaleString('uz-UZ', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const fmt = (s: string) => fmtDateTime(s);
 
   return (
     <div className="max-w-5xl mx-auto">

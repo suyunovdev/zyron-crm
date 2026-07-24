@@ -51,3 +51,9 @@ prisma/dev.db
 
 # Backup fayllari (superadmin backup)
 backups/
+
+# Playwright E2E
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

@@ -54,7 +54,8 @@ npm run dev        # dev server (Turbopack)
 npm run build      # production build
 npm run start      # production server
 npm run lint       # ESLint
-npm run test       # Vitest (biznes-logika testlari)
+npm run test       # Vitest (biznes-logika unit testlari)
+npm run test:e2e   # Playwright E2E (brauzerda user oqimlari)
 npm run db:seed    # bazani demo ma'lumot bilan to'ldirish
 npm run db:reset   # migratsiyani reset + seed
 ```

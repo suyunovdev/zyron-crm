@@ -39,8 +39,50 @@ jobs:
         run: npm run lint
         continue-on-error: true
 
-      - name: Testlar
+      - name: Testlar (unit)
         run: npm test
 
       - name: Build
         run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "file:./dev.db"
+      JWT_SECRET: "ci-dummy-jwt-secret"
+      CRON_SECRET: "ci-dummy-cron-secret"
+      WEBHOOK_SECRET: "ci-dummy-webhook-secret"
+      TZ: "Asia/Tashkent"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Bog'liqliklarni o'rnatish
+        run: npm ci
+
+      - name: Prisma Client + baza (db push) + seed
+        run: |
+          npx prisma generate
+          npx prisma db push --skip-generate
+          npm run db:seed
+
+      - name: Playwright brauzeri
+        run: npx playwright install --with-deps chromium
+
+      - name: Build
+        run: npm run build
+
+      - name: E2E testlar
+        run: npm run test:e2e
+
+      - name: Hisobotni yuklash (xato bo'lsa)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

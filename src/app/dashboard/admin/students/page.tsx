@@ -126,7 +126,7 @@ export default function StudentsPage() {
   const getSubject = (s: Student) => getFirstGroup(s)?.subject || '';
 
   const filtered = useMemo(() => {
-    let list = students.filter(s => {
+    const list = students.filter(s => {
       if (filterStatus !== 'all' && s.status !== filterStatus) return false;
       if (search) {
         const q = search.toLowerCase();

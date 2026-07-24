@@ -113,7 +113,7 @@ function AnalyticsTab() {
         <p className="text-sm font-semibold text-slate-700 mb-2">Top ustozlar (tushum)</p>
         {d.topTeachers.map((t: any, i: number) => (
           <div key={i} className="flex justify-between py-1.5 border-b border-slate-50 last:border-0 text-sm">
-            <span className="text-slate-700">{t.name}</span><span className="font-medium text-slate-900">{fmt(t.revenue)} so'm</span>
+            <span className="text-slate-700">{t.name}</span><span className="font-medium text-slate-900">{fmt(t.revenue)} so’m</span>
           </div>
         ))}
       </div>
@@ -132,10 +132,10 @@ function BranchesTab() {
     <div className="space-y-4">
       <div className={`${card} flex gap-2`}>
         <input className={input} placeholder="Yangi filial nomi" value={name} onChange={e => setName(e.target.value)} />
-        <button onClick={add} className={btn}><Plus className="w-4 h-4" /> Qo'shish</button>
+        <button onClick={add} className={btn}><Plus className="w-4 h-4" /> Qo’shish</button>
       </div>
       <div className={card}>
-        {list.length === 0 ? <p className="text-sm text-slate-400 text-center py-4">Filial yo'q</p> :
+        {list.length === 0 ? <p className="text-sm text-slate-400 text-center py-4">Filial yo’q</p> :
           list.map(b => (
             <div key={b.id} className="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0">
               <div><p className="font-medium text-slate-800">{b.name}</p><p className="text-xs text-slate-400">{b._count.users} xodim • {b._count.groups} guruh</p></div>
@@ -162,11 +162,11 @@ function BroadcastTab() {
   };
   return (
     <div className={card}>
-      {!ready && <div className="text-xs bg-amber-50 text-amber-700 rounded-lg px-3 py-2 mb-3">SMS gateway (SMS_GATEWAY_TOKEN) sozlanmagan — xabar navbatga qo'yiladi (yuborilmaydi).</div>}
+      {!ready && <div className="text-xs bg-amber-50 text-amber-700 rounded-lg px-3 py-2 mb-3">SMS gateway (SMS_GATEWAY_TOKEN) sozlanmagan — xabar navbatga qo’yiladi (yuborilmaydi).</div>}
       <div className="space-y-3 max-w-md">
         <div className="flex gap-2">
           <select className={input} value={audience} onChange={e => setAudience(e.target.value)}>
-            <option value="students">O'quvchilar</option><option value="debtors">Qarzdorlar</option><option value="leads">Lidlar</option><option value="all">Hammasi</option>
+            <option value="students">O’quvchilar</option><option value="debtors">Qarzdorlar</option><option value="leads">Lidlar</option><option value="all">Hammasi</option>
           </select>
           <select className={input} value={channel} onChange={e => setChannel(e.target.value)}>
             <option value="sms">SMS</option><option value="telegram">Telegram</option>
@@ -197,7 +197,7 @@ function ImpersonateTab() {
   };
   return (
     <div className={card}>
-      <p className="text-sm text-slate-500 mb-3">Boshqa foydalanuvchi sifatida kirib, ularning ko'rinishini tekshiring (support/debug). Qaytish tugmasi tepada chiqadi.</p>
+      <p className="text-sm text-slate-500 mb-3">Boshqa foydalanuvchi sifatida kirib, ularning ko’rinishini tekshiring (support/debug). Qaytish tugmasi tepada chiqadi.</p>
       <div className="flex gap-2 max-w-md">
         <select className={input} value={sel} onChange={e => setSel(e.target.value)}>
           <option value="">Foydalanuvchi tanlang...</option>
@@ -219,14 +219,14 @@ function BackupTab() {
   return (
     <div className="space-y-4">
       <div className={card}>
-        <p className="text-sm font-semibold text-slate-700 mb-1">Ma'lumot zaxirasi</p>
+        <p className="text-sm font-semibold text-slate-700 mb-1">Ma’lumot zaxirasi</p>
         <p className="text-xs text-slate-500 mb-3">SQLite bazasining nusxasini serverdagi backups/ papkasiga saqlaydi.</p>
         <button onClick={backup} className={btn}><DatabaseBackup className="w-4 h-4" /> Zaxira yaratish</button>
         {msg && <p className="text-sm text-slate-600 mt-2">{msg}</p>}
       </div>
       <div className={card}>
-        <p className="text-sm font-semibold text-slate-700 mb-1">To'liq eksport (JSON)</p>
-        <p className="text-xs text-slate-500 mb-3">Barcha ma'lumotni JSON fayl sifatida yuklab olish.</p>
+        <p className="text-sm font-semibold text-slate-700 mb-1">To’liq eksport (JSON)</p>
+        <p className="text-xs text-slate-500 mb-3">Barcha ma’lumotni JSON fayl sifatida yuklab olish.</p>
         <a href="/api/superadmin/export" className={`${btn} inline-flex w-fit`}><Download className="w-4 h-4" /> Eksport qilish</a>
       </div>
     </div>
@@ -244,7 +244,7 @@ function SecurityTab() {
   return (
     <div className={card}>
       <p className="text-sm font-semibold text-slate-700 mb-1">Majburiy chiqarish (barcha sessiyalar)</p>
-      <p className="text-xs text-slate-500 mb-3">Barcha eski tokenlarni bekor qiladi — o'g'irlangan/eskirgan sessiyalarga qarshi.</p>
+      <p className="text-xs text-slate-500 mb-3">Barcha eski tokenlarni bekor qiladi — o’g’irlangan/eskirgan sessiyalarga qarshi.</p>
       <button onClick={forceAll} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-orange-600 text-white text-sm font-medium hover:bg-orange-700">
         <ShieldAlert className="w-4 h-4" /> Hammani chiqarish
       </button>
@@ -256,10 +256,10 @@ function SecurityTab() {
 function DangerTab() {
   const [msg, setMsg] = useState('');
   const run = async (action: string, label: string) => {
-    if (!confirm(`"${label}" — bu qaytarib bo'lmaydi. Davom etasizmi?`)) return;
+    if (!confirm(`"${label}" — bu qaytarib bo’lmaydi. Davom etasizmi?`)) return;
     const res = await fetch('/api/superadmin/danger', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, confirm: 'TASDIQLAYMAN' }) });
     const d = await res.json();
-    setMsg(res.ok ? `${d.label}: ${d.deleted} ta o'chirildi` : d.error);
+    setMsg(res.ok ? `${d.label}: ${d.deleted} ta o’chirildi` : d.error);
   };
   const actions = [
     { a: 'clear-rejected-leads', l: 'Rad etilgan lidlarni tozalash' },

@@ -259,7 +259,7 @@ export default function GroupsPage() {
 
   // Filter + Sort
   const filtered = useMemo(() => {
-    let list = groups.filter(g => {
+    const list = groups.filter(g => {
       if (filterStatus === 'active' && g.status !== 'active') return false;
       if (filterStatus === 'archived' && g.status !== 'archived') return false;
       if (filterLang && (g.language || 'uz') !== filterLang) return false;

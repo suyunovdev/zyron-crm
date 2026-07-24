@@ -88,17 +88,16 @@ export function AnalyticsTab() {
 
 export function BranchesTab() {
   const [list, setList] = useState<any[]>([]);
-  const [name, setName] = useState('');
+  const [creating, setCreating] = useState(false);
   const [adminFor, setAdminFor] = useState<{ id: string; name: string } | null>(null);
   const load = useCallback(() => fetch('/api/superadmin/branches').then(r => r.json()).then(d => setList(d.branches)), []);
   useEffect(() => { load(); }, [load]);
-  const add = async () => { if (!name) return; await fetch('/api/superadmin/branches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) }); setName(''); load(); };
   const del = async (id: string) => { if (!confirm('Filialni o\'chirasizmi?')) return; await fetch(`/api/superadmin/branches/${id}`, { method: 'DELETE' }); load(); };
   return (
     <div className="space-y-4">
-      <div className={`${card} flex gap-2`}>
-        <input className={input} placeholder="Yangi filial nomi" value={name} onChange={e => setName(e.target.value)} />
-        <button onClick={add} className={btn}><Plus className="w-4 h-4" /> Qo’shish</button>
+      <div className={`${card} flex items-center justify-between gap-3`}>
+        <p className="text-sm text-slate-500">Yangi filial yaratganda unga admin ham tayinlanadi.</p>
+        <button onClick={() => setCreating(true)} className={btn}><Plus className="w-4 h-4" /> Yangi filial</button>
       </div>
       <div className={card}>
         {list.length === 0 ? <p className="text-sm text-slate-400 text-center py-4">Filial yo’q</p> :
@@ -115,7 +114,75 @@ export function BranchesTab() {
             </div>
           ))}
       </div>
+      {creating && <BranchCreateModal onClose={() => setCreating(false)} onCreated={() => { setCreating(false); load(); }} />}
       {adminFor && <BranchAdminModal branch={adminFor} onClose={() => setAdminFor(null)} onCreated={() => { setAdminFor(null); load(); }} />}
+    </div>
+  );
+}
+
+function BranchCreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [form, setForm] = useState({ branchName: '', name: '', login: '', phone: '', password: '' });
+  const [err, setErr] = useState('');
+  const [creds, setCreds] = useState<{ login: string; password: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    setErr('');
+    if (!form.branchName) { setErr('Filial nomini kiriting'); return; }
+    if (!form.name || !form.login || form.password.length < 4) { setErr('Admin ismi, logini va paroli (kamida 4 belgi) shart'); return; }
+    setSaving(true);
+    const res = await fetch('/api/superadmin/branches', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: form.branchName, admin: { name: form.name, login: form.login, phone: form.phone || null, password: form.password } }),
+    });
+    setSaving(false);
+    if (!res.ok) { setErr((await res.json()).error || 'Xato'); return; }
+    setCreds({ login: form.login, password: form.password });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 bg-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><Building2 className="w-5 h-5 text-[#2660A4]" /> Yangi filial + admin</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
+        </div>
+        {creds ? (
+          <div className="px-6 py-5 text-center">
+            <div className="mx-auto w-11 h-11 rounded-full bg-emerald-100 flex items-center justify-center mb-2 text-lg">✅</div>
+            <p className="font-semibold text-slate-900 mb-3">Filial va admin yaratildi</p>
+            <div className="rounded-xl border border-slate-200 text-left">
+              <div className="flex justify-between px-4 py-2.5 border-b border-slate-100"><span className="text-sm text-slate-500">Login</span><span className="font-mono font-semibold">{creds.login}</span></div>
+              <div className="flex justify-between px-4 py-2.5"><span className="text-sm text-slate-500">Parol</span><span className="font-mono font-semibold">{creds.password}</span></div>
+            </div>
+            <button onClick={onCreated} className="w-full mt-4 bg-emerald-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-700">Yopish</button>
+          </div>
+        ) : (
+          <>
+            <div className="px-6 py-4 space-y-3">
+              {err && <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{err}</div>}
+              <div>
+                <label className="text-xs font-medium text-slate-500">Filial nomi</label>
+                <input value={form.branchName} onChange={e => setForm(s => ({ ...s, branchName: e.target.value }))} className={input} placeholder="Masalan: Aka-Ukalar Ishtixon" />
+              </div>
+              <div className="pt-1 border-t border-slate-100">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-2 mb-1">Filial admini</p>
+              </div>
+              {([['name', 'To\'liq ism'], ['login', 'Login'], ['phone', 'Telefon (ixtiyoriy)'], ['password', 'Parol']] as const).map(([k, label]) => (
+                <div key={k}>
+                  <label className="text-xs font-medium text-slate-500">{label}</label>
+                  <input value={form[k]} onChange={e => setForm(s => ({ ...s, [k]: e.target.value }))} className={input} />
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200">
+              <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100">Bekor</button>
+              <button onClick={submit} disabled={saving} className={btn}>{saving && <Loader2 className="w-4 h-4 animate-spin" />} Yaratish</button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

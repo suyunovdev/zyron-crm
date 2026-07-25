@@ -264,3 +264,20 @@ model TicketMessage {
 
   @@index([ticketId])
 }
+
+// Sodda xabar — ustoz o'quvchining ota-onasiga yozadi (bir tomonlama, o'qiydi).
+// Ticket'dan farqi: kategoriya/muhimlik/status/thread YO'Q. AuditLog kabi sof id.
+model Message {
+  id          String   @id @default(cuid())
+  teacherId   String
+  teacherName String
+  studentId   String
+  studentName String
+  parentId    String   // qabul qiluvchi ota-ona (user id)
+  body        String
+  read        Boolean  @default(false) // ota-ona o'qidimi
+  createdAt   DateTime @default(now())
+
+  @@index([parentId, read])
+  @@index([teacherId])
+}

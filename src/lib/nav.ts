@@ -27,7 +27,6 @@ export const superadminNav: NavItem[] = [
 export const teacherNav: NavItem[] = [
   { label: 'Asosiy', href: '/dashboard/teacher', icon: LayoutDashboard },
   { label: 'Guruhlar', href: '/dashboard/teacher/groups', icon: FolderOpen },
-  { label: 'Xabarlar', href: '/dashboard/teacher/messages', icon: MessageSquare },
 ];
 
 export const studentNav: NavItem[] = [

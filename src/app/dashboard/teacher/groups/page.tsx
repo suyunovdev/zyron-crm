@@ -15,6 +15,10 @@ import {
   TrendingUp,
   Timer,
   Star,
+  MessageSquare,
+  Send,
+  Loader2,
+  X,
 } from 'lucide-react';
 
 interface Student {
@@ -122,6 +126,7 @@ export default function TeacherGroupsPage() {
   const [now, setNow] = useState(tzNow());
   const [teacherName, setTeacherName] = useState('');
   const [timerStr, setTimerStr] = useState('00:00:00');
+  const [msgFor, setMsgFor] = useState<{ id: string; name: string } | null>(null);
   const monthScrollRef = useRef<HTMLDivElement>(null);
 
   // Update clock every second for timer
@@ -637,11 +642,16 @@ export default function TeacherGroupsPage() {
                                     <span className="text-[11px] text-slate-400 w-4">{idx + 1}</span>
                                   </div>
                                   <div className="flex items-center gap-1.5 min-w-0">
-                                    <span className="text-[13px] text-slate-800 truncate">
+                                    <button
+                                      onClick={() => setMsgFor({ id: student.id, name: student.name })}
+                                      title="Ota-onaga xabar yozish"
+                                      className="group/msg text-[13px] text-slate-800 truncate text-left hover:text-blue-600 transition-colors flex items-center gap-1"
+                                    >
                                       <span className="font-bold">{student.name.split(' ')[0]}</span>
                                       {' '}
-                                      <span className="font-normal text-slate-600">{student.name.split(' ').slice(1).join(' ')}</span>
-                                    </span>
+                                      <span className="font-normal text-slate-600 group-hover/msg:text-blue-600">{student.name.split(' ').slice(1).join(' ')}</span>
+                                      <MessageSquare className="w-3 h-3 text-slate-300 group-hover/msg:text-blue-500 flex-shrink-0" />
+                                    </button>
                                     <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded flex-shrink-0 ${
                                       student.status === 'active'
                                         ? 'bg-emerald-100 text-emerald-700'
@@ -970,6 +980,70 @@ export default function TeacherGroupsPage() {
           </div>
         </div>
       )}
+
+      {msgFor && <MessageModal student={msgFor} onClose={() => setMsgFor(null)} />}
+    </div>
+  );
+}
+
+// Ota-onaga xabar yozish modali (o'quvchi ismiga bosilganda)
+function MessageModal({ student, onClose }: { student: { id: string; name: string }; onClose: () => void }) {
+  const [body, setBody] = useState('');
+  const [sending, setSending] = useState(false);
+  const [err, setErr] = useState('');
+  const [done, setDone] = useState(false);
+
+  const send = async () => {
+    setErr('');
+    if (!body.trim()) { setErr('Xabar matnini yozing'); return; }
+    setSending(true);
+    const res = await fetch('/api/teacher/messages', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId: student.id, body: body.trim() }),
+    });
+    setSending(false);
+    if (!res.ok) { setErr((await res.json()).error || 'Xato'); return; }
+    setDone(true);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 bg-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <MessageSquare className="w-5 h-5 text-blue-500" /> Ota-onaga xabar
+          </h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
+        </div>
+        {done ? (
+          <div className="px-6 py-6 text-center">
+            <div className="mx-auto w-11 h-11 rounded-full bg-emerald-100 flex items-center justify-center mb-2 text-lg">✅</div>
+            <p className="font-semibold text-slate-900">Xabar yuborildi</p>
+            <p className="text-sm text-slate-500 mt-1">{student.name} ning ota-onasiga yetkazildi.</p>
+            <button onClick={onClose} className="w-full mt-4 bg-blue-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700">Yopish</button>
+          </div>
+        ) : (
+          <>
+            <div className="px-6 py-4 space-y-3">
+              <p className="text-sm text-slate-500">
+                <span className="font-semibold text-slate-800">{student.name}</span> ning ota-onasiga xabar yoziladi.
+              </p>
+              {err && <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{err}</div>}
+              <textarea value={body} onChange={e => setBody(e.target.value)} rows={4} autoFocus
+                placeholder="Masalan: Farzandingiz bugun darsga kelmadi..."
+                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+            </div>
+            <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200">
+              <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100">Bekor</button>
+              <button onClick={send} disabled={sending}
+                className="flex items-center gap-2 px-5 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-60">
+                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} Yuborish
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

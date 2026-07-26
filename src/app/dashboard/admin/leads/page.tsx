@@ -200,21 +200,26 @@ export default function LeadsPage() {
       }
 
       const newUser = await res.json();
+      const warnings: string[] = [];
 
-      // 2. Add to group if selected
+      // 2. Add to group if selected — xato jimgina yutilmasin
       if (enrollGroupId) {
-        await fetch("/api/admin/groups", {
+        const gr = await fetch("/api/admin/groups", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: enrollGroupId, addStudentId: newUser.id }),
         });
+        if (!gr.ok) {
+          const e = await gr.json().catch(() => ({}));
+          warnings.push(`Guruhga biriktirilmadi: ${e.error || "xatolik"}`);
+        }
       }
 
       // 3. Create initial payment if lead had prepayment
       if (enrollLead.prepayment && enrollLead.prepayment > 0) {
         const now = new Date();
         const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-        await fetch("/api/admin/payments", {
+        const pr = await fetch("/api/admin/payments", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -225,6 +230,7 @@ export default function LeadsPage() {
             note: "Liddan oldindan to'lov",
           }),
         });
+        if (!pr.ok) warnings.push("Oldindan to'lov qayd etilmadi");
       }
 
       // 4. Update lead status to enrolled
@@ -237,6 +243,9 @@ export default function LeadsPage() {
       setShowEnrollModal(false);
       setEnrollLead(null);
       fetchLeads();
+      if (warnings.length) {
+        alert(`O'quvchi yaratildi, lekin:\n• ${warnings.join("\n• ")}\n\nGuruhlar sahifasidan qo'lda biriktirishingiz mumkin.`);
+      }
     } finally {
       setEnrolling(false);
     }

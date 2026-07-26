@@ -110,21 +110,25 @@ export async function PATCH(req: NextRequest) {
   const { id, name, schedule, meetLink, status, maxStudents, startDate, room, dayType, time, price, lessonsPerMonth, mode, addStudentId, removeStudentId, moveStudentId, toGroupId } = await req.json();
   if (!id) return NextResponse.json({ error: 'id kerak' }, { status: 400 });
 
-  // Filial cheklovi: guruh (va tegishli o'quvchi/nishon guruh) shu filialdan bo'lishi shart
+  // Filial cheklovi
   const bId = await scopedBranchId(auth);
+  const groupBranch = async (gid: string) => (await prisma.group.findUnique({ where: { id: gid }, select: { branchId: true } }))?.branchId ?? null;
+  const studentBranch = async (sid: string) => (await prisma.user.findUnique({ where: { id: sid }, select: { branchId: true } }))?.branchId ?? null;
   if (bId) {
-    const inBranch = async (gid: string) => {
-      const g = await prisma.group.findUnique({ where: { id: gid }, select: { branchId: true } });
-      return !!g && g.branchId === bId;
-    };
-    const studentInBranch = async (sid: string) => {
-      const u = await prisma.user.findUnique({ where: { id: sid }, select: { branchId: true } });
-      return !!u && u.branchId === bId;
-    };
-    if (!(await inBranch(id))) return NextResponse.json({ error: 'Guruh boshqa filialga tegishli' }, { status: 403 });
-    if (toGroupId && !(await inBranch(toGroupId))) return NextResponse.json({ error: 'Nishon guruh boshqa filialga tegishli' }, { status: 403 });
-    for (const sid of [addStudentId, removeStudentId, moveStudentId].filter(Boolean)) {
-      if (!(await studentInBranch(sid))) return NextResponse.json({ error: 'O\'quvchi boshqa filialga tegishli' }, { status: 403 });
+    const gBranch = await groupBranch(id);
+    if (addStudentId) {
+      // O'quvchi qo'shish/lidan o'tkazish: guruh admin filialida YOKI filialsiz (umumiy) bo'lsa ruxsat.
+      // O'quvchi qo'shilgach guruhning filialini meros qiladi (moslik).
+      if (gBranch != null && gBranch !== bId) return NextResponse.json({ error: 'Guruh boshqa filialga tegishli' }, { status: 403 });
+      const sB = await studentBranch(addStudentId);
+      if (sB != null && sB !== bId) return NextResponse.json({ error: 'O\'quvchi boshqa filialga tegishli' }, { status: 403 });
+    } else {
+      // Guruh tahriri / o'chirish / ko'chirish: guruh aynan admin filialida bo'lishi shart
+      if (gBranch !== bId) return NextResponse.json({ error: 'Guruh boshqa filialga tegishli' }, { status: 403 });
+      if (toGroupId && (await groupBranch(toGroupId)) !== bId) return NextResponse.json({ error: 'Nishon guruh boshqa filialga tegishli' }, { status: 403 });
+      for (const sid of [removeStudentId, moveStudentId].filter(Boolean)) {
+        if ((await studentBranch(sid)) !== bId) return NextResponse.json({ error: 'O\'quvchi boshqa filialga tegishli' }, { status: 403 });
+      }
     }
   }
 
@@ -136,6 +140,9 @@ export async function PATCH(req: NextRequest) {
     await prisma.groupStudent.create({
       data: { groupId: toGroupId, studentId: moveStudentId },
     });
+    // O'quvchi nishon guruh filialiga o'tadi (moslik)
+    const tb = await groupBranch(toGroupId);
+    if (tb) await prisma.user.update({ where: { id: moveStudentId }, data: { branchId: tb } });
     return NextResponse.json({ ok: true, message: "O'quvchi ko'chirildi" });
   }
 
@@ -144,6 +151,9 @@ export async function PATCH(req: NextRequest) {
     await prisma.groupStudent.create({
       data: { groupId: id, studentId: addStudentId },
     });
+    // O'quvchi guruhning filialini meros qiladi (student va guruh doim bir filialda)
+    const gb = await groupBranch(id);
+    if (gb) await prisma.user.update({ where: { id: addStudentId }, data: { branchId: gb } });
     return NextResponse.json({ ok: true, message: "O'quvchi qo'shildi" });
   }
 

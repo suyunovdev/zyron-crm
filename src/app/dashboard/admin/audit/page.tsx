@@ -45,10 +45,12 @@ export default function AuditPage() {
           className="rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-700">
           <option value="">Barchasi</option>
           <option value="admin">Adminlar</option>
-          <option value="payment">To&apos;lovlar</option>
           <option value="user">Foydalanuvchilar</option>
-          <option value="setting">Sozlamalar</option>
+          <option value="lead">Lidlar</option>
+          <option value="payment">To&apos;lovlar</option>
+          <option value="attendance">Davomat</option>
           <option value="branch">Filiallar</option>
+          <option value="setting">Sozlamalar</option>
           <option value="system">Tizim</option>
         </select>
       </div>

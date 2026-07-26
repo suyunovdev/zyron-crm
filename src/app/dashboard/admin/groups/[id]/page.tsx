@@ -48,7 +48,7 @@ interface GroupDetail {
   _count: { students: number; lessons: number };
 }
 
-const DAY_LABELS: Record<string, string> = { toq: 'Toq', juft: 'Juft', boshqa: 'Boshqa' };
+const DAY_LABELS: Record<string, string> = { toq: 'Toq (Dush/Chor/Jum)', juft: 'Juft (Sesh/Pay/Shan)', boshqa: 'Boshqa' };
 
 const MONTHS_SHORT: Record<string, string> = {
   '01': 'Jan', '02': 'Feb', '03': 'Mar', '04': 'Apr',

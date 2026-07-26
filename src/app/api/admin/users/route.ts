@@ -9,6 +9,7 @@ import { canManageRole } from '@/lib/roles';
 import { computeBillable, groupCost } from '@/lib/billing-core';
 import { loginBase, randomPassword, uniqueLogin, ensureUnique, parentNameFrom } from '@/lib/credentials';
 import { scopedBranchId } from '@/lib/branch-scope';
+import { logAudit } from '@/lib/audit';
 
 const CreateUserSchema = z.object({
   // login/password ixtiyoriy — berilmasa avtomatik generatsiya qilinadi
@@ -187,6 +188,8 @@ export async function POST(req: NextRequest) {
     await prisma.user.update({ where: { id: user.id }, data: { parentId: p.id } });
     parent = { id: p.id, login: p.login, name: p.name, password: parentPass };
   }
+
+  await logAudit(auth, 'create', 'user', user.id, `Yangi ${role}: ${name} (${finalLogin})`);
 
   return NextResponse.json({
     id: user.id, login: user.login, name: user.name, role: user.role,

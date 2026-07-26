@@ -5,6 +5,7 @@ import { createNotification } from "@/lib/notify";
 import { logger } from '@/lib/logger';
 import { getPagination } from '@/lib/paginate';
 import { scopedBranchId } from '@/lib/branch-scope';
+import { logAudit } from '@/lib/audit';
 
 const VALID_STATUSES = ["new", "contacted", "trial", "enrolled", "rejected"];
 
@@ -94,6 +95,7 @@ export async function POST(req: NextRequest) {
     link: '/dashboard/admin/leads',
     branchId: bId,
   });
+  await logAudit(auth, 'create', 'lead', lead.id, `Yangi lid: ${name} (${phone})`);
 
   return NextResponse.json({ lead }, { status: 201 });
 }
@@ -147,6 +149,8 @@ export async function PATCH(req: NextRequest) {
         branchId: lead.branchId,
       });
     }
+    await logAudit(auth, status === 'enrolled' ? 'convert' : 'update', 'lead', id,
+      status === 'enrolled' ? `Lid o'quvchiga o'tkazildi: ${lead.name}` : `Lid holati: ${lead.name} → ${status}`);
 
     return NextResponse.json({ lead });
   } catch (error) {

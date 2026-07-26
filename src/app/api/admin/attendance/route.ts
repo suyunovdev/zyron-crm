@@ -4,6 +4,15 @@ import { requireAuth } from '@/lib/api-utils';
 import { checkDropout } from '@/lib/attendance-guard';
 import { logger } from '@/lib/logger';
 import { scopedBranchId } from '@/lib/branch-scope';
+import { isLessonDay } from '@/lib/schedule';
+import { logAudit } from '@/lib/audit';
+import type { SessionUser } from '@/lib/auth';
+
+// Admin davomat tuzatishini audit jurnaliga yozadi (javobgarlik).
+async function auditAttendance(auth: SessionUser, studentId: string, present: boolean) {
+  const s = await prisma.user.findUnique({ where: { id: studentId }, select: { name: true } });
+  await logAudit(auth, 'update', 'attendance', studentId, `Davomat tuzatildi: ${s?.name || studentId} — ${present ? 'keldi' : 'kelmadi'}`);
+}
 
 // Admin can modify attendance
 export async function PATCH(req: NextRequest) {
@@ -38,6 +47,7 @@ export async function PATCH(req: NextRequest) {
         const l = await prisma.lesson.findUnique({ where: { id: lessonId }, select: { groupId: true } });
         if (l) await checkDropout(studentId, l.groupId, auth);
       }
+      await auditAttendance(auth, studentId, present);
       return NextResponse.json(attendance);
     }
 
@@ -48,11 +58,17 @@ export async function PATCH(req: NextRequest) {
       });
 
       if (!lesson) {
-        // Soxta '00:00' o'rniga guruhning haqiqiy vaqtidan foydalanamiz
+        // Yangi dars yaratishdan oldin: sana guruh jadvaliga (dayType) mos dars kunimi?
         const group = await prisma.group.findUnique({
           where: { id: groupId },
-          select: { time: true },
+          select: { time: true, dayType: true },
         });
+        if (!isLessonDay(group?.dayType, date)) {
+          return NextResponse.json(
+            { error: 'Bu kun guruh jadvaliga to\'g\'ri kelmaydi — dars kuni emas. Davomat faqat dars kunlariga belgilanadi.' },
+            { status: 400 },
+          );
+        }
         const lessonCount = await prisma.lesson.count({ where: { groupId } });
         lesson = await prisma.lesson.create({
           data: {
@@ -70,6 +86,7 @@ export async function PATCH(req: NextRequest) {
         create: { lessonId: lesson.id, studentId, present, ...scores },
       });
       if (!present) await checkDropout(studentId, groupId, auth);
+      await auditAttendance(auth, studentId, present);
       return NextResponse.json(attendance);
     }
 

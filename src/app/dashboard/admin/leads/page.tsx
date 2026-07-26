@@ -410,7 +410,7 @@ export default function LeadsPage() {
       {/* Multi-step Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { setShowModal(false); setModalStep(1); }} />
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
           <div className="relative bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-5 pb-0">
               <h2 className="text-lg font-bold text-slate-900">Yangi qo&apos;shish</h2>
@@ -583,7 +583,7 @@ export default function LeadsPage() {
       {/* Enrollment Modal */}
       {showEnrollModal && enrollLead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowEnrollModal(false)} />
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
           <div className="relative bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 pb-4">
               <div className="flex items-center gap-3">

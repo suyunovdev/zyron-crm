@@ -23,7 +23,7 @@ interface Group {
   _count: { students: number; lessons: number };
 }
 
-const DAY_LABELS: Record<string, string> = { toq: 'Toq', juft: 'Juft', boshqa: 'Boshqa' };
+const DAY_LABELS: Record<string, string> = { toq: 'Toq (Dush/Chor/Jum)', juft: 'Juft (Sesh/Pay/Shan)', boshqa: 'Boshqa' };
 const LANG_LABELS: Record<string, string> = { uz: "O'zbekcha", ru: 'Ruscha', en: 'Inglizcha' };
 
 type SortKey = 'name' | 'students' | 'dayType' | 'teacher' | 'language' | 'room';

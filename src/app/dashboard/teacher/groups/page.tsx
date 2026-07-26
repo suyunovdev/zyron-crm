@@ -245,8 +245,8 @@ export default function TeacherGroupsPage() {
   // Get day type label
   const dayTypeLabel = useMemo(() => {
     if (!selectedGroup) return null;
-    if (selectedGroup.dayType === 'toq') return 'Toq';
-    if (selectedGroup.dayType === 'juft') return 'Juft';
+    if (selectedGroup.dayType === 'toq') return 'Toq (Dush/Chor/Jum)';
+    if (selectedGroup.dayType === 'juft') return 'Juft (Sesh/Pay/Shan)';
     if (selectedGroup.schedule) return selectedGroup.schedule;
     return null;
   }, [selectedGroup]);

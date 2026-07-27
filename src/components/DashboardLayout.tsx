@@ -1145,7 +1145,7 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
                     </Link>
                   )}
                   <Link
-                    href={`/dashboard/${user.role}/settings`}
+                    href={`/dashboard/${user.role === 'superadmin' ? 'admin' : user.role}/settings`}
                     onClick={() => setProfileOpen(false)}
                     className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                   >

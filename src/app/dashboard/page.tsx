@@ -1,8 +1,9 @@
 import { redirect } from 'next/navigation';
-import { getSession } from '@/lib/auth';
+import { getSession, getDashboardPath } from '@/lib/auth';
 
 export default async function DashboardPage() {
   const session = await getSession();
   if (!session) redirect('/login');
-  redirect(`/dashboard/${session.role}`);
+  // getDashboardPath superadmin'ni /dashboard/admin ga xaritalaydi (superadmin sahifasi yo'q)
+  redirect(getDashboardPath(session.role));
 }

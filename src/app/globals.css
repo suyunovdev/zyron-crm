@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* dark: variantlar OS media-query emas, `html.dark` CLASS ga bog'lansin
+   (ilovaning tema-toggli class asosida — aks holda OS dark bo'lsa light rejimda
+   ham dark: klasslar qo'llanardi). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --color-brand-blue: #2660A4;
   --color-brand-blue-dark: #1d4e87;

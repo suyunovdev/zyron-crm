@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Plus, X, Search, Video, ChevronUp, ChevronDown, Archive,
   UserPlus, UserMinus, QrCode, Trash2, RotateCcw, CalendarPlus, Loader2, Download,
@@ -31,6 +31,7 @@ type SortDir = 'asc' | 'desc';
 
 export default function GroupsPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [groups, setGroups] = useState<Group[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [allStudents, setAllStudents] = useState<StudentUser[]>([]);
@@ -78,18 +79,11 @@ export default function GroupsPage() {
 
   useEffect(() => { fetchAll(); }, []);
 
-  // Auto-expand group from URL query ?id=xxx
+  // ?id=xxx deep-link → guruh davomat sahifasiga o'tish
   useEffect(() => {
     const id = searchParams.get('id');
-    if (id && groups.length > 0) {
-      setExpandedId(id);
-      // Scroll to the group row after a short delay
-      setTimeout(() => {
-        const el = document.getElementById(`group-row-${id}`);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 200);
-    }
-  }, [searchParams, groups]);
+    if (id) router.push(`/dashboard/admin/groups/${id}`);
+  }, [searchParams, router]);
 
   const [qrGenerating, setQrGenerating] = useState<string | null>(null);
 
@@ -392,8 +386,8 @@ export default function GroupsPage() {
                       <>
                         <tr key={group.id}
                           id={`group-row-${group.id}`}
-                          className={`hover:bg-slate-50/70 transition-colors cursor-pointer ${isExpanded ? 'bg-slate-50' : ''}`}
-                          onClick={() => setExpandedId(isExpanded ? null : group.id)}
+                          className="hover:bg-slate-50/70 transition-colors cursor-pointer"
+                          onClick={() => router.push(`/dashboard/admin/groups/${group.id}`)}
                         >
                           {/* Guruh */}
                           <td className="px-4 py-3.5">

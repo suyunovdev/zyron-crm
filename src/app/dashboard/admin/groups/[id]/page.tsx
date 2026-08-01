@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Users, BookOpen, CalendarDays, Clock,
-  UserCheck, UserX, Check, Video, Loader2, MapPin,
+  UserCheck, UserX, Check, Video, Loader2, MapPin, X, CalendarPlus,
 } from 'lucide-react';
 
 interface Student {
@@ -62,7 +62,7 @@ function isSameDay(dateStr: string): boolean {
   return today.getFullYear() === y && today.getMonth() + 1 === m && today.getDate() === d;
 }
 
-type TabType = 'davomat' | 'mavzular';
+type TabType = 'davomat' | 'mavzular' | 'oquvchilar';
 
 export default function AdminGroupDetailPage() {
   const params = useParams();
@@ -74,15 +74,64 @@ export default function AdminGroupDetailPage() {
   const [activeTab, setActiveTab] = useState<TabType>('davomat');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [savingCells, setSavingCells] = useState<Set<string>>(new Set());
+  const [allStudents, setAllStudents] = useState<{ id: string; name: string; status: string }[]>([]);
+  const [addId, setAddId] = useState('');
+  const [busy, setBusy] = useState(false);
 
   const now = new Date();
 
+  const reload = useCallback(() =>
+    fetch(`/api/admin/groups/${groupId}`).then(r => r.ok ? r.json() : null).then(d => setGroup(d)),
+  [groupId]);
+
   useEffect(() => {
-    fetch(`/api/admin/groups/${groupId}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { setGroup(data); setLoading(false); })
-      .catch(() => setLoading(false));
+    Promise.all([
+      fetch(`/api/admin/groups/${groupId}`).then(r => r.ok ? r.json() : null),
+      fetch('/api/admin/users?role=student&limit=500').then(r => r.ok ? r.json() : { data: [] }),
+    ]).then(([g, s]) => {
+      setGroup(g);
+      setAllStudents(Array.isArray(s?.data) ? s.data : []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, [groupId]);
+
+  // Dars generatsiya (+N oy)
+  const generateLessons = async (months: number) => {
+    setBusy(true);
+    try {
+      await fetch('/api/admin/groups/generate-lessons', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId, months }),
+      });
+      await reload();
+    } finally { setBusy(false); }
+  };
+  // O'quvchi qo'shish
+  const addStudent = async () => {
+    if (!addId) return;
+    setBusy(true);
+    try {
+      const r = await fetch('/api/admin/groups', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: groupId, addStudentId: addId }),
+      });
+      if (!r.ok) { alert((await r.json()).error || 'Xatolik'); return; }
+      setAddId('');
+      await reload();
+    } finally { setBusy(false); }
+  };
+  // O'quvchini chiqarish
+  const removeStudent = async (sid: string) => {
+    if (!confirm("O'quvchini guruhdan chiqarasizmi?")) return;
+    setBusy(true);
+    try {
+      await fetch('/api/admin/groups', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: groupId, removeStudentId: sid }),
+      });
+      await reload();
+    } finally { setBusy(false); }
+  };
 
   const availableMonths = useMemo(() => {
     if (!group) return [];
@@ -218,7 +267,10 @@ export default function AdminGroupDetailPage() {
   const tabs: { key: TabType; label: string }[] = [
     { key: 'davomat', label: 'Davomat' },
     { key: 'mavzular', label: 'Mavzular' },
+    { key: 'oquvchilar', label: `O'quvchilar (${group.students.length})` },
   ];
+
+  const notInGroup = allStudents.filter(s => !group.students.some(gs => gs.student.id === s.id));
 
   return (
     <>
@@ -282,6 +334,16 @@ export default function AdminGroupDetailPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Dars generatsiya */}
+      <div className="bg-white rounded-xl border border-slate-200 p-4 mb-4 flex items-center gap-3 flex-wrap">
+        <span className="text-sm text-slate-500 flex items-center gap-1.5"><CalendarPlus className="w-4 h-4" /> Dars qo&apos;shish:</span>
+        <button onClick={() => generateLessons(1)} disabled={busy} className="px-3 py-1.5 rounded-lg bg-[#2660A4] text-white text-xs font-semibold hover:bg-[#1d4e87] disabled:opacity-60">+1 oy</button>
+        <button onClick={() => generateLessons(3)} disabled={busy} className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 disabled:opacity-60">+3 oy</button>
+        <button onClick={() => generateLessons(12)} disabled={busy} className="px-3 py-1.5 rounded-lg bg-orange-500 text-white text-xs font-semibold hover:bg-orange-600 disabled:opacity-60">+12 oy</button>
+        {busy && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
+        <span className="text-xs text-slate-400 ml-auto">{group._count.lessons} ta dars mavjud</span>
       </div>
 
       {/* Tabs */}
@@ -513,6 +575,47 @@ export default function AdminGroupDetailPage() {
                 );
               })
             )}
+          </div>
+        )}
+
+        {/* O'quvchilar Tab */}
+        {activeTab === 'oquvchilar' && (
+          <div className="p-6 space-y-4">
+            {/* Qo'shish */}
+            <div className="flex gap-2">
+              <select value={addId} onChange={e => setAddId(e.target.value)}
+                className="flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20">
+                <option value="">O&apos;quvchi tanlang...</option>
+                {notInGroup.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <button onClick={addStudent} disabled={busy || !addId}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#2660A4] text-white text-sm font-semibold hover:bg-[#1d4e87] disabled:opacity-60">
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />} Qo&apos;shish
+              </button>
+            </div>
+            {/* Ro'yxat */}
+            <div className="rounded-xl border border-slate-200 divide-y divide-slate-100">
+              {group.students.length === 0 ? (
+                <p className="p-8 text-center text-sm text-slate-400">Guruhda o&apos;quvchi yo&apos;q</p>
+              ) : (
+                group.students.map(({ student }, i) => (
+                  <div key={student.id} className="flex items-center justify-between px-4 py-2.5">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-xs text-slate-400 w-5">{i + 1}.</span>
+                      <span className="text-sm font-medium text-slate-800 truncate cursor-pointer hover:text-[#2660A4]"
+                        onClick={() => router.push(`/dashboard/admin/students/${student.id}`)}>{student.name}</span>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded flex-shrink-0 ${
+                        student.status === 'active' ? 'bg-emerald-100 text-emerald-700' : student.status === 'frozen' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'
+                      }`}>{student.status === 'active' ? 'Aktiv' : student.status === 'frozen' ? 'Muzlatilgan' : 'Arxiv'}</span>
+                    </div>
+                    <button onClick={() => removeStudent(student.id)} disabled={busy}
+                      className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-60" title="Guruhdan chiqarish">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         )}
       </div>

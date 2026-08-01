@@ -226,7 +226,7 @@ export default function AdminGroupDetailPage() {
       <div className="mb-4">
         <button onClick={() => router.back()}
           className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700">
-          <ArrowLeft className="w-4 h-4" /> Jadvalga qaytish
+          <ArrowLeft className="w-4 h-4" /> Orqaga
         </button>
       </div>
 

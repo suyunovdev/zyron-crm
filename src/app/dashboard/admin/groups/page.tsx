@@ -398,7 +398,14 @@ export default function GroupsPage() {
                           {/* Guruh */}
                           <td className="px-4 py-3.5">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-bold text-slate-800">{idx + 1}. {group.name}</span>
+                              <Link
+                                href={`/dashboard/admin/groups/${group.id}`}
+                                onClick={e => e.stopPropagation()}
+                                title="Guruh davomatini ochish"
+                                className="text-sm font-bold text-slate-800 hover:text-[#2660A4] hover:underline transition-colors"
+                              >
+                                {idx + 1}. {group.name}
+                              </Link>
                               <span className="px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded">[{group.status === 'active' ? 'New' : 'Arxiv'}] {group.subject}</span>
                               {group.teacher?.name && (
                                 <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-medium rounded">{group.teacher.name.split(' ')[0]}</span>

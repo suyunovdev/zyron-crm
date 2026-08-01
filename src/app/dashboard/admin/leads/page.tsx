@@ -33,12 +33,21 @@ interface GroupOption {
   _count: { students: number };
 }
 
+// Bot bilan bir xil holatlar (belgilash variantlari):
 const STATUS_LABELS: Record<string, string> = {
   new: "Yangi Lid",
-  contacted: "Bog'lanildi",
-  trial: "Sinov",
-  enrolled: "Ro'yxatdan o'tdi",
-  rejected: "Rad etildi",
+  contacted: "Qo'ng'iroq qilindi",
+  trial: "Keyinroq",
+  enrolled: "Yozildi",
+  rejected: "Rad etdi",
+};
+
+const STATUS_ICONS: Record<string, string> = {
+  new: "🔵",
+  contacted: "📞",
+  trial: "🔄",
+  enrolled: "✅",
+  rejected: "❌",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -58,11 +67,11 @@ const COURSES = [
 
 const TABS = [
   { key: "all", label: "Hammasi" },
-  { key: "new", label: "Yangi" },
-  { key: "contacted", label: "Bog'lanildi" },
-  { key: "trial", label: "Sinov" },
-  { key: "enrolled", label: "Ro'yxatdan o'tdi" },
-  { key: "rejected", label: "Rad etildi" },
+  { key: "new", label: "Yangi Lid" },
+  { key: "contacted", label: "Qo'ng'iroq qilindi" },
+  { key: "trial", label: "Keyinroq" },
+  { key: "enrolled", label: "Yozildi" },
+  { key: "rejected", label: "Rad etdi" },
 ];
 
 export default function LeadsPage() {
@@ -368,9 +377,10 @@ export default function LeadsPage() {
                         </span>
                       </td>
                       <td className="px-5 py-3.5">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           STATUS_COLORS[lead.status] || "bg-slate-100 text-slate-700"
                         }`}>
+                          <span>{STATUS_ICONS[lead.status] || ""}</span>
                           {STATUS_LABELS[lead.status] || lead.status}
                         </span>
                       </td>
@@ -716,7 +726,7 @@ export default function LeadsPage() {
                 className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2.5 transition-colors ${
                   lead.status === key ? "font-semibold text-slate-900 bg-slate-50" : "text-slate-600"
                 }`}>
-                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${STATUS_COLORS[key]?.split(" ")[0] || "bg-slate-300"}`} />
+                <span className="text-base flex-shrink-0">{STATUS_ICONS[key] || "•"}</span>
                 {label}
               </button>
             );

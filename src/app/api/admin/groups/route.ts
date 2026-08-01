@@ -107,7 +107,7 @@ export async function PATCH(req: NextRequest) {
   const auth = await requireAuth('admin');
   if (auth instanceof NextResponse) return auth;
 
-  const { id, name, schedule, meetLink, status, maxStudents, startDate, room, dayType, time, price, lessonsPerMonth, mode, addStudentId, removeStudentId, moveStudentId, toGroupId } = await req.json();
+  const { id, name, schedule, meetLink, status, maxStudents, startDate, room, dayType, time, price, lessonsPerMonth, mode, teacherId, addStudentId, removeStudentId, moveStudentId, toGroupId } = await req.json();
   if (!id) return NextResponse.json({ error: 'id kerak' }, { status: 400 });
 
   // Filial cheklovi
@@ -128,6 +128,10 @@ export async function PATCH(req: NextRequest) {
       if (toGroupId && (await groupBranch(toGroupId)) !== bId) return NextResponse.json({ error: 'Nishon guruh boshqa filialga tegishli' }, { status: 403 });
       for (const sid of [removeStudentId, moveStudentId].filter(Boolean)) {
         if ((await studentBranch(sid)) !== bId) return NextResponse.json({ error: 'O\'quvchi boshqa filialga tegishli' }, { status: 403 });
+      }
+      // Yangi mentor (o'qituvchi) ham shu filialdan bo'lishi shart
+      if (teacherId && (await studentBranch(teacherId)) !== bId) {
+        return NextResponse.json({ error: 'O\'qituvchi boshqa filialga tegishli' }, { status: 403 });
       }
     }
   }
@@ -179,6 +183,7 @@ export async function PATCH(req: NextRequest) {
   if (price !== undefined) data.price = parseInt(price);
   if (lessonsPerMonth !== undefined) data.lessonsPerMonth = parseInt(lessonsPerMonth);
   if (mode !== undefined) data.mode = mode;
+  if (teacherId !== undefined && teacherId) data.teacherId = teacherId;
 
   const group = await prisma.group.update({ where: { id }, data });
   return NextResponse.json(group);

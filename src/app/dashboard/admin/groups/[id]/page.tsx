@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Users, BookOpen, CalendarDays, Clock,
-  UserCheck, UserX, Check, Video, Loader2, MapPin, X, CalendarPlus,
+  UserCheck, UserX, Check, Video, Loader2, MapPin, X, CalendarPlus, Search, Plus, GraduationCap,
 } from 'lucide-react';
 
 interface Student {
@@ -74,8 +74,9 @@ export default function AdminGroupDetailPage() {
   const [activeTab, setActiveTab] = useState<TabType>('davomat');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [savingCells, setSavingCells] = useState<Set<string>>(new Set());
-  const [allStudents, setAllStudents] = useState<{ id: string; name: string; status: string }[]>([]);
-  const [addId, setAddId] = useState('');
+  const [allStudents, setAllStudents] = useState<{ id: string; name: string; phone?: string; status: string }[]>([]);
+  const [allTeachers, setAllTeachers] = useState<{ id: string; name: string; subject?: string }[]>([]);
+  const [search, setSearch] = useState('');
   const [busy, setBusy] = useState(false);
 
   const now = new Date();
@@ -88,12 +89,28 @@ export default function AdminGroupDetailPage() {
     Promise.all([
       fetch(`/api/admin/groups/${groupId}`).then(r => r.ok ? r.json() : null),
       fetch('/api/admin/users?role=student&limit=500').then(r => r.ok ? r.json() : { data: [] }),
-    ]).then(([g, s]) => {
+      fetch('/api/admin/users?role=teacher&limit=500').then(r => r.ok ? r.json() : { data: [] }),
+    ]).then(([g, s, tch]) => {
       setGroup(g);
       setAllStudents(Array.isArray(s?.data) ? s.data : []);
+      setAllTeachers(Array.isArray(tch?.data) ? tch.data : []);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [groupId]);
+
+  // Mentor (o'qituvchi) tayinlash/o'zgartirish
+  const changeMentor = async (teacherId: string) => {
+    if (!teacherId) return;
+    setBusy(true);
+    try {
+      const r = await fetch('/api/admin/groups', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: groupId, teacherId }),
+      });
+      if (!r.ok) { alert((await r.json()).error || 'Xatolik'); return; }
+      await reload();
+    } finally { setBusy(false); }
+  };
 
   // Dars generatsiya (+N oy)
   const generateLessons = async (months: number) => {
@@ -106,17 +123,17 @@ export default function AdminGroupDetailPage() {
       await reload();
     } finally { setBusy(false); }
   };
-  // O'quvchi qo'shish
-  const addStudent = async () => {
-    if (!addId) return;
+  // O'quvchi qo'shish (qidiruv natijasidan)
+  const addStudent = async (sid: string) => {
+    if (!sid) return;
     setBusy(true);
     try {
       const r = await fetch('/api/admin/groups', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: groupId, addStudentId: addId }),
+        body: JSON.stringify({ id: groupId, addStudentId: sid }),
       });
       if (!r.ok) { alert((await r.json()).error || 'Xatolik'); return; }
-      setAddId('');
+      setSearch('');
       await reload();
     } finally { setBusy(false); }
   };
@@ -271,6 +288,12 @@ export default function AdminGroupDetailPage() {
   ];
 
   const notInGroup = allStudents.filter(s => !group.students.some(gs => gs.student.id === s.id));
+  const searchResults = search.trim()
+    ? notInGroup.filter(s => {
+        const q = search.trim().toLowerCase();
+        return s.name.toLowerCase().includes(q) || (s.phone || '').includes(q);
+      }).slice(0, 8)
+    : [];
 
   return (
     <>
@@ -580,21 +603,53 @@ export default function AdminGroupDetailPage() {
 
         {/* O'quvchilar Tab */}
         {activeTab === 'oquvchilar' && (
-          <div className="p-6 space-y-4">
-            {/* Qo'shish */}
-            <div className="flex gap-2">
-              <select value={addId} onChange={e => setAddId(e.target.value)}
-                className="flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20">
-                <option value="">O&apos;quvchi tanlang...</option>
-                {notInGroup.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          <div className="p-6 space-y-6">
+            {/* Mentor (o'qituvchi) tayinlash */}
+            <div className="max-w-md">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                <GraduationCap className="w-3.5 h-3.5" /> Mentor (o&apos;qituvchi)
+              </label>
+              <select value={group.teacher?.id || ''} onChange={e => changeMentor(e.target.value)} disabled={busy}
+                className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20 disabled:opacity-60">
+                <option value="">Tanlanmagan</option>
+                {allTeachers.map(t => (
+                  <option key={t.id} value={t.id}>{t.name}{t.subject ? ` — ${t.subject}` : ''}</option>
+                ))}
               </select>
-              <button onClick={addStudent} disabled={busy || !addId}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#2660A4] text-white text-sm font-semibold hover:bg-[#1d4e87] disabled:opacity-60">
-                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />} Qo&apos;shish
-              </button>
             </div>
-            {/* Ro'yxat */}
-            <div className="rounded-xl border border-slate-200 divide-y divide-slate-100">
+
+            {/* O'quvchi qidirib qo'shish */}
+            <div className="max-w-md">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                <Plus className="w-3.5 h-3.5" /> O&apos;quvchi qo&apos;shish
+              </label>
+              <div className="relative mt-1.5">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input value={search} onChange={e => setSearch(e.target.value)}
+                  placeholder="Ism yoki telefon bo'yicha qidiring..."
+                  className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+              </div>
+              {search.trim() && (
+                <div className="mt-2 rounded-xl border border-slate-200 divide-y divide-slate-100 max-h-60 overflow-y-auto">
+                  {searchResults.length === 0 ? (
+                    <p className="px-3 py-3 text-sm text-slate-400 text-center">Topilmadi (yoki allaqachon guruhda)</p>
+                  ) : searchResults.map(s => (
+                    <button key={s.id} onClick={() => addStudent(s.id)} disabled={busy}
+                      className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-[#2660A4]/[0.06] text-left disabled:opacity-60">
+                      <span className="text-sm text-slate-800">
+                        {s.name}{s.phone && <span className="text-xs text-slate-400 ml-2">{s.phone}</span>}
+                      </span>
+                      <Plus className="w-4 h-4 text-[#2660A4] flex-shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Guruhdagi o'quvchilar */}
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Guruhdagi o&apos;quvchilar ({group.students.length})</p>
+              <div className="rounded-xl border border-slate-200 divide-y divide-slate-100">
               {group.students.length === 0 ? (
                 <p className="p-8 text-center text-sm text-slate-400">Guruhda o&apos;quvchi yo&apos;q</p>
               ) : (
@@ -615,6 +670,7 @@ export default function AdminGroupDetailPage() {
                   </div>
                 ))
               )}
+              </div>
             </div>
           </div>
         )}

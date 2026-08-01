@@ -17,14 +17,16 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
 
-    const where: Record<string, string> = {};
+    const where: Record<string, unknown> = {};
     if (status && VALID_STATUSES.includes(status)) {
       where.status = status;
     }
 
-    // Filial cheklovi: faqat o'z filiali lidlari
+    // Filial cheklovi: o'z filiali + filialsiz (landing/webhook orqali kelgan) lidlar.
+    // Landing lidlari branchId=null bo'ladi — ular hamma adminга ko'rinsin (kim ham
+    // bo'lsa qabul qilib, o'z filialiga o'tkazadi).
     const bId = await scopedBranchId(auth);
-    if (bId) where.branchId = bId;
+    if (bId) where.OR = [{ branchId: bId }, { branchId: null }];
 
     // Opt-in pagination: ?page/?limit bo'lsa meta qo'shiladi (leads kaliti saqlanadi)
     const pg = getPagination(searchParams);
@@ -122,18 +124,25 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    // Filial cheklovi: boshqa filial lidini o'zgartirib bo'lmaydi
+    // Filial cheklovi: o'z filiali YOKI filialsiz (landing) lidga ruxsat.
+    // Boshqa filial lidiga tegib bo'lmaydi.
     const bId = await scopedBranchId(auth);
+    let claimBranch = false;
     if (bId) {
       const existing = await prisma.lead.findUnique({ where: { id }, select: { branchId: true } });
       if (!existing) return NextResponse.json({ error: 'Lid topilmadi' }, { status: 404 });
-      if (existing.branchId !== bId) return NextResponse.json({ error: 'Bu lid boshqa filialga tegishli' }, { status: 403 });
+      if (existing.branchId !== null && existing.branchId !== bId) {
+        return NextResponse.json({ error: 'Bu lid boshqa filialga tegishli' }, { status: 403 });
+      }
+      // Filialsiz (landing) lidni admin qabul qilsa — o'z filialiga biriktiramiz
+      if (existing.branchId === null) claimBranch = true;
     }
 
     const data: Record<string, string> = { status };
     if (note !== undefined) {
       data.note = note;
     }
+    if (claimBranch && bId) data.branchId = bId;
 
     const lead = await prisma.lead.update({
       where: { id },
@@ -174,12 +183,14 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // Filial cheklovi: boshqa filial lidini o'chirib bo'lmaydi
+    // Filial cheklovi: o'z filiali yoki filialsiz (landing) lidni o'chirsa bo'ladi
     const bId = await scopedBranchId(auth);
     if (bId) {
       const existing = await prisma.lead.findUnique({ where: { id }, select: { branchId: true } });
       if (!existing) return NextResponse.json({ error: 'Lid topilmadi' }, { status: 404 });
-      if (existing.branchId !== bId) return NextResponse.json({ error: 'Bu lid boshqa filialga tegishli' }, { status: 403 });
+      if (existing.branchId !== null && existing.branchId !== bId) {
+        return NextResponse.json({ error: 'Bu lid boshqa filialga tegishli' }, { status: 403 });
+      }
     }
 
     await prisma.lead.delete({

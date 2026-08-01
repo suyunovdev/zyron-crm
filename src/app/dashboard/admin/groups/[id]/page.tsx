@@ -77,6 +77,7 @@ export default function AdminGroupDetailPage() {
   const [allStudents, setAllStudents] = useState<{ id: string; name: string; phone?: string; status: string }[]>([]);
   const [allTeachers, setAllTeachers] = useState<{ id: string; name: string; subject?: string }[]>([]);
   const [search, setSearch] = useState('');
+  const [untilDate, setUntilDate] = useState('');
   const [busy, setBusy] = useState(false);
 
   const now = new Date();
@@ -112,15 +113,20 @@ export default function AdminGroupDetailPage() {
     } finally { setBusy(false); }
   };
 
-  // Dars generatsiya (+N oy)
-  const generateLessons = async (months: number) => {
+  // Dars generatsiya — belgilangan sanagacha
+  const generateUntil = async () => {
+    if (!untilDate) return;
     setBusy(true);
     try {
-      await fetch('/api/admin/groups/generate-lessons', {
+      const r = await fetch('/api/admin/groups/generate-lessons', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId, months }),
+        body: JSON.stringify({ groupId, endDate: untilDate }),
       });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { alert(d.error || 'Xatolik'); return; }
+      setUntilDate('');
       await reload();
+      if (typeof d.created === 'number') alert(d.created > 0 ? `${d.created} ta dars qo'shildi` : 'Yangi dars topilmadi (barcha sanalar allaqachon mavjud)');
     } finally { setBusy(false); }
   };
   // O'quvchi qo'shish (qidiruv natijasidan)
@@ -288,6 +294,8 @@ export default function AdminGroupDetailPage() {
   ];
 
   const notInGroup = allStudents.filter(s => !group.students.some(gs => gs.student.id === s.id));
+  const lessonDates = group.lessons.map(l => l.scheduledDate).sort();
+  const lastLessonDate = lessonDates.length ? lessonDates[lessonDates.length - 1] : (group.startDate || '');
   const searchResults = search.trim()
     ? notInGroup.filter(s => {
         const q = search.trim().toLowerCase();
@@ -359,14 +367,19 @@ export default function AdminGroupDetailPage() {
         </div>
       </div>
 
-      {/* Dars generatsiya */}
+      {/* Dars generatsiya — belgilangan sanagacha */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 mb-4 flex items-center gap-3 flex-wrap">
-        <span className="text-sm text-slate-500 flex items-center gap-1.5"><CalendarPlus className="w-4 h-4" /> Dars qo&apos;shish:</span>
-        <button onClick={() => generateLessons(1)} disabled={busy} className="px-3 py-1.5 rounded-lg bg-[#2660A4] text-white text-xs font-semibold hover:bg-[#1d4e87] disabled:opacity-60">+1 oy</button>
-        <button onClick={() => generateLessons(3)} disabled={busy} className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 disabled:opacity-60">+3 oy</button>
-        <button onClick={() => generateLessons(12)} disabled={busy} className="px-3 py-1.5 rounded-lg bg-orange-500 text-white text-xs font-semibold hover:bg-orange-600 disabled:opacity-60">+12 oy</button>
-        {busy && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
-        <span className="text-xs text-slate-400 ml-auto">{group._count.lessons} ta dars mavjud</span>
+        <span className="text-sm text-slate-500 flex items-center gap-1.5"><CalendarPlus className="w-4 h-4" /> Darslarni shu sanagacha yarat:</span>
+        <input type="date" value={untilDate} min={lastLessonDate || undefined}
+          onChange={e => setUntilDate(e.target.value)}
+          className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+        <button onClick={generateUntil} disabled={busy || !untilDate}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2660A4] text-white text-xs font-semibold hover:bg-[#1d4e87] disabled:opacity-60">
+          {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CalendarPlus className="w-3.5 h-3.5" />} Yaratish
+        </button>
+        <span className="text-xs text-slate-400 ml-auto">
+          {group._count.lessons} ta dars{lastLessonDate ? ` · oxirgi: ${lastLessonDate.split('-').reverse().join('.')}` : ''}
+        </span>
       </div>
 
       {/* Tabs */}

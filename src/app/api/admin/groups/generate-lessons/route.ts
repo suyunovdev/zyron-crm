@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { groupId, year, month, months } = body;
+    const { groupId, year, month, months, endDate } = body;
 
     if (!groupId) {
       return NextResponse.json({ error: 'groupId kerak' }, { status: 400 });
@@ -45,8 +45,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(result);
     }
 
-    // Ko'p oylar uchun
     const startDate = group.startDate || new Date().toISOString().split('T')[0];
+
+    // Sana bo'yicha: startDate dan endDate gacha
+    if (endDate) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+        return NextResponse.json({ error: 'Sana formati noto\'g\'ri (YYYY-MM-DD)' }, { status: 400 });
+      }
+      if (endDate < startDate) {
+        return NextResponse.json({ error: 'Tugash sanasi boshlanish sanasidan keyin bo\'lishi kerak' }, { status: 400 });
+      }
+      const result = await generateLessons({
+        groupId, startDate, endDate,
+        dayType: group.dayType || 'toq',
+        time: group.time || '14:00',
+      });
+      return NextResponse.json(result);
+    }
+
+    // Ko'p oylar uchun (eski rejim)
     const result = await generateLessons({
       groupId,
       startDate,

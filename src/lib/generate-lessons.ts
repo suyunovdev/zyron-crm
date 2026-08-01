@@ -10,7 +10,8 @@ const DAY_MAP: Record<string, number[]> = {
 interface GenerateOptions {
   groupId: string;
   startDate: string;  // "2026-07-01" formatda
-  months: number;     // necha oy uchun generatsiya qilish (default: 12)
+  months?: number;    // necha oy uchun (endDate berilmasa; default: 12)
+  endDate?: string;   // "2026-12-31" — shu sanagacha (berilsa months o'rniga ishlatiladi)
   dayType: string;    // "toq" | "juft"
   time: string;       // "14:00"
   duration?: string;  // "1.5 soat"
@@ -22,17 +23,23 @@ interface GenerateOptions {
  * Mavjud darslar bilan duplikat bo'lmasligi uchun tekshiradi.
  */
 export async function generateLessons(opts: GenerateOptions) {
-  const { groupId, startDate, months = 12, dayType, time, duration = '1.5 soat' } = opts;
+  const { groupId, startDate, months = 12, endDate, dayType, time, duration = '1.5 soat' } = opts;
 
   const allowedDays = DAY_MAP[dayType];
   if (!allowedDays) {
     throw new Error(`Noto'g'ri dayType: ${dayType}. "toq" yoki "juft" bo'lishi kerak.`);
   }
 
-  // Hisoblash: startDate dan boshlab, months oy davomida
+  // Oxirini aniqlash: endDate berilsa shu sanagacha (inklyuziv), aks holda months oy
   const start = new Date(startDate);
-  const end = new Date(start);
-  end.setMonth(end.getMonth() + months);
+  let end: Date;
+  if (endDate) {
+    end = new Date(endDate);
+    end.setDate(end.getDate() + 1); // shu kunni ham qamrashi uchun
+  } else {
+    end = new Date(start);
+    end.setMonth(end.getMonth() + months);
+  }
 
   // Mavjud darslarning sanalarini olish (duplikat oldini olish)
   const existingLessons = await prisma.lesson.findMany({

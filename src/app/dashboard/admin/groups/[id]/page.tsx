@@ -526,7 +526,7 @@ export default function AdminGroupDetailPage() {
                     {group.students.map(({ student }, idx) => {
                       let totalPresent = 0;
                       let totalMarked = 0;
-                      group.lessons.forEach(l => {
+                      filteredLessons.forEach(l => {
                         const rec = l.attendances.find(a => a.studentId === student.id);
                         if (rec) { totalMarked++; if (rec.present) totalPresent++; }
                       });

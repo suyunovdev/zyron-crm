@@ -78,6 +78,7 @@ export default function AdminGroupDetailPage() {
   const [allStudents, setAllStudents] = useState<{ id: string; name: string; phone?: string; status: string }[]>([]);
   const [allTeachers, setAllTeachers] = useState<{ id: string; name: string; subject?: string }[]>([]);
   const [search, setSearch] = useState('');
+  const [fromDate, setFromDate] = useState('');
   const [untilDate, setUntilDate] = useState('');
   const [busy, setBusy] = useState(false);
   // Dars jadvalini tahrirlash
@@ -119,17 +120,19 @@ export default function AdminGroupDetailPage() {
     } finally { setBusy(false); }
   };
 
-  // Dars generatsiya — belgilangan sanagacha
+  // Dars generatsiya — sanadan sanagacha
   const generateUntil = async () => {
     if (!untilDate) return;
+    if (fromDate && fromDate > untilDate) { alert('Boshlanish sanasi tugash sanasidan keyin bo\'lmasligi kerak'); return; }
     setBusy(true);
     try {
       const r = await fetch('/api/admin/groups/generate-lessons', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ groupId, endDate: untilDate }),
+        body: JSON.stringify({ groupId, endDate: untilDate, ...(fromDate ? { startDate: fromDate } : {}) }),
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { alert(d.error || 'Xatolik'); return; }
+      setFromDate('');
       setUntilDate('');
       await reload();
       if (typeof d.created === 'number') alert(d.created > 0 ? `${d.created} ta dars qo'shildi` : 'Yangi dars topilmadi (barcha sanalar allaqachon mavjud)');
@@ -430,10 +433,15 @@ export default function AdminGroupDetailPage() {
 
       {/* Dars generatsiya — belgilangan sanagacha */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 mb-4 flex items-center gap-3 flex-wrap">
-        <span className="text-sm text-slate-500 flex items-center gap-1.5"><CalendarPlus className="w-4 h-4" /> Darslarni shu sanagacha yarat:</span>
-        <input type="date" value={untilDate} min={lastLessonDate || undefined}
+        <span className="text-sm text-slate-500 flex items-center gap-1.5"><CalendarPlus className="w-4 h-4" /> Darslarni yarat:</span>
+        <input type="date" value={fromDate}
+          onChange={e => setFromDate(e.target.value)}
+          className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+        <span className="text-sm text-slate-400">dan</span>
+        <input type="date" value={untilDate} min={fromDate || lastLessonDate || undefined}
           onChange={e => setUntilDate(e.target.value)}
           className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+        <span className="text-sm text-slate-400">gacha</span>
         <button onClick={generateUntil} disabled={busy || !untilDate}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2660A4] text-white text-xs font-semibold hover:bg-[#1d4e87] disabled:opacity-60">
           {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CalendarPlus className="w-3.5 h-3.5" />} Yaratish

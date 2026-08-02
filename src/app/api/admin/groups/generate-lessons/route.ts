@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { groupId, year, month, months, endDate } = body;
+    const { groupId, year, month, months, endDate, startDate: startOverride } = body;
 
     if (!groupId) {
       return NextResponse.json({ error: 'groupId kerak' }, { status: 400 });
@@ -45,7 +45,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(result);
     }
 
-    const startDate = group.startDate || new Date().toISOString().split('T')[0];
+    // Boshlanish sanasi: admin bergan bo'lsa o'sha, aks holda guruh startDate yoki bugun
+    if (startOverride && !/^\d{4}-\d{2}-\d{2}$/.test(startOverride)) {
+      return NextResponse.json({ error: 'Boshlanish sanasi formati noto\'g\'ri (YYYY-MM-DD)' }, { status: 400 });
+    }
+    const startDate = startOverride || group.startDate || new Date().toISOString().split('T')[0];
 
     // Sana bo'yicha: startDate dan endDate gacha
     if (endDate) {

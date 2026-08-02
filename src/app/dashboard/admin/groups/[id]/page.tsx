@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Users, BookOpen, CalendarDays, Clock,
   UserCheck, UserX, Check, Video, Loader2, MapPin, X, CalendarPlus, Search, Plus, GraduationCap,
+  Pencil, Trash2,
 } from 'lucide-react';
 
 interface Student {
@@ -79,6 +80,11 @@ export default function AdminGroupDetailPage() {
   const [search, setSearch] = useState('');
   const [untilDate, setUntilDate] = useState('');
   const [busy, setBusy] = useState(false);
+  // Dars jadvalini tahrirlash
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ scheduledDate: '', scheduledTime: '', topic: '' });
+  const [addOpen, setAddOpen] = useState(false);
+  const [addForm, setAddForm] = useState({ scheduledDate: '', scheduledTime: '', topic: '' });
 
   const now = new Date();
 
@@ -152,6 +158,61 @@ export default function AdminGroupDetailPage() {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: groupId, removeStudentId: sid }),
       });
+      await reload();
+    } finally { setBusy(false); }
+  };
+
+  // Darsni tahrirlashni boshlash
+  const startEdit = (l: Lesson) => {
+    setAddOpen(false);
+    setEditId(l.id);
+    setEditForm({ scheduledDate: l.scheduledDate, scheduledTime: l.scheduledTime || '', topic: l.topic || '' });
+  };
+  // Dars tahririni saqlash (sana / vaqt / mavzu)
+  const saveLesson = async () => {
+    if (!editId || !editForm.scheduledDate) return;
+    setBusy(true);
+    try {
+      const r = await fetch('/api/admin/lessons', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editId, ...editForm }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { alert(d.error || 'Xatolik'); return; }
+      setEditId(null);
+      await reload();
+    } finally { setBusy(false); }
+  };
+  // Darsni o'chirish (davomat yozuvlari ham o'chadi)
+  const deleteLesson = async (l: Lesson) => {
+    const hasAtt = l.attendances.length > 0;
+    if (!confirm(hasAtt
+      ? `Bu darsni o'chirasizmi? ${l.attendances.length} ta davomat yozuvi ham o'chadi.`
+      : "Bu darsni o'chirasizmi?")) return;
+    setBusy(true);
+    try {
+      const r = await fetch('/api/admin/lessons', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: l.id }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { alert(d.error || 'Xatolik'); return; }
+      await reload();
+    } finally { setBusy(false); }
+  };
+  // Yangi alohida dars qo'shish
+  const addLesson = async () => {
+    if (!addForm.scheduledDate) return;
+    setBusy(true);
+    try {
+      const r = await fetch('/api/admin/lessons', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId, ...addForm }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { alert(d.error || 'Xatolik'); return; }
+      setAddForm({ scheduledDate: '', scheduledTime: '', topic: '' });
+      setAddOpen(false);
       await reload();
     } finally { setBusy(false); }
   };
@@ -564,53 +625,139 @@ export default function AdminGroupDetailPage() {
           </div>
         )}
 
-        {/* Mavzular Tab */}
+        {/* Mavzular / dars jadvali Tab */}
         {activeTab === 'mavzular' && (
-          <div className="divide-y divide-slate-100">
-            {group.lessons.length === 0 ? (
-              <div className="p-12 text-center text-sm text-slate-400">Darslar mavjud emas</div>
-            ) : (
-              group.lessons.map(lesson => {
-                const [, m, d] = lesson.scheduledDate.split('-').map(Number);
-                const isToday = isSameDay(lesson.scheduledDate);
-                const MONTHS_UZ = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyn', 'Iyl', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek'];
-                return (
-                  <div key={lesson.id} className={`px-6 py-4 flex items-start gap-4 ${isToday ? 'bg-blue-50/30' : 'hover:bg-slate-50/50'} transition-colors`}>
-                    <div className={`w-11 h-11 rounded-lg flex flex-col items-center justify-center flex-shrink-0 ${
-                      isToday ? 'bg-[#2660A4] text-white' : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      <span className="text-base font-bold leading-none">{d}</span>
-                      <span className="text-[9px] uppercase leading-none mt-0.5">{MONTHS_UZ[m - 1]}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold text-[#2660A4]">{lesson.order}-dars</span>
-                        <span className="text-xs text-slate-400 flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {lesson.scheduledTime} · {lesson.duration}
-                        </span>
-                      </div>
-                      {lesson.topic ? (
-                        <p className="text-sm text-slate-800 font-medium flex items-center gap-1.5">
-                          <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" /> {lesson.topic}
-                        </p>
-                      ) : (
-                        <p className="text-xs text-amber-500 font-medium">Mavzu kiritilmagan</p>
-                      )}
-                      {lesson.attendances.length > 0 && (
-                        <div className="flex items-center gap-3 mt-2 text-xs">
-                          <span className="flex items-center gap-1 text-emerald-600">
-                            <UserCheck className="w-3.5 h-3.5" /> {lesson.attendances.filter(a => a.present).length} keldi
-                          </span>
-                          <span className="flex items-center gap-1 text-red-500">
-                            <UserX className="w-3.5 h-3.5" /> {lesson.attendances.filter(a => !a.present).length} kelmadi
-                          </span>
-                        </div>
-                      )}
-                    </div>
+          <div>
+            {/* Yangi dars qo'shish */}
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+              {!addOpen ? (
+                <button onClick={() => { setEditId(null); setAddOpen(true); }}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#2660A4] hover:underline">
+                  <Plus className="w-4 h-4" /> Yangi dars qo&apos;shish
+                </button>
+              ) : (
+                <div className="flex flex-wrap items-end gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Sana</label>
+                    <input type="date" value={addForm.scheduledDate}
+                      onChange={e => setAddForm(f => ({ ...f, scheduledDate: e.target.value }))}
+                      className="rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-800" />
                   </div>
-                );
-              })
-            )}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Vaqt</label>
+                    <input type="time" value={addForm.scheduledTime}
+                      onChange={e => setAddForm(f => ({ ...f, scheduledTime: e.target.value }))}
+                      className="rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-800" />
+                  </div>
+                  <div className="flex-1 min-w-[160px]">
+                    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Mavzu (ixtiyoriy)</label>
+                    <input type="text" value={addForm.topic} placeholder="Mavzu nomi"
+                      onChange={e => setAddForm(f => ({ ...f, topic: e.target.value }))}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-800" />
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={addLesson} disabled={busy || !addForm.scheduledDate}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-[#2660A4] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
+                      {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Qo&apos;shish
+                    </button>
+                    <button onClick={() => setAddOpen(false)}
+                      className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">Bekor</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {group.lessons.length === 0 ? (
+                <div className="p-12 text-center text-sm text-slate-400">Darslar mavjud emas</div>
+              ) : (
+                group.lessons.map(lesson => {
+                  const [, m, d] = lesson.scheduledDate.split('-').map(Number);
+                  const isToday = isSameDay(lesson.scheduledDate);
+                  const MONTHS_UZ = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyn', 'Iyl', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek'];
+                  const editing = editId === lesson.id;
+                  return (
+                    <div key={lesson.id} className={`px-6 py-4 flex items-start gap-4 ${isToday ? 'bg-blue-50/30' : 'hover:bg-slate-50/50'} transition-colors`}>
+                      <div className={`w-11 h-11 rounded-lg flex flex-col items-center justify-center flex-shrink-0 ${
+                        isToday ? 'bg-[#2660A4] text-white' : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        <span className="text-base font-bold leading-none">{d}</span>
+                        <span className="text-[9px] uppercase leading-none mt-0.5">{MONTHS_UZ[m - 1]}</span>
+                      </div>
+
+                      {editing ? (
+                        <div className="flex-1 flex flex-wrap items-end gap-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Sana</label>
+                            <input type="date" value={editForm.scheduledDate}
+                              onChange={e => setEditForm(f => ({ ...f, scheduledDate: e.target.value }))}
+                              className="rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-800" />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Vaqt</label>
+                            <input type="time" value={editForm.scheduledTime}
+                              onChange={e => setEditForm(f => ({ ...f, scheduledTime: e.target.value }))}
+                              className="rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-800" />
+                          </div>
+                          <div className="flex-1 min-w-[160px]">
+                            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">Mavzu</label>
+                            <input type="text" value={editForm.topic} placeholder="Mavzu nomi"
+                              onChange={e => setEditForm(f => ({ ...f, topic: e.target.value }))}
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-800" />
+                          </div>
+                          <div className="flex gap-2">
+                            <button onClick={saveLesson} disabled={busy || !editForm.scheduledDate}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-[#2660A4] px-3 py-2 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
+                              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Saqlash
+                            </button>
+                            <button onClick={() => setEditId(null)}
+                              className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50">Bekor</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-bold text-[#2660A4]">{lesson.order}-dars</span>
+                              <span className="text-xs text-slate-400 flex items-center gap-1">
+                                <Clock className="w-3 h-3" /> {lesson.scheduledTime} · {lesson.duration}
+                              </span>
+                            </div>
+                            {lesson.topic ? (
+                              <p className="text-sm text-slate-800 font-medium flex items-center gap-1.5">
+                                <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" /> {lesson.topic}
+                              </p>
+                            ) : (
+                              <p className="text-xs text-amber-500 font-medium">Mavzu kiritilmagan</p>
+                            )}
+                            {lesson.attendances.length > 0 && (
+                              <div className="flex items-center gap-3 mt-2 text-xs">
+                                <span className="flex items-center gap-1 text-emerald-600">
+                                  <UserCheck className="w-3.5 h-3.5" /> {lesson.attendances.filter(a => a.present).length} keldi
+                                </span>
+                                <span className="flex items-center gap-1 text-red-500">
+                                  <UserX className="w-3.5 h-3.5" /> {lesson.attendances.filter(a => !a.present).length} kelmadi
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button onClick={() => startEdit(lesson)} title="Tahrirlash"
+                              className="p-2 rounded-lg text-slate-400 hover:text-[#2660A4] hover:bg-slate-100">
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => deleteLesson(lesson)} title="O'chirish"
+                              className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         )}
 

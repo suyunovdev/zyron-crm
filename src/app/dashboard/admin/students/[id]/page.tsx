@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { toast } from '@/components/toast';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Phone, Loader2, Snowflake, Archive, RotateCcw,
@@ -488,7 +489,7 @@ export default function StudentProfilePage() {
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(student.login);
-                  alert('Login nusxalandi!');
+                  toast.success('Login nusxalandi!');
                 }}
                 className="px-3 py-1 rounded-lg border border-blue-200 bg-blue-50 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors">
                 Login nusxalash
@@ -1399,9 +1400,9 @@ export default function StudentProfilePage() {
               setResetPassSubmitting(false);
               if (res.ok) {
                 setShowResetPassModal(false);
-                alert('Parol muvaffaqiyatli yangilandi!');
+                toast.success('Parol muvaffaqiyatli yangilandi!');
               } else {
-                alert('Xatolik yuz berdi');
+                toast.error('Xatolik yuz berdi');
               }
             }} className="space-y-4">
               <div>

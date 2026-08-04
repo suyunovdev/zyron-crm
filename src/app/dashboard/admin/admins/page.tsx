@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from '@/components/toast';
 import { ShieldCheck, Shield, Plus, X, KeyRound, Snowflake, UserCheck, Trash2, Loader2, Eye, EyeOff, Building2 } from 'lucide-react';
 
 interface Branch { id: string; name: string }
@@ -52,7 +53,7 @@ export default function AdminsPage() {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: next }),
     });
-    if (!res.ok) { const e = await res.json(); alert(e.error || 'Xato'); }
+    if (!res.ok) { const e = await res.json(); toast.error(e.error || 'Xato'); }
     await load();
     setBusy('');
   };
@@ -65,7 +66,7 @@ export default function AdminsPage() {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: np }),
     });
-    if (!res.ok) { const e = await res.json(); alert(e.error || 'Xato'); } else alert('Parol yangilandi');
+    if (!res.ok) { const e = await res.json(); toast.error(e.error || 'Xato'); } else toast.success('Parol yangilandi');
     await load();
     setBusy('');
   };
@@ -78,7 +79,7 @@ export default function AdminsPage() {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ role: next }),
     });
-    if (!res.ok) { const e = await res.json(); alert(e.error || 'Xato'); }
+    if (!res.ok) { const e = await res.json(); toast.error(e.error || 'Xato'); }
     await load();
     setBusy('');
   };
@@ -87,7 +88,7 @@ export default function AdminsPage() {
     if (!confirm(`${a.name} adminini o'chirasizmi? Bu qaytarib bo'lmaydi.`)) return;
     setBusy(a.id);
     const res = await fetch(`/api/superadmin/admins/${a.id}`, { method: 'DELETE' });
-    if (!res.ok) { const e = await res.json(); alert(e.error || 'Xato'); }
+    if (!res.ok) { const e = await res.json(); toast.error(e.error || 'Xato'); }
     await load();
     setBusy('');
   };

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from '@/components/toast';
 import { Wallet, Loader2, Check } from 'lucide-react';
 
 interface Row {
@@ -43,7 +44,7 @@ export default function PayrollPage() {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ teacherId, salaryShare: Number(val) }),
     });
-    if (!res.ok) { const e = await res.json(); alert(e.error || 'Xato'); }
+    if (!res.ok) { const e = await res.json(); toast.error(e.error || 'Xato'); }
     setEdits(p => { const n = { ...p }; delete n[teacherId]; return n; });
     await load();
     setSaving('');

@@ -7,6 +7,7 @@ import {
   UserCheck, UserX, Check, Video, Loader2, MapPin, X, CalendarPlus, Search, Plus, GraduationCap,
   Pencil, Trash2,
 } from 'lucide-react';
+import { toast } from '@/components/toast';
 
 interface Student {
   id: string;
@@ -115,7 +116,7 @@ export default function AdminGroupDetailPage() {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: groupId, teacherId }),
       });
-      if (!r.ok) { alert((await r.json()).error || 'Xatolik'); return; }
+      if (!r.ok) { toast.error((await r.json()).error || 'Xatolik'); return; }
       await reload();
     } finally { setBusy(false); }
   };
@@ -123,7 +124,7 @@ export default function AdminGroupDetailPage() {
   // Dars generatsiya — sanadan sanagacha
   const generateUntil = async () => {
     if (!untilDate) return;
-    if (fromDate && fromDate > untilDate) { alert('Boshlanish sanasi tugash sanasidan keyin bo\'lmasligi kerak'); return; }
+    if (fromDate && fromDate > untilDate) { toast.error('Boshlanish sanasi tugash sanasidan keyin bo\'lmasligi kerak'); return; }
     setBusy(true);
     try {
       const r = await fetch('/api/admin/groups/generate-lessons', {
@@ -131,7 +132,7 @@ export default function AdminGroupDetailPage() {
         body: JSON.stringify({ groupId, endDate: untilDate, ...(fromDate ? { startDate: fromDate } : {}) }),
       });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok) { alert(d.error || 'Xatolik'); return; }
+      if (!r.ok) { toast.error(d.error || 'Xatolik'); return; }
       const jumpMonth = (fromDate || untilDate).slice(0, 7);
       setFromDate('');
       setUntilDate('');
@@ -140,9 +141,9 @@ export default function AdminGroupDetailPage() {
         // Yaratilgan oraliqni ko'rsatish uchun o'sha oyga o'tamiz
         setSelectedMonth(jumpMonth);
         setActiveTab('davomat');
-        alert(`${d.created} ta dars qo'shildi`);
+        toast.success(`${d.created} ta dars qo'shildi`);
       } else {
-        alert('Yangi dars topilmadi (tanlangan oraliqdagi barcha darslar allaqachon mavjud)');
+        toast.info('Yangi dars topilmadi (tanlangan oraliqdagi barcha darslar allaqachon mavjud)');
       }
     } finally { setBusy(false); }
   };
@@ -155,7 +156,7 @@ export default function AdminGroupDetailPage() {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: groupId, addStudentId: sid }),
       });
-      if (!r.ok) { alert((await r.json()).error || 'Xatolik'); return; }
+      if (!r.ok) { toast.error((await r.json()).error || 'Xatolik'); return; }
       setSearch('');
       await reload();
     } finally { setBusy(false); }
@@ -189,7 +190,7 @@ export default function AdminGroupDetailPage() {
         body: JSON.stringify({ id: editId, ...editForm }),
       });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok) { alert(d.error || 'Xatolik'); return; }
+      if (!r.ok) { toast.error(d.error || 'Xatolik'); return; }
       setEditId(null);
       await reload();
     } finally { setBusy(false); }
@@ -207,7 +208,7 @@ export default function AdminGroupDetailPage() {
         body: JSON.stringify({ id: l.id }),
       });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok) { alert(d.error || 'Xatolik'); return; }
+      if (!r.ok) { toast.error(d.error || 'Xatolik'); return; }
       await reload();
     } finally { setBusy(false); }
   };
@@ -221,7 +222,7 @@ export default function AdminGroupDetailPage() {
         body: JSON.stringify({ groupId, ...addForm }),
       });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok) { alert(d.error || 'Xatolik'); return; }
+      if (!r.ok) { toast.error(d.error || 'Xatolik'); return; }
       setAddForm({ scheduledDate: '', scheduledTime: '', topic: '' });
       setAddOpen(false);
       await reload();

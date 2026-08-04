@@ -4,6 +4,7 @@
 // komponentlardan foydalanadi (yagona manba, takrorlanmasin).
 
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from '@/components/toast';
 import { Building2, Send, UserCog, DatabaseBackup, ShieldAlert, Skull, Loader2, Plus, Trash2, Download, UserPlus, X } from 'lucide-react';
 
 const fmt = (n: number) => (n || 0).toLocaleString('uz-UZ');
@@ -292,7 +293,7 @@ export function ImpersonateTab() {
     if (!sel) return;
     const res = await fetch('/api/superadmin/impersonate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUserId: sel }) });
     const d = await res.json();
-    if (res.ok) window.location.href = d.redirect; else alert(d.error);
+    if (res.ok) window.location.href = d.redirect; else toast.error(d.error);
   };
   return (
     <div className={card}>

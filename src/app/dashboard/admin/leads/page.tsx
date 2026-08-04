@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { toast } from '@/components/toast';
 import { createPortal } from "react-dom";
 import {
   Plus, Trash2, ChevronDown, Phone, User, TrendingUp, X, Loader2, Search, UserPlus,
@@ -203,7 +204,7 @@ export default function LeadsPage() {
 
       if (!res.ok) {
         const err = await res.json();
-        alert(err.error || "Xatolik yuz berdi");
+        toast.error(err.error || "Xatolik yuz berdi");
         setEnrolling(false);
         return;
       }
@@ -253,7 +254,7 @@ export default function LeadsPage() {
       setEnrollLead(null);
       fetchLeads();
       if (warnings.length) {
-        alert(`O'quvchi yaratildi, lekin:\n• ${warnings.join("\n• ")}\n\nGuruhlar sahifasidan qo'lda biriktirishingiz mumkin.`);
+        toast.info(`O'quvchi yaratildi, lekin:\n• ${warnings.join("\n• ")}\n\nGuruhlar sahifasidan qo'lda biriktirishingiz mumkin.`);
       }
     } finally {
       setEnrolling(false);

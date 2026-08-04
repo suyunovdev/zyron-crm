@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import ThemeProvider from "@/components/ThemeProvider";
 import { Toaster } from "@/components/toast";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -40,6 +41,7 @@ export default function RootLayout({
       <body className="min-h-screen">
         <ThemeProvider>{children}</ThemeProvider>
         <Toaster />
+        <ConfirmDialog />
       </body>
     </html>
   );

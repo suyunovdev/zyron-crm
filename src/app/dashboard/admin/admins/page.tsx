@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from '@/components/toast';
+import { confirmDialog } from '@/components/confirm-dialog';
 import { ShieldCheck, Shield, Plus, X, KeyRound, Snowflake, UserCheck, Trash2, Loader2, Eye, EyeOff, Building2 } from 'lucide-react';
 
 interface Branch { id: string; name: string }
@@ -73,7 +74,7 @@ export default function AdminsPage() {
 
   const changeRole = async (a: Admin) => {
     const next = a.role === 'superadmin' ? 'admin' : 'superadmin';
-    if (!confirm(`${a.name} rolini "${next}" ga o'zgartirasizmi?`)) return;
+    if (!(await confirmDialog(`${a.name} rolini "${next}" ga o'zgartirasizmi?`, { confirmText: "O'zgartirish" }))) return;
     setBusy(a.id);
     const res = await fetch(`/api/superadmin/admins/${a.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -85,7 +86,7 @@ export default function AdminsPage() {
   };
 
   const remove = async (a: Admin) => {
-    if (!confirm(`${a.name} adminini o'chirasizmi? Bu qaytarib bo'lmaydi.`)) return;
+    if (!(await confirmDialog(`${a.name} adminini o'chirasizmi? Bu qaytarib bo'lmaydi.`, { danger: true, confirmText: "O'chirish" }))) return;
     setBusy(a.id);
     const res = await fetch(`/api/superadmin/admins/${a.id}`, { method: 'DELETE' });
     if (!res.ok) { const e = await res.json(); toast.error(e.error || 'Xato'); }

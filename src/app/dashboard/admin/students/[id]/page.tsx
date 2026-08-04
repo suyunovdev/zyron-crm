@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from '@/components/toast';
+import { confirmDialog } from '@/components/confirm-dialog';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Phone, Loader2, Snowflake, Archive, RotateCcw,
@@ -303,7 +304,7 @@ export default function StudentProfilePage() {
   };
 
   const handleDeletePayment = async (paymentId: string) => {
-    if (!confirm("Bu to'lovni o'chirmoqchimisiz?")) return;
+    if (!(await confirmDialog("Bu to'lovni o'chirmoqchimisiz?", { danger: true, confirmText: "O'chirish" }))) return;
     await fetch('/api/admin/payments', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -395,7 +396,7 @@ export default function StudentProfilePage() {
 
   const handleRemoveFromGroup = async () => {
     if (!student || !activeGroup) return;
-    if (!confirm(`${student.name}ni "${activeGroup.name}" guruhidan chiqarmoqchimisiz?`)) return;
+    if (!(await confirmDialog(`${student.name}ni "${activeGroup.name}" guruhidan chiqarmoqchimisiz?`, { danger: true, confirmText: "Chiqarish" }))) return;
     await fetch('/api/admin/groups', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },

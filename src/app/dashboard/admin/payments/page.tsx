@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { confirmDialog } from "@/components/confirm-dialog";
 import {
   Plus,
   Trash2,
@@ -195,7 +196,7 @@ export default function AdminPaymentsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Bu to'lovni o'chirmoqchimisiz?")) return;
+    if (!(await confirmDialog("Bu to'lovni o'chirmoqchimisiz?", { danger: true, confirmText: "O'chirish" }))) return;
 
     setDeleting(id);
     try {

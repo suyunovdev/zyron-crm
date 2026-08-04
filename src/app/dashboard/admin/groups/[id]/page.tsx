@@ -8,6 +8,7 @@ import {
   Pencil, Trash2,
 } from 'lucide-react';
 import { toast } from '@/components/toast';
+import { confirmDialog } from '@/components/confirm-dialog';
 
 interface Student {
   id: string;
@@ -169,7 +170,7 @@ export default function AdminGroupDetailPage() {
   };
   // O'quvchini chiqarish
   const removeStudent = async (sid: string) => {
-    if (!confirm("O'quvchini guruhdan chiqarasizmi?")) return;
+    if (!(await confirmDialog("O'quvchini guruhdan chiqarasizmi?", { danger: true, confirmText: 'Chiqarish' }))) return;
     setBusy(true);
     try {
       await fetch('/api/admin/groups', {
@@ -204,9 +205,12 @@ export default function AdminGroupDetailPage() {
   // Darsni o'chirish (davomat yozuvlari ham o'chadi)
   const deleteLesson = async (l: Lesson) => {
     const hasAtt = l.attendances.length > 0;
-    if (!confirm(hasAtt
-      ? `Bu darsni o'chirasizmi? ${l.attendances.length} ta davomat yozuvi ham o'chadi.`
-      : "Bu darsni o'chirasizmi?")) return;
+    if (!(await confirmDialog(
+      hasAtt
+        ? `Bu darsni o'chirasizmi? ${l.attendances.length} ta davomat yozuvi ham o'chadi.`
+        : "Bu darsni o'chirasizmi?",
+      { danger: true, confirmText: "O'chirish" }
+    ))) return;
     setBusy(true);
     try {
       const r = await fetch('/api/admin/lessons', {

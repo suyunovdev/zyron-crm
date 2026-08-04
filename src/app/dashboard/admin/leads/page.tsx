@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { toast } from '@/components/toast';
+import { confirmDialog } from '@/components/confirm-dialog';
 import { createPortal } from "react-dom";
 import {
   Plus, Trash2, ChevronDown, Phone, User, TrendingUp, X, Loader2, Search, UserPlus,
@@ -156,7 +157,7 @@ export default function LeadsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Haqiqatan ham o'chirmoqchimisiz?")) return;
+    if (!(await confirmDialog("Haqiqatan ham o'chirmoqchimisiz?", { danger: true, confirmText: "O'chirish" }))) return;
     await fetch("/api/admin/leads", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },

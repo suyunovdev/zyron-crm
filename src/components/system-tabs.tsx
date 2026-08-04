@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from '@/components/toast';
+import { confirmDialog } from '@/components/confirm-dialog';
 import { Building2, Send, UserCog, DatabaseBackup, ShieldAlert, Skull, Loader2, Plus, Trash2, Download, UserPlus, X } from 'lucide-react';
 
 const fmt = (n: number) => (n || 0).toLocaleString('uz-UZ');
@@ -93,7 +94,7 @@ export function BranchesTab() {
   const [adminFor, setAdminFor] = useState<{ id: string; name: string } | null>(null);
   const load = useCallback(() => fetch('/api/superadmin/branches').then(r => r.json()).then(d => setList(d.branches)), []);
   useEffect(() => { load(); }, [load]);
-  const del = async (id: string) => { if (!confirm('Filialni o\'chirasizmi?')) return; await fetch(`/api/superadmin/branches/${id}`, { method: 'DELETE' }); load(); };
+  const del = async (id: string) => { if (!(await confirmDialog('Filialni o\'chirasizmi?', { danger: true, confirmText: 'O\'chirish' }))) return; await fetch(`/api/superadmin/branches/${id}`, { method: 'DELETE' }); load(); };
   return (
     <div className="space-y-4">
       <div className={`${card} flex items-center justify-between gap-3`}>
@@ -336,7 +337,7 @@ export function BackupTab() {
 export function SecurityTab() {
   const [msg, setMsg] = useState('');
   const forceAll = async () => {
-    if (!confirm('Barcha foydalanuvchilarni tizimdan chiqarasizmi? Ular qayta login qilishi kerak bo\'ladi.')) return;
+    if (!(await confirmDialog('Barcha foydalanuvchilarni tizimdan chiqarasizmi? Ular qayta login qilishi kerak bo\'ladi.', { danger: true, confirmText: 'Chiqarish' }))) return;
     const res = await fetch('/api/superadmin/security', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'force-logout-all' }) });
     const d = await res.json();
     setMsg(res.ok ? `${d.affected} foydalanuvchi chiqarildi` : d.error);
@@ -356,7 +357,7 @@ export function SecurityTab() {
 export function DangerTab() {
   const [msg, setMsg] = useState('');
   const run = async (action: string, label: string) => {
-    if (!confirm(`"${label}" — bu qaytarib bo’lmaydi. Davom etasizmi?`)) return;
+    if (!(await confirmDialog(`"${label}" — bu qaytarib bo’lmaydi. Davom etasizmi?`, { danger: true, confirmText: 'Davom etish' }))) return;
     const res = await fetch('/api/superadmin/danger', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, confirm: 'TASDIQLAYMAN' }) });
     const d = await res.json();
     setMsg(res.ok ? `${d.label}: ${d.deleted} ta o’chirildi` : d.error);

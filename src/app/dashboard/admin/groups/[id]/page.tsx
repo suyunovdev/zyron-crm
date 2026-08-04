@@ -87,6 +87,8 @@ export default function AdminGroupDetailPage() {
   const [editForm, setEditForm] = useState({ scheduledDate: '', scheduledTime: '', topic: '' });
   const [addOpen, setAddOpen] = useState(false);
   const [addForm, setAddForm] = useState({ scheduledDate: '', scheduledTime: '', topic: '' });
+  // Mentor tanlovi (Saqlash bosilmaguncha qo'llanilmaydi)
+  const [pendingTeacherId, setPendingTeacherId] = useState('');
 
   const now = new Date();
 
@@ -107,17 +109,21 @@ export default function AdminGroupDetailPage() {
     }).catch(() => setLoading(false));
   }, [groupId]);
 
-  // Mentor (o'qituvchi) tayinlash/o'zgartirish
-  const changeMentor = async (teacherId: string) => {
-    if (!teacherId) return;
+  // Guruh mentori o'zgarganda tanlovni sinxronlash
+  useEffect(() => { setPendingTeacherId(group?.teacher?.id || ''); }, [group?.teacher?.id]);
+
+  // Mentor (o'qituvchi) tayinlash — Saqlash tugmasi bosilganda
+  const saveMentor = async () => {
+    if (!pendingTeacherId || pendingTeacherId === (group?.teacher?.id || '')) return;
     setBusy(true);
     try {
       const r = await fetch('/api/admin/groups', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: groupId, teacherId }),
+        body: JSON.stringify({ id: groupId, teacherId: pendingTeacherId }),
       });
       if (!r.ok) { toast.error((await r.json()).error || 'Xatolik'); return; }
       await reload();
+      toast.success('Mentor saqlandi');
     } finally { setBusy(false); }
   };
 
@@ -792,13 +798,20 @@ export default function AdminGroupDetailPage() {
               <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
                 <GraduationCap className="w-3.5 h-3.5" /> Mentor (o&apos;qituvchi)
               </label>
-              <select value={group.teacher?.id || ''} onChange={e => changeMentor(e.target.value)} disabled={busy}
-                className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20 disabled:opacity-60">
-                <option value="">Tanlanmagan</option>
-                {allTeachers.map(t => (
-                  <option key={t.id} value={t.id}>{t.name}{t.subject ? ` — ${t.subject}` : ''}</option>
-                ))}
-              </select>
+              <div className="mt-1.5 flex items-center gap-2">
+                <select value={pendingTeacherId} onChange={e => setPendingTeacherId(e.target.value)} disabled={busy}
+                  className="flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20 disabled:opacity-60">
+                  <option value="">Tanlanmagan</option>
+                  {allTeachers.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}{t.subject ? ` — ${t.subject}` : ''}</option>
+                  ))}
+                </select>
+                <button onClick={saveMentor}
+                  disabled={busy || !pendingTeacherId || pendingTeacherId === (group.teacher?.id || '')}
+                  className="flex items-center gap-1.5 rounded-lg bg-[#2660A4] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap">
+                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Saqlash
+                </button>
+              </div>
             </div>
 
             {/* O'quvchi qidirib qo'shish */}

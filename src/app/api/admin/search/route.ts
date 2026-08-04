@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
     if (!q || q.length < 2) {
       return NextResponse.json(
-        { students: [], teachers: [], groups: [] },
+        { students: [], parents: [], teachers: [], groups: [] },
         { status: 200 }
       );
     }
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     const bId = await scopedBranchId(auth);
     const bWhere = bId ? { branchId: bId } : {};
 
-    const [students, teachers, groups] = await Promise.all([
+    const [students, parents, teachers, groups] = await Promise.all([
       prisma.user.findMany({
         where: {
           role: "student",
@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
           OR: [
             { name: { contains: q } },
             { login: { contains: q } },
+            { phone: { contains: q } },
           ],
         },
         select: {
@@ -40,7 +41,28 @@ export async function GET(req: NextRequest) {
           phone: true,
           status: true,
         },
-        take: 5,
+        take: 6,
+      }),
+
+      prisma.user.findMany({
+        where: {
+          role: "parent",
+          ...bWhere,
+          OR: [
+            { name: { contains: q } },
+            { login: { contains: q } },
+            { phone: { contains: q } },
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          login: true,
+          phone: true,
+          status: true,
+          children: { select: { id: true, name: true } },
+        },
+        take: 6,
       }),
 
       prisma.user.findMany({
@@ -50,6 +72,7 @@ export async function GET(req: NextRequest) {
           OR: [
             { name: { contains: q } },
             { login: { contains: q } },
+            { phone: { contains: q } },
           ],
         },
         select: {
@@ -58,7 +81,7 @@ export async function GET(req: NextRequest) {
           login: true,
           phone: true,
         },
-        take: 5,
+        take: 6,
       }),
 
       prisma.group.findMany({
@@ -82,7 +105,7 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
-    return NextResponse.json({ students, teachers, groups });
+    return NextResponse.json({ students, parents, teachers, groups });
   } catch (error) {
     logger.error("Search error:", error);
     return NextResponse.json(

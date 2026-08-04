@@ -556,7 +556,7 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<{ students: any[]; teachers: any[]; groups: any[] } | null>(null);
+  const [searchResults, setSearchResults] = useState<{ students: any[]; parents: any[]; teachers: any[]; groups: any[] } | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -843,7 +843,7 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
                 <div className={`absolute top-full mt-2 left-0 right-0 rounded-xl shadow-2xl border overflow-hidden z-50 max-h-[400px] overflow-y-auto ${
                   theme === 'dark' ? 'bg-[#1e293b] border-[#334155]' : 'bg-white border-slate-200'
                 }`}>
-                  {searchResults.students.length === 0 && searchResults.teachers.length === 0 && searchResults.groups.length === 0 ? (
+                  {searchResults.students.length === 0 && (searchResults.parents?.length ?? 0) === 0 && searchResults.teachers.length === 0 && searchResults.groups.length === 0 ? (
                     <p className="text-sm text-slate-400 text-center py-6">Natija topilmadi</p>
                   ) : (
                     <>
@@ -877,6 +877,43 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
                                   'bg-slate-100 text-slate-500'
                                 }`}>
                                   {s.status === 'active' ? 'Faol' : s.status === 'frozen' ? 'Muzlatilgan' : 'Arxiv'}
+                                </span>
+                              )}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                      {(searchResults.parents?.length ?? 0) > 0 && (
+                        <div>
+                          <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
+                            <p className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+                              <UserCircle className="w-3.5 h-3.5" /> Ota-onalar
+                            </p>
+                          </div>
+                          {searchResults.parents.map((p: any) => (
+                            <Link
+                              key={p.id}
+                              href="/dashboard/admin/parents"
+                              onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
+                              className="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors"
+                            >
+                              <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center">
+                                <span className="text-xs font-bold text-teal-600">
+                                  {p.name?.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()}
+                                </span>
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-slate-800">{p.name}</p>
+                                <p className="text-xs text-slate-400 truncate">
+                                  {p.login}
+                                  {p.children?.length > 0 && ` • ${p.children.map((c: any) => c.name).join(', ')}`}
+                                </p>
+                              </div>
+                              {p.status && (
+                                <span className={`ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                                  p.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+                                }`}>
+                                  {p.status === 'active' ? 'Faol' : 'Arxiv'}
                                 </span>
                               )}
                             </Link>

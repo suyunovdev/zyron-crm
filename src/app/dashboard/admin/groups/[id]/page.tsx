@@ -132,10 +132,18 @@ export default function AdminGroupDetailPage() {
       });
       const d = await r.json().catch(() => ({}));
       if (!r.ok) { alert(d.error || 'Xatolik'); return; }
+      const jumpMonth = (fromDate || untilDate).slice(0, 7);
       setFromDate('');
       setUntilDate('');
       await reload();
-      if (typeof d.created === 'number') alert(d.created > 0 ? `${d.created} ta dars qo'shildi` : 'Yangi dars topilmadi (barcha sanalar allaqachon mavjud)');
+      if (typeof d.created === 'number' && d.created > 0) {
+        // Yaratilgan oraliqni ko'rsatish uchun o'sha oyga o'tamiz
+        setSelectedMonth(jumpMonth);
+        setActiveTab('davomat');
+        alert(`${d.created} ta dars qo'shildi`);
+      } else {
+        alert('Yangi dars topilmadi (tanlangan oraliqdagi barcha darslar allaqachon mavjud)');
+      }
     } finally { setBusy(false); }
   };
   // O'quvchi qo'shish (qidiruv natijasidan)
@@ -233,7 +241,13 @@ export default function AdminGroupDetailPage() {
   useEffect(() => {
     if (availableMonths.length === 0) { setSelectedMonth(''); return; }
     const cur = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    setSelectedMonth(availableMonths.includes(cur) ? cur : availableMonths[availableMonths.length - 1]);
+    // Reload'dan keyin joriy tanlangan oy hali mavjud bo'lsa — uni saqlaymiz
+    // (aks holda dars yaratganda ko'rinish joriy oyga qaytib ketardi).
+    setSelectedMonth(prev =>
+      prev && availableMonths.includes(prev)
+        ? prev
+        : (availableMonths.includes(cur) ? cur : availableMonths[availableMonths.length - 1])
+    );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [group?.id, availableMonths.length]);
 

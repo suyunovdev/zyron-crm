@@ -957,7 +957,7 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
                           {searchResults.groups.map((g: any) => (
                             <Link
                               key={g.id}
-                              href="/dashboard/admin/groups"
+                              href={`/dashboard/admin/groups/${g.id}`}
                               onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
                               className="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors"
                             >

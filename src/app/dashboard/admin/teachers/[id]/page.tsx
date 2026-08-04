@@ -222,7 +222,8 @@ export default function TeacherProfilePage() {
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {activeGroups.map((g, idx) => (
-              <div key={g.id} className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md transition-shadow">
+              <div key={g.id} onClick={() => router.push(`/dashboard/admin/groups/${g.id}`)}
+                className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-[#2660A4]/40 transition-all cursor-pointer">
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <h3 className="text-sm font-bold text-slate-900">{idx + 1}.{g.name}</h3>
@@ -263,7 +264,8 @@ export default function TeacherProfilePage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {activeGroups.map((g, idx) => (
-                  <tr key={g.id} className="hover:bg-slate-50">
+                  <tr key={g.id} onClick={() => router.push(`/dashboard/admin/groups/${g.id}`)}
+                    className="hover:bg-slate-50 cursor-pointer">
                     <td className="px-5 py-3 text-sm text-slate-500">{idx + 1}</td>
                     <td className="px-5 py-3 text-sm font-semibold text-slate-900">{g.name}</td>
                     <td className="px-5 py-3 text-sm text-slate-600">{g.subject}</td>
@@ -292,7 +294,8 @@ export default function TeacherProfilePage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {archivedGroups.map((g, idx) => (
-              <div key={g.id} className="bg-white rounded-xl border border-slate-200 p-4 opacity-70">
+              <div key={g.id} onClick={() => router.push(`/dashboard/admin/groups/${g.id}`)}
+                className="bg-white rounded-xl border border-slate-200 p-4 opacity-70 hover:opacity-100 hover:shadow-md transition-all cursor-pointer">
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <h3 className="text-sm font-bold text-slate-700">{idx + 1}.{g.name}</h3>

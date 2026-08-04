@@ -320,7 +320,14 @@ export default function StudentsPage() {
 
                         {/* Guruh */}
                         <td className="px-5 py-3 text-center">
-                          <span className="text-sm font-medium text-slate-700">{groupName}</span>
+                          {group ? (
+                            <Link href={`/dashboard/admin/groups/${group.id}`}
+                              className="text-sm font-medium text-slate-700 hover:text-blue-600 hover:underline transition-colors">
+                              {groupName}
+                            </Link>
+                          ) : (
+                            <span className="text-sm font-medium text-slate-700">{groupName}</span>
+                          )}
                           {student.groupStudents.length > 1 && (
                             <span className="ml-1 text-[10px] text-slate-400">
                               +{student.groupStudents.length - 1}

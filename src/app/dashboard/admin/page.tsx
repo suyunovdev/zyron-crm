@@ -342,7 +342,8 @@ export default function AdminDashboardPage() {
               </div>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
                 {unfilledGroups.map(group => (
-                  <div key={group.id} className="border border-slate-200 rounded-xl p-4">
+                  <Link key={group.id} href={`/dashboard/admin/groups/${group.id}`}
+                    className="border border-slate-200 rounded-xl p-4 block hover:shadow-md hover:border-[#2660A4]/40 transition-all">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-bold text-emerald-600 uppercase">{group.subject}</span>
                       <span className="text-xs text-slate-400">{group.name}</span>
@@ -358,7 +359,7 @@ export default function AdminDashboardPage() {
                       {group.time && <span className="font-semibold">{group.time}</span>}
                       {group.schedule && <span>{group.schedule}</span>}
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -414,8 +415,9 @@ export default function AdminDashboardPage() {
             ) : (
               <div className="divide-y divide-slate-100">
                 {activeGroups.slice(0, 8).map(group => (
-                  <div
+                  <Link
                     key={group.id}
+                    href={`/dashboard/admin/groups/${group.id}`}
                     className="flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
@@ -440,7 +442,7 @@ export default function AdminDashboardPage() {
                         <span className="hidden md:block text-xs text-slate-400">{group.room}</span>
                       )}
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}

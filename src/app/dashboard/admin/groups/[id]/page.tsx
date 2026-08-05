@@ -45,6 +45,9 @@ interface GroupDetail {
   time: string;
   startDate: string;
   meetLink?: string;
+  maxStudents: number;
+  price: number;
+  lessonsPerMonth: number;
   teacher: { id: string; name: string } | null;
   students: { student: Student }[];
   lessons: Lesson[];
@@ -90,6 +93,13 @@ export default function AdminGroupDetailPage() {
   const [addForm, setAddForm] = useState({ scheduledDate: '', scheduledTime: '', topic: '' });
   // Mentor tanlovi (Saqlash bosilmaguncha qo'llanilmaydi)
   const [pendingTeacherId, setPendingTeacherId] = useState('');
+  // Guruh ma'lumotlarini tahrirlash
+  const [showEditGroup, setShowEditGroup] = useState(false);
+  const [savingGroup, setSavingGroup] = useState(false);
+  const [groupForm, setGroupForm] = useState({
+    name: '', subject: '', dayType: 'toq', time: '', room: '', mode: 'offline',
+    price: '', maxStudents: '', lessonsPerMonth: '', startDate: '', status: 'active',
+  });
 
   const now = new Date();
 
@@ -126,6 +136,44 @@ export default function AdminGroupDetailPage() {
       await reload();
       toast.success('Mentor saqlandi');
     } finally { setBusy(false); }
+  };
+
+  // Guruh tahrirlash modalini ochish
+  const openEditGroup = () => {
+    if (!group) return;
+    setGroupForm({
+      name: group.name, subject: group.subject, dayType: group.dayType || 'toq',
+      time: group.time || '', room: group.room || '', mode: group.mode || 'offline',
+      price: String(group.price ?? ''), maxStudents: String(group.maxStudents ?? ''),
+      lessonsPerMonth: String(group.lessonsPerMonth ?? ''), startDate: group.startDate || '',
+      status: group.status || 'active',
+    });
+    setShowEditGroup(true);
+  };
+  // Guruh ma'lumotlarini saqlash
+  const saveGroupEdit = async () => {
+    if (!groupForm.name.trim() || !groupForm.subject.trim()) { toast.error('Nomi va fani kiritilishi shart'); return; }
+    setSavingGroup(true);
+    try {
+      const body: Record<string, unknown> = {
+        id: groupId, name: groupForm.name.trim(), subject: groupForm.subject.trim(),
+        dayType: groupForm.dayType, time: groupForm.time || null, room: groupForm.room || null,
+        mode: groupForm.mode, status: groupForm.status,
+      };
+      if (groupForm.price !== '') body.price = parseInt(groupForm.price) || 0;
+      if (groupForm.maxStudents !== '') body.maxStudents = parseInt(groupForm.maxStudents) || 1;
+      if (groupForm.lessonsPerMonth !== '') body.lessonsPerMonth = parseInt(groupForm.lessonsPerMonth) || 0;
+      if (groupForm.startDate) body.startDate = groupForm.startDate;
+      const r = await fetch('/api/admin/groups', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { toast.error(d.error || 'Xatolik'); return; }
+      setShowEditGroup(false);
+      await reload();
+      toast.success('Guruh ma\'lumotlari saqlandi');
+    } finally { setSavingGroup(false); }
   };
 
   // Dars generatsiya — sanadan sanagacha
@@ -413,6 +461,10 @@ export default function AdminGroupDetailPage() {
               }`}>
                 {group.status === 'active' ? 'Aktiv' : 'Arxiv'}
               </span>
+              <button onClick={openEditGroup} title="Tahrirlash"
+                className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                <Pencil className="w-3.5 h-3.5" /> Tahrirlash
+              </button>
             </div>
             {group.teacher && (
               <p className="text-sm text-slate-500 mt-1">
@@ -875,6 +927,102 @@ export default function AdminGroupDetailPage() {
           </div>
         )}
       </div>
+
+      {/* ── Guruhni tahrirlash modali ── */}
+      {showEditGroup && (
+        <div className="fixed inset-0 z-[9990] flex items-center justify-center p-4 bg-black/50" onClick={() => setShowEditGroup(false)}>
+          <div onClick={e => e.stopPropagation()} className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900">Guruhni tahrirlash</h3>
+              <button onClick={() => setShowEditGroup(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-5 space-y-3.5 overflow-y-auto">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Guruh nomi</label>
+                  <input value={groupForm.name} onChange={e => setGroupForm(f => ({ ...f, name: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Fan / Yo&apos;nalish</label>
+                  <input value={groupForm.subject} onChange={e => setGroupForm(f => ({ ...f, subject: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Dars kunlari</label>
+                  <select value={groupForm.dayType} onChange={e => setGroupForm(f => ({ ...f, dayType: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20">
+                    <option value="toq">Toq (Dush/Chor/Jum)</option>
+                    <option value="juft">Juft (Sesh/Pay/Shan)</option>
+                    <option value="boshqa">Boshqa</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Dars vaqti</label>
+                  <input type="time" value={groupForm.time} onChange={e => setGroupForm(f => ({ ...f, time: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Dars xonasi</label>
+                  <input value={groupForm.room} onChange={e => setGroupForm(f => ({ ...f, room: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Turi</label>
+                  <select value={groupForm.mode} onChange={e => setGroupForm(f => ({ ...f, mode: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20">
+                    <option value="offline">Offline</option>
+                    <option value="online">Online</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Narx (so&apos;m)</label>
+                  <input type="number" value={groupForm.price} onChange={e => setGroupForm(f => ({ ...f, price: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Maks. o&apos;quvchi</label>
+                  <input type="number" value={groupForm.maxStudents} onChange={e => setGroupForm(f => ({ ...f, maxStudents: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Oyiga dars</label>
+                  <input type="number" value={groupForm.lessonsPerMonth} onChange={e => setGroupForm(f => ({ ...f, lessonsPerMonth: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Boshlanish sanasi</label>
+                  <input type="date" value={groupForm.startDate} onChange={e => setGroupForm(f => ({ ...f, startDate: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Holati</label>
+                  <select value={groupForm.status} onChange={e => setGroupForm(f => ({ ...f, status: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20">
+                    <option value="active">Aktiv</option>
+                    <option value="archived">Arxiv</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end px-5 py-3 bg-slate-50 border-t border-slate-100">
+              <button onClick={() => setShowEditGroup(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Bekor</button>
+              <button onClick={saveGroupEdit} disabled={savingGroup}
+                className="flex items-center gap-1.5 rounded-lg bg-[#2660A4] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
+                {savingGroup ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Saqlash
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

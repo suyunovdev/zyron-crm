@@ -107,7 +107,7 @@ export async function PATCH(req: NextRequest) {
   const auth = await requireAuth('admin');
   if (auth instanceof NextResponse) return auth;
 
-  const { id, name, schedule, meetLink, status, maxStudents, startDate, room, dayType, time, price, lessonsPerMonth, mode, teacherId, addStudentId, removeStudentId, moveStudentId, toGroupId } = await req.json();
+  const { id, name, subject, schedule, meetLink, status, maxStudents, startDate, room, dayType, time, price, lessonsPerMonth, mode, teacherId, addStudentId, removeStudentId, moveStudentId, toGroupId } = await req.json();
   if (!id) return NextResponse.json({ error: 'id kerak' }, { status: 400 });
 
   // Filial cheklovi
@@ -172,6 +172,7 @@ export async function PATCH(req: NextRequest) {
   // Update group info
   const data: Record<string, unknown> = {};
   if (name !== undefined) data.name = name;
+  if (subject !== undefined) data.subject = subject;
   if (schedule !== undefined) data.schedule = schedule;
   if (meetLink !== undefined) data.meetLink = meetLink;
   if (status !== undefined) data.status = status;

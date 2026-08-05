@@ -203,7 +203,7 @@ export async function PATCH(req: NextRequest) {
   const auth = await requireAuth('admin');
   if (auth instanceof NextResponse) return auth;
 
-  const { id, name, phone, subject, status, password } = await req.json();
+  const { id, name, phone, subject, level, status, password } = await req.json();
   if (!id) return NextResponse.json({ error: 'id kerak' }, { status: 400 });
 
   // Nishon foydalanuvchi admin/superadmin bo'lsa — faqat superadmin tahrirlaydi
@@ -222,6 +222,7 @@ export async function PATCH(req: NextRequest) {
   if (name !== undefined) data.name = name;
   if (phone !== undefined) data.phone = phone;
   if (subject !== undefined) data.subject = subject;
+  if (level !== undefined) data.level = level;
   if (status !== undefined) data.status = status;
   if (password) {
     data.password = bcrypt.hashSync(password, 10);

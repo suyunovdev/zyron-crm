@@ -5,7 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Phone, Loader2, Users, FolderOpen,
   Calendar, Clock, MapPin, LayoutGrid, List,
+  Pencil, KeyRound, Eye, EyeOff, Copy, X, Check,
 } from 'lucide-react';
+import { toast } from '@/components/toast';
 
 interface GroupStudent {
   student: { id: string; name: string; status: string };
@@ -18,7 +20,7 @@ interface Group {
   _count: { students: number; lessons: number };
 }
 interface TeacherDetail {
-  id: string; login: string; name: string; phone: string;
+  id: string; login: string; rawPass: string | null; name: string; phone: string;
   role: string; subject: string | null; status: string;
   level: string | null; createdAt: string;
   teacherGroups: Group[];
@@ -43,6 +45,10 @@ export default function TeacherProfilePage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('groups');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [revealPass, setRevealPass] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', phone: '', subject: '', level: '', password: '' });
 
   const fetchTeacher = useCallback(() => {
     setLoading(true);
@@ -53,6 +59,36 @@ export default function TeacherProfilePage() {
   }, [teacherId]);
 
   useEffect(() => { fetchTeacher(); }, [fetchTeacher]);
+
+  const openEdit = () => {
+    if (!teacher) return;
+    setEditForm({
+      name: teacher.name, phone: teacher.phone || '',
+      subject: teacher.subject || '', level: teacher.level || '', password: '',
+    });
+    setShowEdit(true);
+  };
+
+  const saveEdit = async () => {
+    if (!editForm.name.trim()) { toast.error('Ism kiritilishi shart'); return; }
+    setSaving(true);
+    try {
+      const body: Record<string, string> = {
+        id: teacherId, name: editForm.name.trim(), phone: editForm.phone.trim(),
+        subject: editForm.subject.trim(), level: editForm.level,
+      };
+      if (editForm.password.trim()) body.password = editForm.password.trim();
+      const r = await fetch('/api/admin/users', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { toast.error(d.error || 'Xatolik'); return; }
+      setShowEdit(false);
+      fetchTeacher();
+      toast.success('Ustoz ma\'lumotlari saqlandi');
+    } finally { setSaving(false); }
+  };
 
   const now = new Date();
   const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -152,10 +188,40 @@ export default function TeacherProfilePage() {
             </div>
           </div>
 
-          {/* Month selector */}
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <Calendar className="w-4 h-4" />
-            <span className="font-medium">{currentMonth}</span>
+          {/* Actions */}
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:flex items-center gap-2 text-sm text-slate-500">
+              <Calendar className="w-4 h-4" />
+              <span className="font-medium">{currentMonth}</span>
+            </span>
+            <button onClick={openEdit}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">
+              <Pencil className="w-4 h-4" /> Tahrirlash
+            </button>
+          </div>
+        </div>
+
+        {/* ── Kirish ma'lumotlari (login / parol) ── */}
+        <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5">
+            <span className="text-sm text-slate-500 flex items-center gap-1.5"><KeyRound className="w-3.5 h-3.5" /> Login</span>
+            <span className="flex items-center gap-2">
+              <span className="text-sm font-mono font-bold text-slate-800">{teacher.login}</span>
+              <button onClick={() => { navigator.clipboard?.writeText(teacher.login); toast.success('Login nusxalandi'); }}
+                title="Nusxalash" className="text-slate-400 hover:text-blue-600"><Copy className="w-3.5 h-3.5" /></button>
+            </span>
+          </div>
+          <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5">
+            <span className="text-sm text-slate-500 flex items-center gap-1.5"><KeyRound className="w-3.5 h-3.5" /> Parol</span>
+            <span className="flex items-center gap-2">
+              <span className="text-sm font-mono font-bold text-slate-800">{revealPass ? (teacher.rawPass || '—') : '••••••'}</span>
+              <button onClick={() => setRevealPass(v => !v)} title={revealPass ? 'Yashirish' : 'Ko\'rsatish'}
+                className="text-slate-400 hover:text-blue-600">{revealPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}</button>
+              {teacher.rawPass && (
+                <button onClick={() => { navigator.clipboard?.writeText(teacher.rawPass!); toast.success('Parol nusxalandi'); }}
+                  title="Nusxalash" className="text-slate-400 hover:text-blue-600"><Copy className="w-3.5 h-3.5" /></button>
+              )}
+            </span>
           </div>
         </div>
       </div>
@@ -312,6 +378,60 @@ export default function TeacherProfilePage() {
             ))}
           </div>
         )
+      )}
+
+      {/* ── Tahrirlash modali ── */}
+      {showEdit && (
+        <div className="fixed inset-0 z-[9990] flex items-center justify-center p-4 bg-black/50" onClick={() => setShowEdit(false)}>
+          <div onClick={e => e.stopPropagation()} className="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <h3 className="text-base font-bold text-slate-900">Ustozni tahrirlash</h3>
+              <button onClick={() => setShowEdit(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-5 space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Ism</label>
+                <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Telefon</label>
+                  <input value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Daraja</label>
+                  <select value={editForm.level} onChange={e => setEditForm(f => ({ ...f, level: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20">
+                    <option value="">—</option>
+                    <option value="junior">Junior</option>
+                    <option value="middle">Middle</option>
+                    <option value="senior">Senior</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Fan / Yo&apos;nalish</label>
+                <input value={editForm.subject} onChange={e => setEditForm(f => ({ ...f, subject: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Yangi parol (ixtiyoriy)</label>
+                <input value={editForm.password} onChange={e => setEditForm(f => ({ ...f, password: e.target.value }))}
+                  placeholder="O'zgartirmaslik uchun bo'sh qoldiring"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end px-5 py-3 bg-slate-50 border-t border-slate-100">
+              <button onClick={() => setShowEdit(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Bekor</button>
+              <button onClick={saveEdit} disabled={saving}
+                className="flex items-center gap-1.5 rounded-lg bg-[#2660A4] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Saqlash
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

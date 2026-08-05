@@ -69,27 +69,27 @@ html.dark .bg-slate-200 {
   background-color: #334155 !important;
 }
 
-/* ── Text colors ── */
+/* ── Text colors — dark uchun izchil (monotonik) ramp ── */
 html.dark .text-slate-900 {
-  color: #f1f5f9 !important;
+  color: #f8fafc !important;
 }
 html.dark .text-slate-800 {
-  color: #e2e8f0 !important;
+  color: #e7edf4 !important;
 }
 html.dark .text-slate-700 {
-  color: #cbd5e1 !important;
+  color: #cdd7e3 !important;
 }
 html.dark .text-slate-600 {
-  color: #94a3b8 !important;
+  color: #a7b4c6 !important;
 }
 html.dark .text-slate-500 {
-  color: #64748b !important;
+  color: #8a97a9 !important;
 }
 html.dark .text-slate-400 {
-  color: #64748b !important;
+  color: #74808f !important;
 }
 html.dark .text-slate-300 {
-  color: #94a3b8 !important;
+  color: #6b7787 !important;
 }
 
 /* ── Borders ── */
@@ -102,6 +102,44 @@ html.dark .border-slate-100 {
 html.dark .border-slate-300 {
   border-color: #334155 !important;
 }
+
+/* ── Rangli matn (badge/status/aksent) — dark fonda kontrast va uyg'unlik uchun
+   to'q -600/-700/-800 soyalar yorug'roq -300/-400 ga ko'chiriladi ── */
+html.dark .text-red-800 { color: #fca5a5 !important; }
+html.dark .text-red-700 { color: #fca5a5 !important; }
+html.dark .text-red-600 { color: #f87171 !important; }
+html.dark .text-rose-700 { color: #fda4af !important; }
+html.dark .text-rose-600 { color: #fb7185 !important; }
+html.dark .text-orange-800 { color: #fdba74 !important; }
+html.dark .text-orange-700 { color: #fdba74 !important; }
+html.dark .text-orange-600 { color: #fb923c !important; }
+html.dark .text-amber-800 { color: #fcd34d !important; }
+html.dark .text-amber-700 { color: #fcd34d !important; }
+html.dark .text-amber-600 { color: #fbbf24 !important; }
+html.dark .text-yellow-700 { color: #fde047 !important; }
+html.dark .text-yellow-600 { color: #facc15 !important; }
+html.dark .text-green-800 { color: #86efac !important; }
+html.dark .text-green-700 { color: #86efac !important; }
+html.dark .text-green-600 { color: #4ade80 !important; }
+html.dark .text-emerald-800 { color: #6ee7b7 !important; }
+html.dark .text-emerald-700 { color: #6ee7b7 !important; }
+html.dark .text-emerald-600 { color: #34d399 !important; }
+html.dark .text-teal-700 { color: #5eead4 !important; }
+html.dark .text-teal-600 { color: #2dd4bf !important; }
+html.dark .text-cyan-700 { color: #67e8f9 !important; }
+html.dark .text-cyan-600 { color: #22d3ee !important; }
+html.dark .text-blue-800 { color: #93c5fd !important; }
+html.dark .text-blue-700 { color: #93c5fd !important; }
+html.dark .text-blue-600 { color: #60a5fa !important; }
+html.dark .text-indigo-700 { color: #a5b4fc !important; }
+html.dark .text-indigo-600 { color: #818cf8 !important; }
+html.dark .text-violet-700 { color: #c4b5fd !important; }
+html.dark .text-violet-600 { color: #a78bfa !important; }
+html.dark .text-purple-800 { color: #c4b5fd !important; }
+html.dark .text-purple-700 { color: #c4b5fd !important; }
+html.dark .text-purple-600 { color: #a78bfa !important; }
+html.dark .text-pink-700 { color: #f9a8d4 !important; }
+html.dark .text-pink-600 { color: #f472b6 !important; }
 
 /* ── Hover backgrounds ── */
 html.dark .hover\:bg-slate-50:hover,

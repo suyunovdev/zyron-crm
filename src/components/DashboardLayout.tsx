@@ -814,7 +814,7 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
         )}
         {/* Top bar */}
         <header className={`flex-shrink-0 z-20 h-14 flex items-center justify-between px-4 lg:px-6 ${
-          theme === 'dark' ? 'bg-[#1a3a6a] border-b border-[#2660A4]/30' : 'bg-[#2660A4]'
+          theme === 'dark' ? 'bg-[#111e34] border-b border-[#1e3556]' : 'bg-[#2660A4]'
         }`}>
           {/* Mobile menu (only if sidebar exists) */}
           {hasSidebar ? (

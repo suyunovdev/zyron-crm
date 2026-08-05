@@ -43,6 +43,7 @@ interface GroupDetail {
   room: string;
   dayType: string;
   time: string;
+  duration: string;
   startDate: string;
   meetLink?: string;
   maxStudents: number;
@@ -97,7 +98,7 @@ export default function AdminGroupDetailPage() {
   const [showEditGroup, setShowEditGroup] = useState(false);
   const [savingGroup, setSavingGroup] = useState(false);
   const [groupForm, setGroupForm] = useState({
-    name: '', subject: '', dayType: 'toq', time: '', room: '', mode: 'offline',
+    name: '', subject: '', dayType: 'toq', time: '', duration: '2.5 soat', room: '', mode: 'offline',
     price: '', maxStudents: '', lessonsPerMonth: '', startDate: '', status: 'active',
   });
 
@@ -143,7 +144,7 @@ export default function AdminGroupDetailPage() {
     if (!group) return;
     setGroupForm({
       name: group.name, subject: group.subject, dayType: group.dayType || 'toq',
-      time: group.time || '', room: group.room || '', mode: group.mode || 'offline',
+      time: group.time || '', duration: group.duration || '2.5 soat', room: group.room || '', mode: group.mode || 'offline',
       price: String(group.price ?? ''), maxStudents: String(group.maxStudents ?? ''),
       lessonsPerMonth: String(group.lessonsPerMonth ?? ''), startDate: group.startDate || '',
       status: group.status || 'active',
@@ -157,8 +158,8 @@ export default function AdminGroupDetailPage() {
     try {
       const body: Record<string, unknown> = {
         id: groupId, name: groupForm.name.trim(), subject: groupForm.subject.trim(),
-        dayType: groupForm.dayType, time: groupForm.time || null, room: groupForm.room || null,
-        mode: groupForm.mode, status: groupForm.status,
+        dayType: groupForm.dayType, time: groupForm.time || null, duration: groupForm.duration,
+        room: groupForm.room || null, mode: groupForm.mode, status: groupForm.status,
       };
       if (groupForm.price !== '') body.price = parseInt(groupForm.price) || 0;
       if (groupForm.maxStudents !== '') body.maxStudents = parseInt(groupForm.maxStudents) || 1;
@@ -482,6 +483,12 @@ export default function AdminGroupDetailPage() {
               <div>
                 <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Dars vaqti</p>
                 <p className="font-semibold text-slate-800 mt-0.5">{group.time}</p>
+              </div>
+            )}
+            {group.duration && (
+              <div>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Davomiyligi</p>
+                <p className="font-semibold text-slate-800 mt-0.5">{group.duration}</p>
               </div>
             )}
             <div>
@@ -966,6 +973,16 @@ export default function AdminGroupDetailPage() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Dars davomiyligi</label>
+                  <select value={groupForm.duration} onChange={e => setGroupForm(f => ({ ...f, duration: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20">
+                    <option value="1.5 soat">1.5 soat</option>
+                    <option value="2 soat">2 soat</option>
+                    <option value="2.5 soat">2.5 soat</option>
+                    <option value="3 soat">3 soat</option>
+                  </select>
+                </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Dars xonasi</label>
                   <input value={groupForm.room} onChange={e => setGroupForm(f => ({ ...f, room: e.target.value }))}

@@ -18,6 +18,7 @@ const CreateGroupSchema = z.object({
   room: z.string().max(40).optional().nullable(),
   dayType: z.enum(['toq', 'juft', 'boshqa']).optional(),
   time: z.string().max(10).optional().nullable(),
+  duration: z.string().max(20).optional(),
   price: z.coerce.number().int().min(0).optional(),
   lessonsPerMonth: z.coerce.number().int().min(1).max(60).optional(),
   mode: z.enum(['offline', 'online']).optional(),
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
 
   const parsed = await parseBody(req, CreateGroupSchema);
   if (parsed instanceof NextResponse) return parsed;
-  const { name, subject, teacherId, schedule, meetLink, maxStudents, startDate, room, dayType, time, price, lessonsPerMonth, mode } = parsed;
+  const { name, subject, teacherId, schedule, meetLink, maxStudents, startDate, room, dayType, time, duration, price, lessonsPerMonth, mode } = parsed;
 
   // Filial cheklovi: o'qituvchi shu filialdan bo'lishi shart, guruh o'sha filialga
   const bId = await scopedBranchId(auth);
@@ -73,6 +74,7 @@ export async function POST(req: NextRequest) {
       room: room || null,
       dayType: dayType || 'toq',
       time: time || null,
+      duration: duration || '2.5 soat',
       mode: mode || 'offline',
       price: price ?? 0,
       lessonsPerMonth: lessonsPerMonth ?? 12,
@@ -93,6 +95,7 @@ export async function POST(req: NextRequest) {
         months: 12,
         dayType: dt,
         time: time || '14:00',
+        duration: duration || '2.5 soat',
       });
     } catch (e) {
       logger.error('[Auto-generate lessons]', e);
@@ -107,7 +110,7 @@ export async function PATCH(req: NextRequest) {
   const auth = await requireAuth('admin');
   if (auth instanceof NextResponse) return auth;
 
-  const { id, name, subject, schedule, meetLink, status, maxStudents, startDate, room, dayType, time, price, lessonsPerMonth, mode, teacherId, addStudentId, removeStudentId, moveStudentId, toGroupId } = await req.json();
+  const { id, name, subject, schedule, meetLink, status, maxStudents, startDate, room, dayType, time, duration, price, lessonsPerMonth, mode, teacherId, addStudentId, removeStudentId, moveStudentId, toGroupId } = await req.json();
   if (!id) return NextResponse.json({ error: 'id kerak' }, { status: 400 });
 
   // Filial cheklovi
@@ -181,11 +184,18 @@ export async function PATCH(req: NextRequest) {
   if (room !== undefined) data.room = room;
   if (dayType !== undefined) data.dayType = dayType;
   if (time !== undefined) data.time = time;
+  if (duration !== undefined) data.duration = duration;
   if (price !== undefined) data.price = parseInt(price);
   if (lessonsPerMonth !== undefined) data.lessonsPerMonth = parseInt(lessonsPerMonth);
   if (mode !== undefined) data.mode = mode;
   if (teacherId !== undefined && teacherId) data.teacherId = teacherId;
 
   const group = await prisma.group.update({ where: { id }, data });
+
+  // Davomiylik o'zgarsa — guruhning barcha darslariga qo'llaymiz (jadval/hisob izchil bo'lsin)
+  if (duration !== undefined) {
+    await prisma.lesson.updateMany({ where: { groupId: id }, data: { duration } });
+  }
+
   return NextResponse.json(group);
 }

@@ -54,6 +54,7 @@ model Group {
   room        String?  // xona raqami (Room 7, Room 8...)
   dayType     String   @default("toq") // toq, juft, boshqa
   time        String?  // dars vaqti (14:00, 18:40...)
+  duration    String   @default("2.5 soat") // bitta dars davomiyligi (1.5/2/2.5/3 soat)
   language    String   @default("uz") // uz, ru, en
   price       Int      @default(0)   // oylik kurs narxi (so'mda)
   lessonsPerMonth Int  @default(12)  // oyiga nechta dars

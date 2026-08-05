@@ -13,9 +13,22 @@ interface Group {
   room?: string;
   dayType?: string;
   time?: string;
+  duration?: string;
   startDate?: string;
   teacher: { id: string; name: string } | null;
   _count: { students: number };
+}
+
+// "18:00" + "2.5 soat" → "20:30"
+function endTime(time?: string, duration?: string): string {
+  if (!time) return '';
+  const [h, m] = time.split(':').map(Number);
+  if (isNaN(h)) return '';
+  const hours = parseFloat((duration || '').match(/[\d.]+/)?.[0] || '2.5');
+  const total = h * 60 + (m || 0) + Math.round(hours * 60);
+  const eh = Math.floor((total % 1440) / 60);
+  const em = total % 60;
+  return `${String(eh).padStart(2, '0')}:${String(em).padStart(2, '0')}`;
 }
 
 const ROOMS = Array.from({ length: 10 }, (_, i) => `Room ${i + 1}`);
@@ -201,7 +214,10 @@ export default function SchedulePage() {
                                   {group.teacher?.name || '—'}
                                 </div>
                               </div>
-                              <div className="flex items-center justify-end">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-[9px] font-medium text-cyan-600 whitespace-nowrap">
+                                  {group.time}–{endTime(group.time, group.duration)}
+                                </span>
                                 <span className={`text-[10px] font-bold px-1 py-0.5 rounded ${getCountColor(group)}`}>
                                   {group._count?.students ?? 0}
                                 </span>

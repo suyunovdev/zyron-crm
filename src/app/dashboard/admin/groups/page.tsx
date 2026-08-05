@@ -56,7 +56,7 @@ export default function GroupsPage() {
 
   const emptyForm = {
     name: '', subject: '', teacherId: '', schedule: '', meetLink: '',
-    maxStudents: '15', startDate: '', room: '', dayType: 'toq', time: '',
+    maxStudents: '15', startDate: '', room: '', dayType: 'toq', time: '', duration: '2.5 soat',
     language: 'uz', price: '', lessonsPerMonth: '12', mode: 'offline',
   };
   const [form, setForm] = useState(emptyForm);
@@ -857,14 +857,24 @@ export default function GroupsPage() {
                 </select>
               </div>
 
-              {/* Boshlanish vaqti + sana */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Boshlanish vaqti + davomiyligi + sana */}
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-800 mb-1.5">
                     <span className="text-red-500">*</span> Boshlanish vaqti
                   </label>
                   <input type="time" value={form.time} onChange={e => setForm(p => ({ ...p, time: e.target.value }))}
                     className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-800 mb-1.5">Davomiyligi</label>
+                  <select value={form.duration} onChange={e => setForm(p => ({ ...p, duration: e.target.value }))}
+                    className="w-full px-4 py-3 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                    <option value="1.5 soat">1.5 soat</option>
+                    <option value="2 soat">2 soat</option>
+                    <option value="2.5 soat">2.5 soat</option>
+                    <option value="3 soat">3 soat</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-800 mb-1.5">

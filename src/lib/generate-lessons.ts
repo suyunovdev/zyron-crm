@@ -113,7 +113,7 @@ export async function generateLessonsForMonth(
 ) {
   const group = await prisma.group.findUnique({
     where: { id: groupId },
-    select: { dayType: true, time: true, startDate: true },
+    select: { dayType: true, time: true, duration: true, startDate: true },
   });
 
   if (!group) throw new Error('Guruh topilmadi');
@@ -126,6 +126,7 @@ export async function generateLessonsForMonth(
     months: 1,
     dayType: group.dayType || 'toq',
     time: group.time || '14:00',
+    duration: group.duration || '2.5 soat',
   });
 }
 

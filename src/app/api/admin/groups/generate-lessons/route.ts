@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     const group = await prisma.group.findUnique({
       where: { id: groupId },
-      select: { id: true, dayType: true, time: true, startDate: true, name: true, branchId: true },
+      select: { id: true, dayType: true, time: true, duration: true, startDate: true, name: true, branchId: true },
     });
 
     if (!group) {
@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
         groupId, startDate, endDate,
         dayType: group.dayType || 'toq',
         time: group.time || '14:00',
+        duration: group.duration || '2.5 soat',
       });
       return NextResponse.json(result);
     }
@@ -74,6 +75,7 @@ export async function POST(req: NextRequest) {
       months: months || 12,
       dayType: group.dayType || 'toq',
       time: group.time || '14:00',
+      duration: group.duration || '2.5 soat',
     });
 
     return NextResponse.json(result);

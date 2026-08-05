@@ -284,7 +284,7 @@ export default function AdminDashboardPage() {
 
           {/* ── Small stat cards row ── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <Link href="/dashboard/admin/students?status=archived" className="block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-[#2660A4]/40 transition-all">
               <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
                 <UserX className="w-4 h-4" />
                 Ketgan o&apos;quvchilar
@@ -293,9 +293,9 @@ export default function AdminDashboardPage() {
               <div className="mt-2 h-1 bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full bg-red-400 rounded-full" style={{ width: stats && stats.totalStudents > 0 ? `${((stats.archivedStudents || 0) / stats.totalStudents) * 100}%` : '0%' }} />
               </div>
-            </div>
+            </Link>
 
-            <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <Link href="/dashboard/admin/students?status=frozen" className="block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-[#2660A4]/40 transition-all">
               <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
                 <Snowflake className="w-4 h-4" />
                 Muzlatilgan
@@ -304,9 +304,9 @@ export default function AdminDashboardPage() {
               <div className="mt-2 h-1 bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full bg-blue-400 rounded-full" style={{ width: stats && stats.totalStudents > 0 ? `${((stats.frozenStudents || 0) / stats.totalStudents) * 100}%` : '0%' }} />
               </div>
-            </div>
+            </Link>
 
-            <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <Link href="/dashboard/admin/teachers" className="block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-[#2660A4]/40 transition-all">
               <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
                 <UserPlus className="w-4 h-4" />
                 O&apos;qituvchilar
@@ -315,9 +315,9 @@ export default function AdminDashboardPage() {
               <div className="mt-2 h-1 bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full bg-blue-500 rounded-full" style={{ width: '100%' }} />
               </div>
-            </div>
+            </Link>
 
-            <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <Link href="/dashboard/admin/groups" className="block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-[#2660A4]/40 transition-all">
               <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
                 <FolderOpen className="w-4 h-4" />
                 Guruhlar
@@ -326,7 +326,7 @@ export default function AdminDashboardPage() {
               <div className="mt-2 h-1 bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full bg-amber-500 rounded-full" style={{ width: stats && stats.totalGroups > 0 ? `${((stats.activeGroups || 0) / stats.totalGroups) * 100}%` : '0%' }} />
               </div>
-            </div>
+            </Link>
           </div>
 
           {/* ── To'ldirilmagan guruhlar ── */}

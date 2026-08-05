@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Search, Plus, X, ChevronUp, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
+
+const VALID_STATUS = ['active', 'frozen', 'archived', 'all'];
 
 interface GroupInfo {
   id: string;
@@ -56,7 +59,10 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('active');
+  const initialStatus = useSearchParams().get('status');
+  const [filterStatus, setFilterStatus] = useState(
+    initialStatus && VALID_STATUS.includes(initialStatus) ? initialStatus : 'active'
+  );
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [showModal, setShowModal] = useState(false);

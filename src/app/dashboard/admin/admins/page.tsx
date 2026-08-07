@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { toast } from '@/components/toast';
 import { confirmDialog } from '@/components/confirm-dialog';
 import { ShieldCheck, Shield, Plus, X, KeyRound, Snowflake, UserCheck, Trash2, Loader2, Eye, EyeOff, Building2 } from 'lucide-react';
+import { SkeletonCards } from '@/components/skeleton';
 
 interface Branch { id: string; name: string }
 interface Admin {
@@ -112,9 +113,7 @@ export default function AdminsPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin text-[#2660A4]" />
-        </div>
+        <SkeletonCards count={4} cols={2} />
       ) : error ? (
         <div className="text-center py-12 text-sm text-red-500">{error}</div>
       ) : (

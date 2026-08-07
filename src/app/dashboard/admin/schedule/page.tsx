@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Users } from 'lucide-react';
+import { Skeleton } from '@/components/skeleton';
 
 interface Group {
   id: string;
@@ -162,8 +163,11 @@ export default function SchedulePage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-7 h-7 animate-spin text-blue-500" />
+          <div className="flex-1 min-h-0 rounded-xl border border-slate-200 bg-white p-4 space-y-2">
+            <Skeleton className="h-8 w-full" />
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
           </div>
         ) : allTimeSlots.length === 0 ? (
           <div className="bg-white rounded-xl border border-slate-200 py-16 text-center">

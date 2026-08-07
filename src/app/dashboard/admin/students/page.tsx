@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Search, Plus, X, ChevronUp, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
+import { SkeletonTable } from '@/components/skeleton';
 
 const VALID_STATUS = ['active', 'frozen', 'archived', 'all'];
 
@@ -227,10 +228,11 @@ export default function StudentsPage() {
         </div>
 
         {/* Table */}
+        {loading ? (
+          <SkeletonTable rows={10} cols={5} />
+        ) : (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          {loading ? (
-            <div className="p-16 text-center text-slate-400 text-sm">Yuklanmoqda...</div>
-          ) : filtered.length === 0 ? (
+          {filtered.length === 0 ? (
             <div className="p-16 text-center text-slate-400 text-sm">O&apos;quvchilar topilmadi</div>
           ) : (
             <div className="overflow-x-auto">
@@ -424,6 +426,7 @@ export default function StudentsPage() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* Create Modal */}

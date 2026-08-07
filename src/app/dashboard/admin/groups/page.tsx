@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { SkeletonTable } from '@/components/skeleton';
 import {
   Plus, X, Search, Video, ChevronUp, ChevronDown, Archive,
   UserPlus, UserMinus, QrCode, Trash2, RotateCcw, CalendarPlus, Loader2, Download,
@@ -331,7 +332,7 @@ export default function GroupsPage() {
 
         {/* Table */}
         {loading ? (
-          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 text-sm">Yuklanmoqda...</div>
+          <SkeletonTable rows={8} cols={6} />
         ) : filtered.length === 0 ? (
           <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400">Guruhlar topilmadi</div>
         ) : (

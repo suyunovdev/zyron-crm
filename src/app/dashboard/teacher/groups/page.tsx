@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Skeleton, SkeletonTable } from '@/components/skeleton';
 import {
   Users,
   BookOpen,
@@ -384,7 +385,10 @@ export default function TeacherGroupsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64 text-slate-400 text-sm">Yuklanmoqda...</div>
+      <div className="space-y-4">
+        <Skeleton className="h-9 w-56" />
+        <SkeletonTable rows={8} cols={4} />
+      </div>
     );
   }
 

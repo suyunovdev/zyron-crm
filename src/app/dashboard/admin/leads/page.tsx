@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { SkeletonTable } from "@/components/skeleton";
 import { toast } from '@/components/toast';
 import { confirmDialog } from '@/components/confirm-dialog';
 import { createPortal } from "react-dom";
@@ -326,12 +327,11 @@ export default function LeadsPage() {
         </div>
 
         {/* Table */}
+        {loading ? (
+          <SkeletonTable rows={6} cols={5} avatar={false} />
+        ) : (
         <div className="bg-white rounded-xl border border-slate-200 overflow-visible">
-          {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
-            </div>
-          ) : filteredLeads.length === 0 ? (
+          {filteredLeads.length === 0 ? (
             <div className="text-center py-20 text-slate-400">
               <User className="w-10 h-10 mx-auto mb-3 opacity-50" />
               <p>Lidlar topilmadi</p>
@@ -417,6 +417,7 @@ export default function LeadsPage() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* Multi-step Modal */}

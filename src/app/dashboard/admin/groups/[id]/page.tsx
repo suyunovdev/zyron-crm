@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@/components/toast';
 import { confirmDialog } from '@/components/confirm-dialog';
+import { Skeleton } from '@/components/skeleton';
 
 interface Student {
   id: string;
@@ -407,8 +408,31 @@ export default function AdminGroupDetailPage() {
   if (loading) {
     return (
       <>
-        <div className="flex items-center justify-center h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <Skeleton className="h-4 w-24 mb-4" />
+        <div className="bg-white rounded-xl border border-slate-200 p-5 mb-4">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="space-y-2.5">
+              <Skeleton className="h-7 w-40" />
+              <Skeleton className="h-3.5 w-32" />
+            </div>
+            <div className="flex items-start gap-6">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-2.5 w-16" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <Skeleton className="h-14 w-full rounded-xl mb-4" />
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="border-b border-slate-200 px-6 py-3 flex gap-6">
+            {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-4 w-20" />)}
+          </div>
+          <div className="p-6 space-y-3">
+            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+          </div>
         </div>
       </>
     );

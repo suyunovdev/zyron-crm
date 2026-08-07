@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Skeleton, SkeletonStatCards, SkeletonTable } from '@/components/skeleton';
 import {
   Users, BookOpen, CalendarDays, TrendingUp, ChevronRight, Clock,
   UserCheck, UserX, Phone, Loader2,
@@ -131,8 +132,10 @@ export default function TeacherDashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+      <div className="space-y-5">
+        <Skeleton className="h-8 w-48" />
+        <SkeletonStatCards count={4} />
+        <SkeletonTable rows={5} cols={3} />
       </div>
     );
   }

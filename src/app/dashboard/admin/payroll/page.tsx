@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from '@/components/toast';
 import { Wallet, Loader2, Check } from 'lucide-react';
+import { Skeleton, SkeletonTable } from '@/components/skeleton';
 
 interface Row {
   teacherId: string; name: string; subject: string | null; level: string | null;
@@ -64,7 +65,17 @@ export default function PayrollPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-[#2660A4]" /></div>
+        <>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="p-4 rounded-xl border border-slate-200 bg-white">
+                <Skeleton className="h-3 w-24 mb-2" />
+                <Skeleton className="h-7 w-32" />
+              </div>
+            ))}
+          </div>
+          <SkeletonTable rows={8} cols={4} avatar={false} />
+        </>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 mb-4">

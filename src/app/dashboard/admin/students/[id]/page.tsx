@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { toast } from '@/components/toast';
 import { confirmDialog } from '@/components/confirm-dialog';
+import { SkeletonDetailPage } from '@/components/skeleton';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Phone, Loader2, Snowflake, Archive, RotateCcw,
@@ -429,14 +430,7 @@ export default function StudentProfilePage() {
 
   // ─── Loading / Not found ───
   if (loading) {
-    return (
-      <>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-7 h-7 animate-spin text-blue-500" />
-          <span className="ml-2 text-slate-400 text-sm">Yuklanmoqda...</span>
-        </div>
-      </>
-    );
+    return <SkeletonDetailPage />;
   }
 
   if (!student) {

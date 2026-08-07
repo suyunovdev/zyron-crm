@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Skeleton } from '@/components/skeleton';
 import {
   Users, Wallet, Clock, CalendarDays, MapPin, Trophy, Medal, Loader2, BookOpen,
 } from 'lucide-react';
@@ -62,8 +63,19 @@ export default function ParentDashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-7 h-7 animate-spin text-blue-500" />
+      <div className="space-y-5">
+        <Skeleton className="h-8 w-40" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-xl border border-slate-200 p-5">
+              <Skeleton className="h-4 w-24 mb-3" />
+              <Skeleton className="h-8 w-20" />
+            </div>
+          ))}
+        </div>
+        <div className="bg-white rounded-xl border border-slate-200 p-6 space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+        </div>
       </div>
     );
   }

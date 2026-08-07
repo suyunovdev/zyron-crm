@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { ScrollText, Loader2 } from 'lucide-react';
+import { SkeletonTable } from '@/components/skeleton';
 import { fmtDateTime } from '@/lib/date';
 
 interface Log {
@@ -56,7 +57,7 @@ export default function AuditPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-[#2660A4]" /></div>
+        <SkeletonTable rows={10} cols={4} avatar={false} />
       ) : (
         <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
           <div className="overflow-x-auto">

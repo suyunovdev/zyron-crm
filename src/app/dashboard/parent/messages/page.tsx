@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { MessageSquare, Loader2 } from 'lucide-react';
 import { fmtDateTime } from '@/lib/date';
+import { Skeleton } from '@/components/skeleton';
 
 interface Msg { id: string; teacherName: string; studentName: string; body: string; read: boolean; createdAt: string }
 
@@ -21,7 +22,21 @@ export default function ParentMessagesPage() {
     }).catch(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="flex justify-center h-64 items-center"><Loader2 className="w-7 h-7 animate-spin text-blue-500" /></div>;
+  if (loading) return (
+    <div className="space-y-4 max-w-2xl mx-auto">
+      <Skeleton className="h-8 w-40" />
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-3.5 w-32" />
+            <Skeleton className="h-3 w-20" />
+          </div>
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-3/4" />
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="space-y-5 max-w-2xl mx-auto">

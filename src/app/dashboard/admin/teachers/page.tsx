@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Search, Plus, X, LayoutGrid, List, Users, FolderOpen, Phone, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { SkeletonCards } from '@/components/skeleton';
 
 interface TeacherGroup {
   id: string;
@@ -157,7 +158,7 @@ export default function TeachersPage() {
 
         {/* Content */}
         {loading ? (
-          <div className="py-20 text-center text-slate-400 text-sm">Yuklanmoqda...</div>
+          <SkeletonCards count={8} cols={4} />
         ) : filtered.length === 0 ? (
           <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400">Mentorlar topilmadi</div>
         ) : viewMode === 'grid' ? (

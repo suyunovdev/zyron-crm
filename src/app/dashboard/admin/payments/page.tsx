@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { confirmDialog } from "@/components/confirm-dialog";
+import { Skeleton } from "@/components/skeleton";
 import {
   Plus,
   Trash2,
@@ -320,14 +321,13 @@ export default function AdminPaymentsPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="px-4 py-12 text-center text-slate-400"
-                    >
-                      Yuklanmoqda...
-                    </td>
-                  </tr>
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <tr key={i} className="border-b border-slate-50">
+                      {Array.from({ length: 7 }).map((_, c) => (
+                        <td key={c} className="px-4 py-3.5"><Skeleton className="h-4 w-full max-w-[120px]" /></td>
+                      ))}
+                    </tr>
+                  ))
                 ) : payments.length === 0 ? (
                   <tr>
                     <td

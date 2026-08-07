@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, X, Link2, Unlink, Search, Users } from 'lucide-react';
+import { SkeletonTable } from '@/components/skeleton';
 
 interface ChildInfo {
   id: string; name: string; login: string; phone: string | null; status: string;
@@ -140,10 +141,11 @@ export default function ParentsPage() {
           </button>
         </div>
 
+        {loading ? (
+          <SkeletonTable rows={8} cols={4} />
+        ) : (
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-          {loading ? (
-            <div className="p-16 text-center text-slate-400 text-sm">Yuklanmoqda...</div>
-          ) : parents.length === 0 ? (
+          {parents.length === 0 ? (
             <div className="p-16 text-center text-slate-400 text-sm">Ota-onalar topilmadi</div>
           ) : (
             <div className="overflow-x-auto">
@@ -207,6 +209,7 @@ export default function ParentsPage() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* Create Parent Modal */}

@@ -8,6 +8,7 @@ import {
   Pencil, KeyRound, Eye, EyeOff, Copy, X, Check,
 } from 'lucide-react';
 import { toast } from '@/components/toast';
+import { SkeletonDetailPage } from '@/components/skeleton';
 
 interface GroupStudent {
   student: { id: string; name: string; status: string };
@@ -120,13 +121,7 @@ export default function TeacherProfilePage() {
   };
 
   if (loading) {
-    return (
-      <>
-        <div className="flex items-center justify-center h-[60vh]">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-        </div>
-      </>
-    );
+    return <SkeletonDetailPage />;
   }
 
   if (!teacher) {

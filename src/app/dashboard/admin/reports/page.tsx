@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { SkeletonStatCards, SkeletonTable } from "@/components/skeleton";
 import {
   Calendar,
   Users,
@@ -170,9 +171,9 @@ export default function ReportsPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            <span className="ml-3 text-slate-500">Yuklanmoqda...</span>
+          <div className="space-y-4">
+            <SkeletonStatCards count={4} />
+            <SkeletonTable rows={6} cols={4} avatar={false} />
           </div>
         ) : (
           <>

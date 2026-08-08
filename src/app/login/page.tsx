@@ -2,8 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, AlertCircle, ShieldCheck, Users, UsersRound } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, ShieldCheck, Users, UsersRound, Sparkles, GraduationCap, UserRound } from 'lucide-react';
 import Image from 'next/image';
+
+const IS_DEMO = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+const DEMO_ACCOUNTS = [
+  { label: 'Administrator', login: 'demo', pass: 'demo2024', Icon: Users, hint: 'To\'liq boshqaruv' },
+  { label: 'O\'qituvchi', login: 'ustoz', pass: 'demo2024', Icon: GraduationCap, hint: 'Davomat, baho' },
+  { label: 'Ota-ona', login: 'otaona', pass: 'demo2024', Icon: UserRound, hint: 'Farzand kuzatuvi' },
+];
 
 // Subdomen bo'yicha auditoriya matni:
 //  crm.* → xodimlar (admin, o'qituvchi) · my.* → o'quvchi va ota-ona
@@ -38,8 +45,7 @@ export default function LoginPage() {
   }, []);
   const c = COPY[audience];
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const doLogin = async (loginVal: string, passVal: string) => {
     setError('');
     setLoading(true);
 
@@ -47,7 +53,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ login, password }),
+        body: JSON.stringify({ login: loginVal, password: passVal }),
       });
 
       const data = await res.json();
@@ -68,6 +74,16 @@ export default function LoginPage() {
       setError("Server bilan aloqa yo'q");
       setLoading(false);
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    doLogin(login, password);
+  };
+
+  const demoLogin = (l: string, p: string) => {
+    setLogin(l); setPassword(p);
+    doLogin(l, p);
   };
 
   return (
@@ -161,6 +177,34 @@ export default function LoginPage() {
                 ) : 'Kirish'}
               </button>
             </form>
+
+            {/* Demo rejimi — tez kirish tugmalari */}
+            {IS_DEMO && (
+              <div className="mt-6 pt-5 border-t border-dashed border-slate-200">
+                <div className="flex items-center justify-center gap-1.5 mb-3">
+                  <Sparkles className="w-3.5 h-3.5 text-[#22AA79]" />
+                  <span className="text-xs font-semibold text-slate-500">Demoni bir bosishda ko&apos;ring</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {DEMO_ACCOUNTS.map(a => (
+                    <button
+                      key={a.login}
+                      type="button"
+                      onClick={() => demoLogin(a.login, a.pass)}
+                      disabled={loading}
+                      className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl border border-slate-200 hover:border-[#2660A4] hover:bg-[#2660A4]/5 transition-all disabled:opacity-60"
+                    >
+                      <a.Icon className="w-5 h-5 text-[#2660A4]" />
+                      <span className="text-[12px] font-semibold text-slate-700 leading-tight">{a.label}</span>
+                      <span className="text-[10px] text-slate-400 leading-tight">{a.hint}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-center text-[11px] text-slate-400 mt-3">
+                  Namuna ma&apos;lumot · har kuni yangilanadi · 14 kun bepul sinov
+                </p>
+              </div>
+            )}
 
             {/* Parolni unutish — self-service reset yo'q, admin bilan bog'lanish */}
             <p className="text-center text-xs text-slate-400 mt-6">

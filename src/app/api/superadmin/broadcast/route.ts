@@ -6,13 +6,14 @@ import { parseBody } from '@/lib/validate';
 import { computeDebtSummary } from '@/lib/billing';
 import { logAudit } from '@/lib/audit';
 import { logger } from '@/lib/logger';
+import { eskizConfigured, sendBulk } from '@/lib/eskiz';
 
 export async function GET() {
   try {
     const auth = await requireAuth('superadmin');
     if (auth instanceof NextResponse) return auth;
     const campaigns = await prisma.smsCampaign.findMany({ orderBy: { createdAt: 'desc' }, take: 50 });
-    const gatewayReady = Boolean(process.env.SMS_GATEWAY_TOKEN);
+    const gatewayReady = eskizConfigured();
     return NextResponse.json({ campaigns, gatewayReady });
   } catch (error) {
     logger.error('[GET /api/superadmin/broadcast]', error);
@@ -45,12 +46,21 @@ async function resolveRecipients(audience: string): Promise<string[]> {
   return all.map(u => u.phone).filter((p): p is string => Boolean(p));
 }
 
-// SMS jo'natish — gateway sozlangan bo'lsa yuboradi, aks holda navbatga qo'yadi.
-// (UZ: ESKIZ/Play Mobile gateway'ini SMS_GATEWAY_TOKEN orqali ulash mumkin.)
-async function dispatch(recipients: string[], message: string, channel: string): Promise<'sent' | 'queued'> {
-  if (!process.env.SMS_GATEWAY_TOKEN) return 'queued';
-  // TODO(prod): shu yerda haqiqiy gateway API chaqiriladi
-  logger.info('[broadcast] yuborildi', { count: recipients.length, channel });
+// Xabar jo'natish. SMS — Eskiz.uz orqali (sozlangan bo'lsa). Telegram hali ulanmagan.
+// Gateway sozlanmagan yoki qisman muvaffaqiyatsiz bo'lsa mos status qaytaradi.
+async function dispatch(
+  recipients: string[],
+  message: string,
+  channel: string,
+): Promise<'sent' | 'partial' | 'failed' | 'queued'> {
+  if (recipients.length === 0) return 'queued';
+  if (channel === 'telegram') return 'queued'; // Telegram integratsiyasi keyingi faza
+  if (!eskizConfigured()) return 'queued';
+
+  const { sent, failed } = await sendBulk(recipients, message);
+  logger.info('[broadcast] eskiz', { sent, failed, total: recipients.length });
+  if (sent === 0) return 'failed';
+  if (failed > 0) return 'partial';
   return 'sent';
 }
 

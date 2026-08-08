@@ -248,33 +248,51 @@ function BranchAdminModal({ branch, onClose, onCreated }: { branch: { id: string
   );
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  sent: 'yuborildi ✅', partial: 'qisman yuborildi ⚠️', failed: 'yuborilmadi ❌', queued: 'navbatga qo\'yildi (yuborilmadi)',
+};
+
 export function BroadcastTab() {
   const [msg, setMsg] = useState('');
   const [audience, setAudience] = useState('students');
   const [channel, setChannel] = useState('sms');
   const [result, setResult] = useState('');
   const [ready, setReady] = useState(false);
+  const [sending, setSending] = useState(false);
   useEffect(() => { fetch('/api/superadmin/broadcast').then(r => r.json()).then(d => setReady(d.gatewayReady)); }, []);
   const send = async () => {
-    if (!msg) return;
-    const res = await fetch('/api/superadmin/broadcast', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, audience, channel }) });
-    const d = await res.json();
-    setResult(res.ok ? `${d.recipientCount} ta qabul qiluvchi — holat: ${d.status}` : d.error);
+    if (!msg.trim() || sending) return;
+    if (!confirm(`"${audience}" auditoriyasiga SMS yuborilsinmi? Bu haqiqiy SMS jo'natadi.`)) return;
+    setSending(true);
+    setResult('');
+    try {
+      const res = await fetch('/api/superadmin/broadcast', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, audience, channel }) });
+      const d = await res.json();
+      setResult(res.ok ? `${d.recipientCount} ta qabul qiluvchi — ${STATUS_LABEL[d.status] || d.status}` : (d.error || 'Xatolik'));
+    } finally { setSending(false); }
   };
+  const smsCount = Math.max(1, Math.ceil(msg.length / 160));
   return (
     <div className={card}>
-      {!ready && <div className="text-xs bg-amber-50 text-amber-700 rounded-lg px-3 py-2 mb-3">SMS gateway (SMS_GATEWAY_TOKEN) sozlanmagan — xabar navbatga qo’yiladi (yuborilmaydi).</div>}
+      {ready ? (
+        <div className="text-xs bg-emerald-50 text-emerald-700 rounded-lg px-3 py-2 mb-3">Eskiz.uz SMS gateway ulangan — xabarlar haqiqatan yuboriladi.</div>
+      ) : (
+        <div className="text-xs bg-amber-50 text-amber-700 rounded-lg px-3 py-2 mb-3">SMS gateway sozlanmagan (ESKIZ_EMAIL / ESKIZ_PASSWORD env) — xabar navbatga qo’yiladi, yuborilmaydi.</div>
+      )}
       <div className="space-y-3 max-w-md">
         <div className="flex gap-2">
           <select className={input} value={audience} onChange={e => setAudience(e.target.value)}>
             <option value="students">O’quvchilar</option><option value="debtors">Qarzdorlar</option><option value="leads">Lidlar</option><option value="all">Hammasi</option>
           </select>
           <select className={input} value={channel} onChange={e => setChannel(e.target.value)}>
-            <option value="sms">SMS</option><option value="telegram">Telegram</option>
+            <option value="sms">SMS</option><option value="telegram">Telegram (tez orada)</option>
           </select>
         </div>
         <textarea className={input} rows={4} placeholder="Xabar matni..." value={msg} onChange={e => setMsg(e.target.value)} />
-        <button onClick={send} className={btn}><Send className="w-4 h-4" /> Yuborish</button>
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-slate-400">{msg.length} belgi · ~{smsCount} SMS</span>
+          <button onClick={send} disabled={sending || !msg.trim()} className={btn}><Send className="w-4 h-4" /> {sending ? 'Yuborilmoqda...' : 'Yuborish'}</button>
+        </div>
         {result && <p className="text-sm text-slate-600">{result}</p>}
       </div>
     </div>

@@ -15,9 +15,16 @@ tavsiflaydi.
 | `JWT_SECRET` | JWT imzo kaliti — `openssl rand -base64 32` |
 | `CRON_SECRET` | auto-absent cron sekret — `openssl rand -hex 24` |
 | `WEBHOOK_SECRET` | Saytdan lid webhook sekret |
+| `ESKIZ_EMAIL` / `ESKIZ_PASSWORD` | (ixtiyoriy) Eskiz.uz SMS gateway kabineti — sozlanmasa SMS yuborilmaydi |
+| `ESKIZ_FROM` | (ixtiyoriy) SMS jo'natuvchi nomi; default `4546` (test) |
 
 > ⚠️ `CRON_SECRET` va `WEBHOOK_SECRET` endi **majburiy** — sozlanmasa tegishli
 > endpoint 500 qaytaradi (koddagi zaxira qiymatlar xavfsizlik uchun olib tashlangan).
+>
+> 📲 **Eskiz SMS**: `ESKIZ_EMAIL`/`ESKIZ_PASSWORD` sozlangач tizim avtomatik login
+> qilib token oladi (30 kun amal qiladi, 401 da avto yangilanadi). Moderatsiyagacha
+> faqat test matni (`Bu Eskiz dan test`) `4546` raqamidan yuboriladi; real matnlar
+> uchun Eskiz kabinetida shablon tasdiqlatiladi va o'z nickname ulanadi.
 
 ---
 

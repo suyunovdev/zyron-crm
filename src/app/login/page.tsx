@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, AlertCircle, ShieldCheck, Users, UsersRound, Sparkles, GraduationCap, UserRound } from 'lucide-react';
 import Image from 'next/image';
+import { BrandLogo } from '@/components/brand-logo';
 
 const IS_DEMO = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 const DEMO_ACCOUNTS = [
@@ -101,7 +102,7 @@ export default function LoginPage() {
         <div className="w-full md:w-1/2 bg-white p-8 md:p-10 flex flex-col">
           {/* Logo */}
           <div className="mb-10">
-            <Image src="/logo-horizontal.png" alt="Aka-Uka Ta'lim Markazi" width={180} height={56} className="object-contain" priority />
+            <BrandLogo slot="loginHorizontal" className="object-contain" priority />
           </div>
 
           <div className="flex-1 flex flex-col justify-center w-full max-w-sm mx-auto md:mx-0">
@@ -236,7 +237,7 @@ export default function LoginPage() {
           {/* Central content */}
           <div className="text-center relative z-10">
             <div className="mx-auto mb-6">
-              <Image src="/logo-vertical-white.png" alt="Aka-Uka" width={160} height={160} className="object-contain mx-auto" />
+              <BrandLogo slot="loginHero" className="object-contain mx-auto" />
             </div>
             <div className="mt-6 flex items-center justify-center gap-2">
               <div className="w-8 h-1 bg-white/40 rounded-full" />

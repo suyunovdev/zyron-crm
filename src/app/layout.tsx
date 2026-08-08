@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import ThemeProvider from "@/components/ThemeProvider";
+import { BRAND_NAME } from "@/lib/brand";
 import { Toaster } from "@/components/toast";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import "./globals.css";
@@ -16,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Aka-Uka Ta'lim Markazi — Boshqaruv tizimi",
-  description: "Aka-Uka Ta'lim Markazi (Ishtixon) boshqaruv tizimi: o'quvchilar, guruhlar, davomat va to'lovlar.",
+  title: `${BRAND_NAME} — Boshqaruv tizimi`,
+  description: `${BRAND_NAME} boshqaruv tizimi: o'quvchilar, guruhlar, davomat va to'lovlar.`,
 };
 
 export default function RootLayout({

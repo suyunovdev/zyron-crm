@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+import { BrandLogo } from '@/components/brand-logo';
 import { GraduationCap, Menu, X, LogOut, ChevronDown, Settings, Search, Users, UserPlus, FolderOpen, Moon, Sun, Calendar, Loader2, Banknote, CreditCard, ArrowRightLeft, BarChart3, UserCheck, UserX, Snowflake, Archive, BookOpen, ChevronUp, Download, Bell, Check, CheckCheck, Trash2, UserRoundPlus, CircleDollarSign, Globe, UserCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
@@ -708,7 +708,7 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
             theme === 'dark' ? 'border-[#1e293b]' : 'border-slate-200'
           }`}>
             <Link href="/">
-              <Image src="/logo-vertical.png" alt="Aka-Uka" width={50} height={50} className="object-contain" />
+              <BrandLogo slot="sidebarMark" className="object-contain" />
             </Link>
           </div>
 
@@ -759,7 +759,7 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
           <aside className="absolute left-0 top-0 bottom-0 w-64 bg-[#0f1b2d] flex flex-col animate-slide-in">
             <div className="px-5 py-5 border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <Image src="/logo-horizontal-white.png" alt="Aka-Uka" width={120} height={36} className="object-contain" />
+                <BrandLogo slot="topbarWhite" className="object-contain" />
               </div>
               <button onClick={() => setSidebarOpen(false)} className="p-1.5 hover:bg-white/10 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-slate-400" />
@@ -823,7 +823,7 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
             </button>
           ) : (
             <Link href="/">
-              <Image src="/logo-horizontal-white.png" alt="Aka-Uka" width={120} height={36} className="object-contain" />
+              <BrandLogo slot="topbarWhite" className="object-contain" />
             </Link>
           )}
 

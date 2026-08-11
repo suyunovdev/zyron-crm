@@ -41,10 +41,18 @@ export function rateLimit(key: string, limit: number, windowMs: number): RateLim
   return { allowed: true, remaining: limit - bucket.count, retryAfterSec: 0 };
 }
 
-/** So'rovdan mijoz IP manzilini ajratib olish (proxy header'larini hisobga oladi). */
+/**
+ * So'rovdan mijoz IP manzilini ajratib olish.
+ * MUHIM: nginx `$proxy_add_x_forwarded_for` haqiqiy IP'ni ro'yxat OXIRIGA qo'shadi.
+ * Mijoz XFF'ning boshiga soxta qiymat qo'sha oladi, shuning uchun BIRINCHI emas,
+ * OXIRGI (ishonchli proxy qo'shgan) qiymatni olamiz — aks holda rate-limit aylanib o'tiladi.
+ */
 export function getClientIp(req: Request): string {
   const xff = req.headers.get('x-forwarded-for');
-  if (xff) return xff.split(',')[0].trim();
+  if (xff) {
+    const parts = xff.split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.length) return parts[parts.length - 1];
+  }
   return req.headers.get('x-real-ip') || 'unknown';
 }
 

@@ -55,6 +55,8 @@ async function dispatch(
 ): Promise<'sent' | 'partial' | 'failed' | 'queued'> {
   if (recipients.length === 0) return 'queued';
   if (channel === 'telegram') return 'queued'; // Telegram integratsiyasi keyingi faza
+  // Demo rejimда HECH QACHON real SMS yubormaymiz (namuna raqamlarga jo'natmaslik uchun)
+  if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') return 'queued';
   if (!eskizConfigured()) return 'queued';
 
   const { sent, failed } = await sendBulk(recipients, message);

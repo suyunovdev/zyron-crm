@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
+import { parseBody } from '@/lib/validate';
 import { checkDropout } from '@/lib/attendance-guard';
 import { logger } from '@/lib/logger';
 import { scopedBranchId } from '@/lib/branch-scope';
 import { isLessonDay } from '@/lib/schedule';
 import { logAudit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth';
+
+// present MAJBURIY boolean (string "false" kabi truthy qiymatlar rad etiladi — teacher endpoint bilan bir xil)
+const AttendanceSchema = z.object({
+  lessonId: z.string().optional(),
+  studentId: z.string().min(1),
+  present: z.boolean(),
+  groupId: z.string().optional(),
+  date: z.string().optional(),
+  time: z.string().optional(),
+  scoreAttend: z.coerce.number().int().min(0).max(5).optional(),
+  scoreHomework: z.coerce.number().int().min(0).max(5).optional(),
+  scoreActivity: z.coerce.number().int().min(0).max(5).optional(),
+});
 
 // Admin davomat tuzatishini audit jurnaliga yozadi (javobgarlik).
 async function auditAttendance(auth: SessionUser, studentId: string, present: boolean) {
@@ -20,7 +35,9 @@ export async function PATCH(req: NextRequest) {
     const auth = await requireAuth('admin');
     if (auth instanceof NextResponse) return auth;
 
-    const { lessonId, studentId, present, groupId, date, time, scoreAttend, scoreHomework, scoreActivity } = await req.json();
+    const parsed = await parseBody(req, AttendanceSchema);
+    if (parsed instanceof NextResponse) return parsed;
+    const { lessonId, studentId, present, groupId, date, time, scoreAttend, scoreHomework, scoreActivity } = parsed;
 
     // Filial cheklovi: boshqa filial o'quvchisi davomatini o'zgartirib bo'lmaydi
     const bId = await scopedBranchId(auth);
@@ -70,14 +87,20 @@ export async function PATCH(req: NextRequest) {
           );
         }
         const lessonCount = await prisma.lesson.count({ where: { groupId } });
-        lesson = await prisma.lesson.create({
-          data: {
-            groupId,
-            scheduledDate: date,
-            scheduledTime: time || group?.time || '00:00',
-            order: lessonCount + 1,
-          },
-        });
+        try {
+          lesson = await prisma.lesson.create({
+            data: {
+              groupId,
+              scheduledDate: date,
+              scheduledTime: time || group?.time || '00:00',
+              order: lessonCount + 1,
+            },
+          });
+        } catch {
+          // Race: boshqa so'rov shu darsni yaratib ulgurdi (unique constraint) — qayta o'qiymiz
+          lesson = await prisma.lesson.findFirst({ where: { groupId, scheduledDate: date } });
+          if (!lesson) throw new Error('Dars yaratib bo\'lmadi');
+        }
       }
 
       const attendance = await prisma.attendance.upsert({

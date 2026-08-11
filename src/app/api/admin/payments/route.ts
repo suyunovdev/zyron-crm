@@ -86,10 +86,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'O\'quvchi boshqa filialga tegishli' }, { status: 403 });
   }
 
+  // Ishorani type'dan hosil qilamiz: refund → manfiy (balansni kamaytiradi),
+  // to'lov/chegirma → musbat. Operator ishorasidan qat'i nazar to'g'ri bo'ladi.
+  const signedAmount = payType === 'refund' ? -Math.abs(Number(amount)) : Math.abs(Number(amount));
+
+  // Idempotentlik: so'nggi 15s da bir xil (o'quvchi, summa, oy, tur) to'lov bo'lsa —
+  // takror (ikki marta bosish / tarmoq qayta urinishi) deb rad etamiz.
+  const dup = await prisma.payment.findFirst({
+    where: { studentId, amount: signedAmount, month, type: payType, createdAt: { gte: new Date(Date.now() - 15_000) } },
+    select: { id: true },
+  });
+  if (dup) {
+    return NextResponse.json({ error: 'Bu to\'lov allaqachon kiritildi (takror)' }, { status: 409 });
+  }
+
   const payment = await prisma.payment.create({
     data: {
       studentId,
-      amount: Number(amount),
+      amount: signedAmount,
       month,
       method: method || "cash",
       type: payType,
@@ -107,13 +121,15 @@ export async function POST(req: NextRequest) {
   });
 
   const methodLabel = method === 'card' ? 'Karta' : method === 'transfer' ? "O'tkazma" : 'Naqd';
+  const typeLabel = payType === 'refund' ? 'Qaytarish' : payType === 'discount' ? 'Chegirma' : 'To\'lov';
+  // Bildirishnoma xatosi asosiy to'lovni buzmasin (yon effekt)
   await createNotification({
     type: 'payment',
-    title: 'Yangi to\'lov qabul qilindi',
-    message: `${payment.student.name} — ${Number(amount).toLocaleString()} so'm (${methodLabel})`,
+    title: `Yangi ${typeLabel.toLowerCase()} qabul qilindi`,
+    message: `${payment.student.name} — ${signedAmount.toLocaleString()} so'm (${methodLabel})`,
     link: '/dashboard/admin/payments',
     branchId: student.branchId,
-  });
+  }).catch(() => {});
 
   return NextResponse.json(payment, { status: 201 });
 }

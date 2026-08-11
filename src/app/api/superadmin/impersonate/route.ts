@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       id: target.id, login: target.login, name: target.name,
       role: target.role as 'superadmin' | 'admin' | 'teacher' | 'student' | 'parent',
       impersonatedBy: { id: auth.id, name: auth.name },
-    });
+    }, { tokenVersion: target.tokenVersion }); // majburiy-logout/status bekorini hisobga olsin
 
     await logAudit(auth, 'login-as', 'user', target.id, `${target.name} (${target.role}) sifatida kirdi`);
 
@@ -62,7 +62,7 @@ export async function DELETE(req: NextRequest) {
     const token = await createToken({
       id: orig.id, login: orig.login, name: orig.name,
       role: orig.role as 'superadmin' | 'admin' | 'teacher' | 'student' | 'parent',
-    });
+    }, { tokenVersion: orig.tokenVersion });
     const res = NextResponse.json({ ok: true, redirect: getDashboardPath(orig.role) });
     res.cookies.set('token', token, cookieOpts(req.headers.get('host') || ''));
     return res;

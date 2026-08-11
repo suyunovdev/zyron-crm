@@ -54,6 +54,15 @@ const LAST = ['Karimov', 'Rahimov', 'Yusupov', 'Tosheva', 'Ergasheva', 'Sobirov'
   'Sultonova', 'Qodirov', 'Ibragimova', 'Nazarov', 'Umarova', 'Hasanov', 'Yo\'ldosheva'];
 
 async function main() {
+  // XAVFSIZLIK: bu skript wipe() qiladi — faqat demo/dev bazada ishlashi shart.
+  // Prod DB (dev.db) yoki noma'lum DATABASE_URL bo'lsa — to'xtaydi.
+  const dbUrl = process.env.DATABASE_URL || '';
+  const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || dbUrl.includes('demo');
+  if (!isDemo) {
+    console.error('❌ Xavfsizlik: seed-demo faqat demo bazada ishlaydi (DATABASE_URL "demo" bo\'lsin yoki NEXT_PUBLIC_DEMO_MODE=true). To\'xtatildi.');
+    process.exit(1);
+  }
+
   console.log('Demo ma\'lumot tozalanmoqda...');
   await wipe();
 

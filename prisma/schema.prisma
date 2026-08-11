@@ -95,7 +95,8 @@ model Lesson {
 
   attendances Attendance[]
 
-  @@index([groupId])
+  // Bir guruhda bir sanaga faqat bitta dars — ikki barobar billing/oylikni oldini oladi
+  @@unique([groupId, scheduledDate])
   @@index([scheduledDate])
 }
 

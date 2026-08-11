@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, AlertCircle, ShieldCheck, Users, UsersRound, Sparkles, GraduationCap, UserRound } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, ShieldCheck, Users, UsersRound, Sparkles, GraduationCap, UserRound, BookOpen } from 'lucide-react';
 import Image from 'next/image';
 import { BrandLogo } from '@/components/brand-logo';
 
@@ -10,6 +10,7 @@ const IS_DEMO = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 const DEMO_ACCOUNTS = [
   { label: 'Administrator', login: 'demo', pass: 'demo2024', Icon: Users, hint: 'To\'liq boshqaruv' },
   { label: 'O\'qituvchi', login: 'ustoz', pass: 'demo2024', Icon: GraduationCap, hint: 'Davomat, baho' },
+  { label: 'O\'quvchi', login: 'oquvchi', pass: 'demo2024', Icon: BookOpen, hint: 'O\'z darslari' },
   { label: 'Ota-ona', login: 'otaona', pass: 'demo2024', Icon: UserRound, hint: 'Farzand kuzatuvi' },
 ];
 
@@ -186,7 +187,7 @@ export default function LoginPage() {
                   <Sparkles className="w-3.5 h-3.5 text-[#22AA79]" />
                   <span className="text-xs font-semibold text-slate-500">Demoni bir bosishda ko&apos;ring</span>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {DEMO_ACCOUNTS.map(a => (
                     <button
                       key={a.login}

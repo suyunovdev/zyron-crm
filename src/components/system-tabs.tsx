@@ -4,9 +4,10 @@
 // komponentlardan foydalanadi (yagona manba, takrorlanmasin).
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { toast } from '@/components/toast';
 import { confirmDialog } from '@/components/confirm-dialog';
-import { Building2, Send, UserCog, DatabaseBackup, ShieldAlert, Skull, Loader2, Plus, Trash2, Download, UserPlus, X } from 'lucide-react';
+import { Building2, Send, UserCog, DatabaseBackup, ShieldAlert, Skull, Loader2, Plus, Trash2, Download, UserPlus, X, ChevronRight } from 'lucide-react';
 
 const fmt = (n: number) => (n || 0).toLocaleString('uz-UZ');
 
@@ -105,7 +106,13 @@ export function BranchesTab() {
         {list.length === 0 ? <p className="text-sm text-slate-400 text-center py-4">Filial yo’q</p> :
           list.map(b => (
             <div key={b.id} className="flex justify-between items-center py-3 border-b border-slate-50 last:border-0 gap-3">
-              <div className="min-w-0"><p className="font-medium text-slate-800 truncate">{b.name}</p><p className="text-xs text-slate-400">{b._count.users} xodim • {b._count.groups} guruh</p></div>
+              <Link href={`/dashboard/admin/system/branches/${b.id}`} className="min-w-0 flex-1 flex items-center gap-2 group -my-1 py-1 rounded-lg hover:bg-slate-50/70 transition-colors">
+                <div className="min-w-0">
+                  <p className="font-medium text-slate-800 truncate group-hover:text-[#2660A4]">{b.name}</p>
+                  <p className="text-xs text-slate-400">{b._count.users} xodim • {b._count.groups} guruh</p>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#2660A4] shrink-0" />
+              </Link>
               <div className="flex items-center gap-1.5 shrink-0">
                 <button onClick={() => setAdminFor({ id: b.id, name: b.name })}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2660A4]/10 text-[#2660A4] text-xs font-medium hover:bg-[#2660A4]/20">

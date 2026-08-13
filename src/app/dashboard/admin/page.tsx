@@ -235,7 +235,7 @@ export default function AdminDashboardPage() {
                   const barColor = rate >= 80 ? 'bg-emerald-500' : rate >= 50 ? 'bg-amber-500' : 'bg-red-500';
                   const rateColor = rate >= 80 ? 'text-emerald-600' : rate >= 50 ? 'text-amber-600' : 'text-red-600';
                   return (
-                    <div key={b.id} className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-all">
+                    <Link key={b.id} href={`/dashboard/admin/system/branches/${b.id}`} className="block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-[#2660A4]/40 transition-all">
                       <div className="flex items-start justify-between gap-2 mb-4">
                         <p className="font-bold text-slate-900 truncate">{b.name}</p>
                         <span className={`text-sm font-bold ${rateColor} shrink-0`}>{rate}%</span>
@@ -275,7 +275,7 @@ export default function AdminDashboardPage() {
                         <span className="text-slate-400">Qarzdorlik</span>
                         <span className={`font-semibold ${b.debt > 0 ? 'text-red-600' : 'text-slate-700'}`}>{formatAmount(b.debt)} so&apos;m</span>
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>

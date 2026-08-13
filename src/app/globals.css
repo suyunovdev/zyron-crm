@@ -342,6 +342,10 @@ html.dark .bg-black\/60 {
   .toast-in { animation: none; }
 }
 
+/* ── Chart ranglari (dark/light) ── */
+:root { --chart-track: #e8edf3; --chart-grid: #eef1f5; }
+html.dark { --chart-track: #26344a; --chart-grid: #1f2b3f; }
+
 /* ── Skeleton shimmer (yuklanish holatlari) ── */
 .skeleton {
   position: relative;

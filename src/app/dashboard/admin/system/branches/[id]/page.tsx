@@ -5,9 +5,20 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Building2, Users, GraduationCap, FolderOpen, ShieldCheck,
-  Phone, MapPin, UserCheck, CalendarDays, Wallet, TrendingUp,
+  Phone, MapPin, UserCheck, CalendarDays, Wallet, TrendingUp, X, Loader2, BarChart3,
 } from 'lucide-react';
 import { SkeletonDetailPage } from '@/components/skeleton';
+import { Donut, Bars, LineArea } from '@/components/charts';
+
+interface Analytics {
+  months: string[];
+  revenueTrend: number[]; methods: { cash: number; card: number; transfer: number };
+  collectionTrend: number[]; attendanceTrend: number[]; newTrend: number[];
+  studentStatus: { active: number; frozen: number; archived: number };
+  studentsPerGroup: { label: string; value: number }[];
+  teachersLoad: { name: string; groups: number; students: number }[];
+  topDebtors: { label: string; value: number }[];
+}
 
 interface Detail {
   branch: { id: string; name: string; address: string | null; phone: string | null; createdAt: string };
@@ -41,6 +52,20 @@ export default function BranchDetailPage() {
   const [d, setD] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('guruhlar');
+  const [metric, setMetric] = useState<string | null>(null);
+  const [an, setAn] = useState<Analytics | null>(null);
+  const [anLoading, setAnLoading] = useState(false);
+
+  const openMetric = (key: string) => {
+    setMetric(key);
+    if (!an && !anLoading) {
+      setAnLoading(true);
+      fetch(`/api/superadmin/branches/${branchId}/analytics`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { setAn(data); setAnLoading(false); })
+        .catch(() => setAnLoading(false));
+    }
+  };
 
   const load = useCallback(() => {
     fetch(`/api/superadmin/branches/${branchId}`)
@@ -63,14 +88,14 @@ export default function BranchDetailPage() {
   const attColor = k.attendancePercent >= 80 ? 'text-emerald-600' : k.attendancePercent >= 50 ? 'text-amber-600' : 'text-red-600';
 
   const kpis = [
-    { label: 'O\'quvchi (faol/jami)', val: `${k.activeStudents}/${k.totalStudents}`, icon: Users, sub: k.frozenStudents ? `${k.frozenStudents} muzlatilgan` : '' },
-    { label: 'Guruh (faol/jami)', val: `${k.activeGroups}/${k.groups}`, icon: FolderOpen, sub: '' },
-    { label: 'O\'qituvchi', val: k.teachers, icon: GraduationCap, sub: '' },
-    { label: 'Admin', val: k.admins, icon: ShieldCheck, sub: '' },
-    { label: 'Bu oy tushum', val: `${fmt(k.monthRevenue)}`, icon: Wallet, sub: 'so\'m', accent: 'text-emerald-600' },
-    { label: 'Qarzdorlik', val: `${fmt(k.totalDebt)}`, icon: Wallet, sub: `${k.debtors} qarzdor`, accent: k.totalDebt > 0 ? 'text-red-600' : '' },
-    { label: 'To\'lov intizomi', val: `${k.collectionRate}%`, icon: TrendingUp, sub: '', accent: rateColor },
-    { label: 'Davomat (bu oy)', val: `${k.attendancePercent}%`, icon: UserCheck, sub: '', accent: attColor },
+    { key: 'students', label: 'O\'quvchi (faol/jami)', val: `${k.activeStudents}/${k.totalStudents}`, icon: Users, sub: k.frozenStudents ? `${k.frozenStudents} muzlatilgan` : '' },
+    { key: 'groups', label: 'Guruh (faol/jami)', val: `${k.activeGroups}/${k.groups}`, icon: FolderOpen, sub: '' },
+    { key: 'teachers', label: 'O\'qituvchi', val: k.teachers, icon: GraduationCap, sub: '' },
+    { key: 'admins', label: 'Admin', val: k.admins, icon: ShieldCheck, sub: '' },
+    { key: 'revenue', label: 'Bu oy tushum', val: `${fmt(k.monthRevenue)}`, icon: Wallet, sub: 'so\'m', accent: 'text-emerald-600' },
+    { key: 'debt', label: 'Qarzdorlik', val: `${fmt(k.totalDebt)}`, icon: Wallet, sub: `${k.debtors} qarzdor`, accent: k.totalDebt > 0 ? 'text-red-600' : '' },
+    { key: 'collection', label: 'To\'lov intizomi', val: `${k.collectionRate}%`, icon: TrendingUp, sub: '', accent: rateColor },
+    { key: 'attendance', label: 'Davomat (bu oy)', val: `${k.attendancePercent}%`, icon: UserCheck, sub: '', accent: attColor },
   ];
 
   const TABS: { key: Tab; label: string; n: number }[] = [
@@ -107,13 +132,17 @@ export default function BranchDetailPage() {
         </div>
       </div>
 
-      {/* KPI */}
+      {/* KPI — bosilsa chart detali */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         {kpis.map(kp => (
-          <div key={kp.label} className="bg-white rounded-xl border border-slate-200 p-4">
-            <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1.5"><kp.icon className="w-3.5 h-3.5" /> {kp.label}</div>
+          <button key={kp.key} onClick={() => openMetric(kp.key)}
+            className="text-left bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-[#2660A4]/40 transition-all group">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-1.5 text-xs text-slate-400"><kp.icon className="w-3.5 h-3.5" /> {kp.label}</div>
+              <BarChart3 className="w-3.5 h-3.5 text-slate-300 group-hover:text-[#2660A4]" />
+            </div>
             <p className={`text-xl font-bold ${kp.accent || 'text-slate-900'}`}>{kp.val}{kp.sub && <span className="text-xs font-normal text-slate-400 ml-1">{kp.sub}</span>}</p>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -224,10 +253,124 @@ export default function BranchDetailPage() {
           )}
         </div>
       </div>
+
+      {/* KPI chart modal */}
+      {metric && (
+        <MetricModal metric={metric} an={an} loading={anLoading} branch={d} onClose={() => setMetric(null)} />
+      )}
     </>
   );
 }
 
 function Empty() {
   return <p className="text-sm text-slate-400 text-center py-10">Ma&apos;lumot yo&apos;q</p>;
+}
+
+const fmtSom = (n: number) => n.toLocaleString('en-US').replace(/,/g, ' ');
+const monthLabel = (m: string) => { const [, mo] = m.split('-'); return ['Yan','Fev','Mar','Apr','May','Iyn','Iyl','Avg','Sen','Okt','Noy','Dek'][Number(mo) - 1] || m; };
+
+const METRIC_META: Record<string, { title: string; desc: string }> = {
+  students: { title: 'O\'quvchilar', desc: 'Holat bo\'yicha taqsimot va so\'nggi 6 oydagi yangi o\'quvchilar oqimi.' },
+  groups: { title: 'Guruhlar', desc: 'Har guruhdagi o\'quvchilar soni (eng katta 10 ta).' },
+  teachers: { title: 'O\'qituvchilar', desc: 'Har o\'qituvchining guruh va o\'quvchi yuki.' },
+  admins: { title: 'Adminlar', desc: 'Filial administratorlari.' },
+  revenue: { title: 'Bu oy tushum', desc: 'So\'nggi 6 oy tushumi va to\'lov usullari taqsimoti.' },
+  debt: { title: 'Qarzdorlik', desc: 'Eng katta qarzi bor o\'quvchilar (top 10).' },
+  collection: { title: 'To\'lov intizomi', desc: 'Har oy to\'lov qilgan faol o\'quvchilar ulushi (%).' },
+  attendance: { title: 'Davomat', desc: 'So\'nggi 6 oydagi o\'rtacha davomat foizi.' },
+};
+
+function MetricModal({ metric, an, loading, branch, onClose }:
+  { metric: string; an: Analytics | null; loading: boolean; branch: Detail; onClose: () => void }) {
+  const meta = METRIC_META[metric];
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+  const trend = (arr: number[] | undefined) => (an && arr ? an.months.map((m, i) => ({ label: monthLabel(m), value: arr[i] ?? 0 })) : []);
+
+  return (
+    <div className="fixed inset-0 z-[9990] flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <div>
+            <h3 className="text-base font-bold text-slate-900">{meta?.title}</h3>
+            <p className="text-xs text-slate-400 mt-0.5">{branch.branch.name} · {meta?.desc}</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="p-5 overflow-y-auto space-y-6">
+          {loading || !an ? (
+            <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-[#2660A4]" /></div>
+          ) : (
+            <>
+              {metric === 'students' && (
+                <>
+                  <Section title="Holat bo'yicha">
+                    <Donut data={[
+                      { label: 'Faol', value: an.studentStatus.active, color: '#22AA79' },
+                      { label: 'Muzlatilgan', value: an.studentStatus.frozen, color: '#3b82f6' },
+                      { label: 'Arxiv', value: an.studentStatus.archived, color: '#94a3b8' },
+                    ]} />
+                  </Section>
+                  <Section title="Yangi o'quvchilar (oylar)"><LineArea data={trend(an.newTrend)} color="#22AA79" /></Section>
+                </>
+              )}
+              {metric === 'groups' && (
+                <Section title="Guruhlar bo'yicha o'quvchilar"><Bars data={an.studentsPerGroup} color="#2660A4" /></Section>
+              )}
+              {metric === 'teachers' && (
+                <>
+                  <Section title="Guruh soni"><Bars data={an.teachersLoad.map(t => ({ label: t.name, value: t.groups }))} color="#8b5cf6" /></Section>
+                  <Section title="O'quvchi soni"><Bars data={an.teachersLoad.map(t => ({ label: t.name, value: t.students }))} color="#2660A4" /></Section>
+                </>
+              )}
+              {metric === 'admins' && (
+                <div className="divide-y divide-slate-100">
+                  {branch.admins.length === 0 ? <Empty /> : branch.admins.map(a => (
+                    <div key={a.id} className="flex items-center justify-between py-3">
+                      <div><p className="font-semibold text-slate-800">{a.name}</p><p className="text-xs text-slate-400 font-mono">{a.login}</p></div>
+                      <ShieldCheck className="w-4 h-4 text-[#2660A4]" />
+                    </div>
+                  ))}
+                </div>
+              )}
+              {metric === 'revenue' && (
+                <>
+                  <Section title="Oylik tushum (so'm)"><LineArea data={trend(an.revenueTrend)} color="#22AA79" valueFmt={v => fmtSom(v)} /></Section>
+                  <Section title="To'lov usullari">
+                    <Donut data={[
+                      { label: 'Naqd', value: an.methods.cash, color: '#22AA79' },
+                      { label: 'Karta', value: an.methods.card, color: '#2660A4' },
+                      { label: 'O\'tkazma', value: an.methods.transfer, color: '#8b5cf6' },
+                    ]} />
+                  </Section>
+                </>
+              )}
+              {metric === 'debt' && (
+                <Section title="Eng katta qarzdorlar (so'm)"><Bars data={an.topDebtors} color="#ef4444" /></Section>
+              )}
+              {metric === 'collection' && (
+                <Section title="To'lov intizomi (%)"><LineArea data={trend(an.collectionTrend)} color="#f59e0b" valueFmt={v => v + '%'} /></Section>
+              )}
+              {metric === 'attendance' && (
+                <Section title="Davomat (%)"><LineArea data={trend(an.attendanceTrend)} color="#22AA79" valueFmt={v => v + '%'} /></Section>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-sm font-semibold text-slate-700 mb-3">{title}</p>
+      {children}
+    </div>
+  );
 }

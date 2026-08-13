@@ -30,6 +30,7 @@ export default function AdminsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [showPass, setShowPass] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState('');
+  const [editCred, setEditCred] = useState<Admin | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -60,18 +61,6 @@ export default function AdminsPage() {
     setBusy('');
   };
 
-  const resetPassword = async (a: Admin) => {
-    const np = prompt(`${a.name} uchun yangi parol (kamida 4 belgi):`);
-    if (!np) return;
-    setBusy(a.id);
-    const res = await fetch(`/api/superadmin/admins/${a.id}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: np }),
-    });
-    if (!res.ok) { const e = await res.json(); toast.error(e.error || 'Xato'); } else toast.success('Parol yangilandi');
-    await load();
-    setBusy('');
-  };
 
   const changeRole = async (a: Admin) => {
     const next = a.role === 'superadmin' ? 'admin' : 'superadmin';
@@ -172,7 +161,7 @@ export default function AdminsPage() {
                             <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
                           ) : (
                             <>
-                              <button onClick={() => resetPassword(a)} title="Parolni tiklash"
+                              <button onClick={() => setEditCred(a)} title="Login/parolni tahrirlash"
                                 className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-[#2660A4]">
                                 <KeyRound className="w-4 h-4" />
                               </button>
@@ -206,6 +195,71 @@ export default function AdminsPage() {
       )}
 
       {showCreate && <CreateAdminModal branches={branches} onClose={() => setShowCreate(false)} onCreated={() => { setShowCreate(false); load(); }} />}
+      {editCred && <CredEditModal admin={editCred} onClose={() => setEditCred(null)} onSaved={() => { setEditCred(null); load(); }} />}
+    </div>
+  );
+}
+
+// Login + parolni tahrirlash (superadmin)
+function CredEditModal({ admin, onClose, onSaved }: { admin: Admin; onClose: () => void; onSaved: () => void }) {
+  const [login, setLogin] = useState(admin.login);
+  const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!login.trim()) { toast.error('Login bo\'sh bo\'lmasin'); return; }
+    if (password && password.length < 4) { toast.error('Parol kamida 4 belgi'); return; }
+    const body: Record<string, string> = {};
+    if (login.trim() !== admin.login) body.login = login.trim();
+    if (password) body.password = password;
+    if (Object.keys(body).length === 0) { onClose(); return; }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/superadmin/admins/${admin.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { toast.error(d.error || 'Xatolik'); return; }
+      toast.success('Saqlandi');
+      onSaved();
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9990] flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} className="w-full max-w-sm rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <h3 className="text-base font-bold text-slate-900">Login / parol</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+        </div>
+        <div className="p-5 space-y-3.5">
+          <p className="text-xs text-slate-500">{admin.name}</p>
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Login</label>
+            <input value={login} onChange={e => setLogin(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Yangi parol (ixtiyoriy)</label>
+            <div className="relative">
+              <input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="O'zgartirmaslik uchun bo'sh qoldiring"
+                className="w-full rounded-lg border border-slate-200 px-3 pr-10 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+              <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-2 justify-end px-5 py-3 bg-slate-50 border-t border-slate-100">
+          <button onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Bekor</button>
+          <button onClick={save} disabled={saving}
+            className="flex items-center gap-1.5 rounded-lg bg-[#2660A4] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />} Saqlash
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

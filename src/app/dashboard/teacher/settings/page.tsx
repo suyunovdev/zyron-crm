@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { User, Lock, Save, Loader2, CheckCircle } from 'lucide-react';
+import { AvatarUpload } from '@/components/avatar-upload';
 
 interface SessionUser {
   id: string;
@@ -10,6 +11,7 @@ interface SessionUser {
   role: string;
   phone?: string;
   subject?: string;
+  avatar?: string | null;
 }
 
 export default function TeacherSettingsPage() {
@@ -80,6 +82,20 @@ export default function TeacherSettingsPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold text-slate-900">Sozlamalar</h1>
+
+      {/* Profil rasmi */}
+      {user && (
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+            <User className="w-4.5 h-4.5 text-emerald-600" />
+            <h2 className="text-base font-bold text-slate-900">Profil rasmi</h2>
+          </div>
+          <div className="p-6">
+            <AvatarUpload avatar={user.avatar ?? null} name={user.name}
+              onChange={a => setUser(u => u ? { ...u, avatar: a } : u)} />
+          </div>
+        </div>
+      )}
 
       {/* Profile info */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">

@@ -15,6 +15,7 @@ async function activeSuperadminCount(): Promise<number> {
 
 const UpdateAdminSchema = z.object({
   name: z.string().min(1).max(120).optional(),
+  login: z.string().min(1).max(64).optional(),
   phone: z.string().max(32).nullable().optional(),
   status: z.enum(['active', 'frozen', 'archived']).optional(),
   password: z.string().min(4).max(128).optional(),
@@ -29,7 +30,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const { id } = await params;
     const parsed = await parseBody(req, UpdateAdminSchema);
     if (parsed instanceof NextResponse) return parsed;
-    const { name, phone, status, password, role } = parsed;
+    const { name, login, phone, status, password, role } = parsed;
+
+    // Login o'zgartirilsa — unikallik tekshiruvi
+    if (login) {
+      const existing = await prisma.user.findUnique({ where: { login }, select: { id: true } });
+      if (existing && existing.id !== id) {
+        return NextResponse.json({ error: 'Bu login allaqachon mavjud' }, { status: 409 });
+      }
+    }
 
     const target = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true, status: true } });
     if (!target || !isAdminRole(target.role)) {
@@ -51,6 +60,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const data: Record<string, unknown> = {};
     if (name !== undefined) data.name = name;
+    if (login !== undefined) data.login = login;
     if (phone !== undefined) data.phone = phone;
     if (status !== undefined) data.status = status;
     if (role !== undefined) data.role = role;
@@ -65,7 +75,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       select: { id: true, login: true, name: true, role: true, status: true },
     });
     const changes = [
-      role && `rol→${role}`, status && `holat→${status}`, password && 'parol tiklandi', name && 'ism',
+      role && `rol→${role}`, status && `holat→${status}`, password && 'parol tiklandi',
+      login && 'login o\'zgartirildi', name && 'ism',
     ].filter(Boolean).join(', ');
     await logAudit(auth, 'update', 'admin', id, `${user.name}: ${changes}`);
     return NextResponse.json(user);

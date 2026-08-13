@@ -21,6 +21,7 @@ interface SessionUser {
   name: string;
   login: string;
   role: string;
+  avatar?: string | null;
   impersonatedBy?: { id: string; name: string };
 }
 
@@ -580,6 +581,16 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
       })
       .catch(() => router.push('/login'));
   }, [router]);
+
+  // Profil rasmi o'zgarsa topbar avatarini darhol yangilaymiz
+  useEffect(() => {
+    const onAvatar = (e: Event) => {
+      const val = (e as CustomEvent).detail as string | null;
+      setUser(u => u ? { ...u, avatar: val } : u);
+    };
+    window.addEventListener('avatar-updated', onAvatar);
+    return () => window.removeEventListener('avatar-updated', onAvatar);
+  }, []);
 
   // Notifications polling
   const fetchNotifications = useCallback(async () => {
@@ -1142,9 +1153,14 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
                 onClick={() => setProfileOpen(!profileOpen)}
                 className="flex items-center gap-2.5 hover:bg-white/10 rounded-lg px-2.5 py-1.5 transition-colors"
               >
-                <div className="w-8 h-8 bg-[#22AA79] rounded-lg flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">{initials}</span>
-                </div>
+                {user.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-lg object-cover" />
+                ) : (
+                  <div className="w-8 h-8 bg-[#22AA79] rounded-lg flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">{initials}</span>
+                  </div>
+                )}
                 <div className="hidden sm:block text-left">
                   <p className="text-sm font-semibold text-white leading-tight">{user.name}</p>
                 </div>

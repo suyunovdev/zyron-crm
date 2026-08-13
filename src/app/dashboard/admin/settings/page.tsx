@@ -9,12 +9,14 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
+import { AvatarUpload } from '@/components/avatar-upload';
 
 interface SessionUser {
   id: string;
   name: string;
   login: string;
   role: string;
+  avatar?: string | null;
 }
 
 interface Stats {
@@ -95,6 +97,19 @@ export default function AdminSettingsPage() {
               <p className="text-2xl font-bold text-blue-600 mt-1">{stats?.activeGroups ?? 0}/{stats?.totalGroups ?? 0}</p>
             </div>
           </div>
+
+          {/* Profil rasmi */}
+          {user && (
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100">
+                <h2 className="text-lg font-bold text-slate-900">Profil rasmi</h2>
+              </div>
+              <div className="p-5">
+                <AvatarUpload avatar={user.avatar ?? null} name={user.name}
+                  onChange={a => setUser(u => u ? { ...u, avatar: a } : u)} />
+              </div>
+            </div>
+          )}
 
           {/* Shaxsiy ma'lumotlar */}
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">

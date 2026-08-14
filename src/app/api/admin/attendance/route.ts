@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { parseBody } from '@/lib/validate';
-import { checkDropout } from '@/lib/attendance-guard';
 import { logger } from '@/lib/logger';
 import { scopedBranchId } from '@/lib/branch-scope';
 import { isLessonDay } from '@/lib/schedule';
@@ -60,10 +59,6 @@ export async function PATCH(req: NextRequest) {
         update: { present, ...scores, markedAt: new Date() },
         create: { lessonId, studentId, present, ...scores },
       });
-      if (!present) {
-        const l = await prisma.lesson.findUnique({ where: { id: lessonId }, select: { groupId: true } });
-        if (l) await checkDropout(studentId, l.groupId, auth);
-      }
       await auditAttendance(auth, studentId, present);
       return NextResponse.json(attendance);
     }
@@ -108,7 +103,6 @@ export async function PATCH(req: NextRequest) {
         update: { present, ...scores, markedAt: new Date() },
         create: { lessonId: lesson.id, studentId, present, ...scores },
       });
-      if (!present) await checkDropout(studentId, groupId, auth);
       await auditAttendance(auth, studentId, present);
       return NextResponse.json(attendance);
     }

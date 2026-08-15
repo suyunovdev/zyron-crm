@@ -11,13 +11,14 @@ interface Recipient {
 }
 interface Sent { id: string; studentName: string; body: string; createdAt: string; read: boolean }
 
-type StatusFilter = 'all' | 'active' | 'frozen' | 'archived';
+type StatusFilter = 'all' | 'active' | 'frozen' | 'archived' | 'debtors';
 
-const STATUS_CHIPS: { value: StatusFilter; label: string }[] = [
+const STATUS_CHIPS: { value: StatusFilter; label: string; danger?: boolean }[] = [
   { value: 'all', label: 'Hammasi' },
   { value: 'active', label: 'Faol' },
   { value: 'frozen', label: 'Muzlatilgan' },
   { value: 'archived', label: 'Arxiv' },
+  { value: 'debtors', label: 'Qarzdorlar', danger: true },
 ];
 const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
   active: { label: 'Faol', cls: 'bg-emerald-100 text-emerald-700' },
@@ -46,7 +47,6 @@ export default function AdminMessagesPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
-  const [debtorOnly, setDebtorOnly] = useState(false);
 
   const loadSent = () => fetch('/api/admin/messages').then(r => r.ok ? r.json() : { messages: [] }).then(d => setSent(d.messages || []));
   const loadRecipients = () => fetch('/api/admin/messages/recipients').then(r => r.ok ? r.json() : { students: [] }).then(d => setRecipients(d.students || []));
@@ -57,12 +57,15 @@ export default function AdminMessagesPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const matchStatus = (s: Recipient) =>
+      statusFilter === 'all' ? true
+        : statusFilter === 'debtors' ? s.isDebtor
+        : s.status === statusFilter;
     return recipients.filter(s =>
-      (statusFilter === 'all' || s.status === statusFilter) &&
-      (!debtorOnly || s.isDebtor) &&
+      matchStatus(s) &&
       (!q || s.name.toLowerCase().includes(q) || (s.phone || '').includes(q)),
     );
-  }, [recipients, statusFilter, debtorOnly, search]);
+  }, [recipients, statusFilter, search]);
 
   const selectableIds = useMemo(() => filtered.filter(s => s.hasParent).map(s => s.id), [filtered]);
   const allSelected = selectableIds.length > 0 && selectableIds.every(id => selected.has(id));
@@ -143,18 +146,18 @@ export default function AdminMessagesPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                {STATUS_CHIPS.map(c => (
-                  <button key={c.value} onClick={() => setStatusFilter(c.value)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                      statusFilter === c.value ? 'border-[#2660A4] bg-[#2660A4]/5 text-[#2660A4]' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
-                    {c.label}
-                  </button>
-                ))}
-                <button onClick={() => setDebtorOnly(v => !v)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                    debtorOnly ? 'border-red-400 bg-red-50 text-red-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
-                  Qarzdorlar
-                </button>
+                {STATUS_CHIPS.map(c => {
+                  const active = statusFilter === c.value;
+                  const cls = c.danger
+                    ? (active ? 'border-red-400 bg-red-50 text-red-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50')
+                    : (active ? 'border-[#2660A4] bg-[#2660A4]/5 text-[#2660A4]' : 'border-slate-200 text-slate-500 hover:bg-slate-50');
+                  return (
+                    <button key={c.value} onClick={() => setStatusFilter(c.value)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${cls}`}>
+                      {c.label}
+                    </button>
+                  );
+                })}
               </div>
               {/* Barchasini tanlash */}
               <div className="flex items-center justify-between">

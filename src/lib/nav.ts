@@ -8,6 +8,7 @@ export const adminNav: NavItem[] = [
   { label: "O'qituvchilar", href: '/dashboard/admin/teachers', icon: UserPlus },
   { label: 'Guruhlar', href: '/dashboard/admin/groups', icon: FolderOpen },
   { label: 'Ota-onalar', href: '/dashboard/admin/parents', icon: UserCheck },
+  { label: 'Xabarlar', href: '/dashboard/admin/messages', icon: MessageSquare },
   { label: "To'lovlar", href: '/dashboard/admin/payments', icon: CreditCard },
   { label: 'Jadval', href: '/dashboard/admin/schedule', icon: CalendarClock },
   { label: 'Oylik hisobot', href: '/dashboard/admin/reports', icon: FileBarChart, action: 'report-modal' },

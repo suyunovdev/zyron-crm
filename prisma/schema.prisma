@@ -271,8 +271,10 @@ model TicketMessage {
 // Ticket'dan farqi: kategoriya/muhimlik/status/thread YO'Q. AuditLog kabi sof id.
 model Message {
   id          String   @id @default(cuid())
+  // teacherId/teacherName — jo'natuvchi (ustoz YOKI admin). senderRole rolni bildiradi.
   teacherId   String
   teacherName String
+  senderRole  String   @default("teacher") // teacher | admin
   studentId   String
   studentName String
   parentId    String   // qabul qiluvchi ota-ona (user id)

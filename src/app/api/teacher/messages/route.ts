@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
       data: {
         teacherId: auth.id,
         teacherName: auth.name,
+        senderRole: 'teacher',
         studentId: gs.student.id,
         studentName: gs.student.name,
         parentId: gs.student.parentId,

@@ -5,7 +5,7 @@ import { MessageSquare, Loader2 } from 'lucide-react';
 import { fmtDateTime } from '@/lib/date';
 import { Skeleton } from '@/components/skeleton';
 
-interface Msg { id: string; teacherName: string; studentName: string; body: string; read: boolean; createdAt: string }
+interface Msg { id: string; teacherName: string; senderRole: string; studentName: string; body: string; read: boolean; createdAt: string }
 
 export default function ParentMessagesPage() {
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -48,7 +48,7 @@ export default function ParentMessagesPage() {
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-12 text-center">
           <MessageSquare className="w-10 h-10 text-slate-300 mx-auto mb-3" />
           <p className="text-sm font-semibold text-slate-500">Hozircha xabar yo&apos;q</p>
-          <p className="text-xs text-slate-400 mt-1">Ustoz xabar yozganda shu yerda ko&apos;rinadi</p>
+          <p className="text-xs text-slate-400 mt-1">Ustoz yoki administrator xabar yozganda shu yerda ko&apos;rinadi</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -59,7 +59,12 @@ export default function ParentMessagesPage() {
                 : 'bg-blue-50/60 dark:bg-blue-900/15 border-blue-200 dark:border-blue-800/40'
             }`}>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-sm font-bold text-slate-900 dark:text-white">{m.teacherName}</span>
+                <span className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{m.teacherName}</span>
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                    m.senderRole === 'admin' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                  }`}>{m.senderRole === 'admin' ? 'Administrator' : 'Ustoz'}</span>
+                </span>
                 {!m.read && <span className="w-2 h-2 rounded-full bg-blue-500 flex-none" />}
               </div>
               <p className="text-[11px] text-slate-400 mb-2">{m.studentName} haqida</p>

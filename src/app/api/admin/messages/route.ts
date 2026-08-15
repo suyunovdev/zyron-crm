@@ -27,9 +27,10 @@ export async function GET() {
 }
 
 const SendSchema = z.object({
-  mode: z.enum(['single', 'group', 'all']),
+  mode: z.enum(['single', 'group', 'all', 'selected']),
   body: z.string().min(1, 'xabar matni kerak').max(2000),
   studentId: z.string().optional(),
+  studentIds: z.array(z.string()).max(2000).optional(),
   groupId: z.string().optional(),
   // "Barcha" (all) rejimida segment/holat filtri
   status: z.enum(['active', 'frozen', 'archived', 'debtors', 'all']).optional(),
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
     if (auth instanceof NextResponse) return auth;
     const parsed = await parseBody(req, SendSchema);
     if (parsed instanceof NextResponse) return parsed;
-    const { mode, body, studentId, groupId } = parsed;
+    const { mode, body, studentId, studentIds, groupId } = parsed;
     const segment = parsed.status || 'active';
 
     const bId = await scopedBranchId(auth);
@@ -67,6 +68,13 @@ export async function POST(req: NextRequest) {
         select: { student: { select: { id: true, name: true, parentId: true } } },
       });
       recipients = gs.map(x => x.student);
+    } else if (mode === 'selected') {
+      const ids = studentIds || [];
+      if (ids.length === 0) return NextResponse.json({ error: 'O\'quvchi tanlanmagan' }, { status: 400 });
+      recipients = await prisma.user.findMany({
+        where: { id: { in: ids }, role: 'student', ...branchWhere },
+        select: { id: true, name: true, parentId: true },
+      });
     } else {
       // "Barcha" rejimi — segment (holat / qarzdorlar) bo'yicha
       if (segment === 'debtors') {

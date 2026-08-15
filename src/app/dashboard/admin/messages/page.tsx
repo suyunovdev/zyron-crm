@@ -10,9 +10,19 @@ interface Group { id: string; name: string; subject: string; _count?: { students
 interface Sent { id: string; studentName: string; body: string; createdAt: string; read: boolean }
 
 type Mode = 'single' | 'group' | 'all';
+type Segment = 'active' | 'frozen' | 'archived' | 'debtors' | 'all';
+
+const SEGMENTS: { value: Segment; label: string }[] = [
+  { value: 'active', label: 'Faol o\'quvchilar' },
+  { value: 'frozen', label: 'Muzlatilganlar' },
+  { value: 'archived', label: 'Arxivlanganlar' },
+  { value: 'debtors', label: 'Qarzdorlar' },
+  { value: 'all', label: 'Barcha o\'quvchilar' },
+];
 
 export default function AdminMessagesPage() {
   const [mode, setMode] = useState<Mode>('single');
+  const [segment, setSegment] = useState<Segment>('active');
   const [body, setBody] = useState('');
   const [students, setStudents] = useState<Student[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -47,12 +57,15 @@ export default function AdminMessagesPage() {
     if (!body.trim()) { toast.error('Xabar matnini yozing'); return; }
     if (mode === 'single' && !studentId) { toast.error('O\'quvchini tanlang'); return; }
     if (mode === 'group' && !groupId) { toast.error('Guruhni tanlang'); return; }
-    if (mode === 'all' && !confirm('Barcha faol o\'quvchilar ota-onasiga yuborilsinmi?')) return;
+    if (mode === 'all') {
+      const segLabel = SEGMENTS.find(s => s.value === segment)?.label.toLowerCase() || '';
+      if (!confirm(`"${segLabel}" ota-onasiga yuborilsinmi?`)) return;
+    }
     setSending(true);
     try {
       const res = await fetch('/api/admin/messages', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode, body, studentId: studentId || undefined, groupId: groupId || undefined }),
+        body: JSON.stringify({ mode, body, studentId: studentId || undefined, groupId: groupId || undefined, status: mode === 'all' ? segment : undefined }),
       });
       const d = await res.json().catch(() => ({}));
       if (!res.ok) { toast.error(d.error || 'Xatolik'); return; }
@@ -65,7 +78,7 @@ export default function AdminMessagesPage() {
   const MODES: { key: Mode; label: string; icon: typeof Users }[] = [
     { key: 'single', label: 'Bitta o\'quvchi', icon: UserRound },
     { key: 'group', label: 'Guruh', icon: FolderOpen },
-    { key: 'all', label: 'Barcha faol', icon: Users },
+    { key: 'all', label: 'Barcha', icon: Users },
   ];
 
   return (
@@ -127,7 +140,16 @@ export default function AdminMessagesPage() {
           </div>
         )}
         {mode === 'all' && (
-          <p className="text-sm text-amber-700 bg-amber-50 rounded-lg px-3 py-2.5">Barcha faol o&apos;quvchilarning ota-onasiga yuboriladi.</p>
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Segment (holat)</label>
+            <select value={segment} onChange={e => setSegment(e.target.value as Segment)}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20">
+              {SEGMENTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+            <p className="text-xs text-slate-400 mt-1.5">
+              {segment === 'debtors' ? 'Pul qarzi bor o\'quvchilar' : SEGMENTS.find(s => s.value === segment)?.label}ning ota-onasiga yuboriladi.
+            </p>
+          </div>
         )}
 
         {/* Matn */}

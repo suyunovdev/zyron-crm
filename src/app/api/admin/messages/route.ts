@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { parseBody } from '@/lib/validate';
 import { scopedBranchId } from '@/lib/branch-scope';
+import { computeDebtSummary } from '@/lib/billing';
 import { createNotification } from '@/lib/notify';
 import { logAudit } from '@/lib/audit';
 import { logger } from '@/lib/logger';
@@ -30,6 +31,8 @@ const SendSchema = z.object({
   body: z.string().min(1, 'xabar matni kerak').max(2000),
   studentId: z.string().optional(),
   groupId: z.string().optional(),
+  // "Barcha" (all) rejimida segment/holat filtri
+  status: z.enum(['active', 'frozen', 'archived', 'debtors', 'all']).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -39,6 +42,7 @@ export async function POST(req: NextRequest) {
     const parsed = await parseBody(req, SendSchema);
     if (parsed instanceof NextResponse) return parsed;
     const { mode, body, studentId, groupId } = parsed;
+    const segment = parsed.status || 'active';
 
     const bId = await scopedBranchId(auth);
     const branchWhere = bId ? { branchId: bId } : {};
@@ -64,10 +68,24 @@ export async function POST(req: NextRequest) {
       });
       recipients = gs.map(x => x.student);
     } else {
-      recipients = await prisma.user.findMany({
-        where: { role: 'student', status: 'active', ...branchWhere },
-        select: { id: true, name: true, parentId: true },
-      });
+      // "Barcha" rejimi — segment (holat / qarzdorlar) bo'yicha
+      if (segment === 'debtors') {
+        const debt = await computeDebtSummary(bId);
+        const debtorIds = [...debt.balances.entries()].filter(([, b]) => b < 0).map(([id]) => id);
+        recipients = debtorIds.length
+          ? await prisma.user.findMany({
+              where: { id: { in: debtorIds }, role: 'student', ...branchWhere },
+              select: { id: true, name: true, parentId: true },
+            })
+          : [];
+      } else {
+        // active | frozen | archived | all (statussiz)
+        const statusWhere = segment === 'all' ? {} : { status: segment };
+        recipients = await prisma.user.findMany({
+          where: { role: 'student', ...statusWhere, ...branchWhere },
+          select: { id: true, name: true, parentId: true },
+        });
+      }
     }
 
     // Faqat ota-onasi bor o'quvchilar
@@ -97,7 +115,8 @@ export async function POST(req: NextRequest) {
       }).catch(() => {});
     }
 
-    await logAudit(auth, 'create', 'message', '', `Admin xabar (${mode}) → ${result.count} ota-ona`);
+    const scopeLabel = mode === 'all' ? `all/${segment}` : mode;
+    await logAudit(auth, 'create', 'message', '', `Admin xabar (${scopeLabel}) → ${result.count} ota-ona`);
     return NextResponse.json({ ok: true, sent: result.count }, { status: 201 });
   } catch (error) {
     logger.error('[POST /api/admin/messages]', error);

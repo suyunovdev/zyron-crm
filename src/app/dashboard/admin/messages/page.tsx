@@ -142,11 +142,16 @@ export default function AdminMessagesPage() {
         {mode === 'all' && (
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Segment (holat)</label>
-            <select value={segment} onChange={e => setSegment(e.target.value as Segment)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20">
-              {SEGMENTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
-            <p className="text-xs text-slate-400 mt-1.5">
+            <div className="flex flex-wrap gap-2">
+              {SEGMENTS.map(s => (
+                <button key={s.value} type="button" onClick={() => setSegment(s.value)}
+                  className={`px-3.5 py-2 rounded-lg text-sm font-semibold border transition-all ${
+                    segment === s.value ? 'border-[#2660A4] bg-[#2660A4]/5 text-[#2660A4]' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
+                  {s.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-slate-400 mt-2">
               {segment === 'debtors' ? 'Pul qarzi bor o\'quvchilar' : SEGMENTS.find(s => s.value === segment)?.label}ning ota-onasiga yuboriladi.
             </p>
           </div>

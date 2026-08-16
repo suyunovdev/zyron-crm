@@ -94,6 +94,26 @@ export async function proxy(req: NextRequest) {
     }
   }
 
+  // Bosh sahifa ("/") — statik keshlangan redirect oq ekran berardi,
+  // shu sabab bu yerda haqiqiy server redirect qilamiz (kesh chetlab o'tiladi).
+  if (path === '/') {
+    if (token) {
+      const user = await verifyToken(token);
+      if (user) {
+        const role = user.role;
+        const dashboardPath = getDashboardPath(role);
+        if (isClientHost(host) && STAFF_ROLES.includes(role)) {
+          return NextResponse.redirect(getStaffUrl(req, dashboardPath));
+        }
+        if (isStaffHost(host) && CLIENT_ROLES.includes(role) && !host.startsWith('localhost')) {
+          return NextResponse.redirect(getClientUrl(req, dashboardPath));
+        }
+        return NextResponse.redirect(new URL(dashboardPath, req.url));
+      }
+    }
+    return NextResponse.redirect(new URL('/login', req.url));
+  }
+
   // Login sahifasiga kirgan foydalanuvchi allaqachon tizimda bo'lsa
   if (path === '/login' && token) {
     const user = await verifyToken(token);
@@ -117,5 +137,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login'],
+  matcher: ['/', '/dashboard/:path*', '/login'],
 };

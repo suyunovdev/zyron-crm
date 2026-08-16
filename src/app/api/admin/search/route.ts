@@ -52,6 +52,8 @@ export async function GET(req: NextRequest) {
             { name: { contains: q } },
             { login: { contains: q } },
             { phone: { contains: q } },
+            // Farzand ismi bo'yicha ham topilsin (o'quvchi ismini yozganда ota-ona chiqadi)
+            { children: { some: { name: { contains: q } } } },
           ],
         },
         select: {

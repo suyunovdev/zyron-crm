@@ -3,10 +3,30 @@
 //   NEXT_PUBLIC_BRAND=zyron  +  NEXT_PUBLIC_BRAND_NAME=Zyron
 // NEXT_PUBLIC_* build-time inline bo'ladi (har nusxa o'z brendini oladi).
 
-const IS_ZYRON = (process.env.NEXT_PUBLIC_BRAND || '').toLowerCase() === 'zyron';
+export const IS_ZYRON = (process.env.NEXT_PUBLIC_BRAND || '').toLowerCase() === 'zyron';
 
 export const BRAND_NAME = process.env.NEXT_PUBLIC_BRAND_NAME || "Aka-Uka Ta'lim Markazi";
 export const BRAND_SHORT = process.env.NEXT_PUBLIC_BRAND_NAME || 'Aka-Uka';
+
+// Ilova manzili (canonical/OG/metadataBase uchun). Har nusxa o'z env'idan,
+// aks holda brendga qarab standart. NEXT_PUBLIC_* build-time inline bo'ladi.
+export const APP_URL =
+  process.env.NEXT_PUBLIC_APP_URL ||
+  (IS_ZYRON ? 'https://zyron-crm.zyron.uz' : 'https://crm.akaukalarmarkazi.uz');
+
+// Brend ranglari — ikonka (ImageResponse), manifest theme_color va viewport uchun.
+// Zyron: cyan→blue gradient; Aka-Uka: klassik ko'k. Logolardan olingan.
+export const BRAND_COLORS = IS_ZYRON
+  ? { primary: '#2563EB', accent: '#06B6D4', ink: '#0F172A' }
+  : { primary: '#2660A4', accent: '#1D4E87', ink: '#0F172A' };
+
+// Ikonka belgisidagi harf (kvadrat tile markazida).
+export const BRAND_INITIAL = IS_ZYRON ? 'Z' : 'A';
+
+// Manifest ikonasi uchun mavjud logo (SVG Zyron / PNG Aka-Uka — ikkalasi ham amal qiladi).
+export const BRAND_MANIFEST_ICON = IS_ZYRON
+  ? { src: '/zyron-mark.svg', type: 'image/svg+xml' }
+  : { src: '/logo-vertical.png', type: 'image/png' };
 
 interface LogoSlot { src: string; w: number; h: number; svg: boolean }
 

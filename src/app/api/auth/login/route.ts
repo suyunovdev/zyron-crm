@@ -11,6 +11,11 @@ const LoginSchema = z.object({
   password: z.string().min(1, 'kiritilishi shart').max(128),
 });
 
+// Timing enumeration'ni to'sish uchun soxta hash: foydalanuvchi topilmasa ham
+// bcrypt taqqoslashi ishlaydi, shunda javob vaqti user bor/yo'qligini oshkor
+// qilmaydi. Bu hash hech qachon mos kelmaydi (tasodifiy urug'dan yasalgan).
+const DUMMY_HASH = '$2b$10$yl3CmOdm8siL14bQnS631e592PTTy3hTCifhYffMMX2HMwa6OBzT6';
+
 export async function POST(req: NextRequest) {
   // Brute-force himoyasi: IP bo'yicha 1 daqiqada 10 urinish
   const ip = getClientIp(req);
@@ -28,7 +33,10 @@ export async function POST(req: NextRequest) {
 
   const user = await prisma.user.findUnique({ where: { login } });
 
-  if (!user || !bcrypt.compareSync(password, user.password)) {
+  // Har doim bcrypt taqqoslashi ishlaydi (user yo'q bo'lsa soxta hash bilan) —
+  // vaqt bo'yicha login enumeration'ning oldini oladi.
+  const passwordOk = bcrypt.compareSync(password, user?.password ?? DUMMY_HASH);
+  if (!user || !passwordOk) {
     return NextResponse.json({ error: 'Login yoki parol noto\'g\'ri' }, { status: 401 });
   }
 

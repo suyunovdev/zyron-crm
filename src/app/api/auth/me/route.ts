@@ -10,7 +10,14 @@ export async function GET() {
   // Avatar/telefon JWT'да yo'q — DB'dan qo'shamiz (profil rasm ko'rsatish uchun)
   const u = await prisma.user.findUnique({
     where: { id: session.id },
-    select: { avatar: true, phone: true },
+    select: { avatar: true, phone: true, telegramChatId: true },
   });
-  return NextResponse.json({ user: { ...session, avatar: u?.avatar ?? null, phone: u?.phone ?? null } });
+  return NextResponse.json({
+    user: {
+      ...session,
+      avatar: u?.avatar ?? null,
+      phone: u?.phone ?? null,
+      telegramLinked: Boolean(u?.telegramChatId),
+    },
+  });
 }

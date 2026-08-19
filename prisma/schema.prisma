@@ -26,6 +26,9 @@ model User {
   branch    Branch?  @relation(fields: [branchId], references: [id])
   salaryShare  Int?     // ustoz uchun: yig'ilgan to'lovdan ulush (%)
   tokenVersion Int   @default(0) // majburiy logout uchun — bumping barcha eski tokenlarni bekor qiladi
+  telegramChatId   String?   @unique // bog'langan Telegram chat/user id (bitta akkaunt = bitta ota-ona)
+  telegramUsername String?   // @username (ko'rsatish uchun, ixtiyoriy)
+  telegramLinkedAt DateTime? // Telegram bog'langan vaqt
   createdAt DateTime @default(now())
 
   teacherGroups Group[]

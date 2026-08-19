@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/skeleton';
 import {
-  Users, Wallet, Clock, CalendarDays, MapPin, Trophy, Medal, Loader2, BookOpen,
+  Users, Wallet, Clock, CalendarDays, MapPin, Trophy, Medal, BookOpen,
 } from 'lucide-react';
 import { fmtDate, fmtDayMonth } from '@/lib/date';
+import { TelegramConnectModal } from '@/components/parent/TelegramConnectModal';
 
 interface LeaderboardEntry {
   rank: number; name: string; present: number; total: number; pct: number;
@@ -27,7 +28,7 @@ interface Child {
   recentLessons: RecentLesson[];
   recentPayments: { amount: number; month: string; method: string; createdAt: string }[];
 }
-interface SessionUser { name: string }
+interface SessionUser { name: string; telegramLinked?: boolean }
 
 const METHOD_LABELS: Record<string, string> = { cash: 'Naqd', card: 'Karta', transfer: "O'tkazma" };
 
@@ -84,6 +85,8 @@ export default function ParentDashboardPage() {
 
   return (
     <div className="space-y-5 max-w-3xl mx-auto">
+      <TelegramConnectModal linked={!!user?.telegramLinked} />
+
       <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
         Assalomu alaykum{firstName ? `, ${firstName}` : ''}
       </h1>

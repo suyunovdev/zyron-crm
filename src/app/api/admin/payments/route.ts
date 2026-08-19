@@ -8,6 +8,9 @@ import { logger } from '@/lib/logger';
 import { getPagination, paginated } from '@/lib/paginate';
 import { logAudit } from '@/lib/audit';
 import { scopedBranchId } from '@/lib/branch-scope';
+import { pushToParent } from '@/lib/tg-notify';
+import { escapeHtml } from '@/lib/telegram';
+import { computeStudentBalance } from '@/lib/billing';
 
 export async function GET(req: NextRequest) {
   try {
@@ -130,6 +133,23 @@ export async function POST(req: NextRequest) {
     link: '/dashboard/admin/payments',
     branchId: student.branchId,
   }).catch(() => {});
+
+  // Avto-push: ota-onaga Telegram xabar — faqat haqiqiy to'lovda (refund/chegirma emas)
+  if (payType === 'payment') {
+    void (async () => {
+      const bal = await computeStudentBalance(studentId).catch(() => null);
+      let balLine = '';
+      if (bal) {
+        balLine = bal.balance < 0
+          ? `\nBalans: −${Math.abs(bal.balance).toLocaleString('ru-RU')} so'm (qarzdorlik)`
+          : `\nBalans: +${bal.balance.toLocaleString('ru-RU')} so'm`;
+      }
+      await pushToParent(
+        studentId,
+        `💰 <b>${escapeHtml(payment.student.name)}</b> uchun ${Math.abs(signedAmount).toLocaleString('ru-RU')} so'm to'lov qabul qilindi (${methodLabel}).${balLine}`,
+      );
+    })();
+  }
 
   return NextResponse.json(payment, { status: 201 });
 }

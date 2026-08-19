@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAuth, attendanceWindow } from '@/lib/api-utils';
 import { parseBody } from '@/lib/validate';
+import { pushToParent } from '@/lib/tg-notify';
+import { escapeHtml } from '@/lib/telegram';
 
 const score = z.coerce.number().int().min(0).max(5).optional();
 const AttendanceSchema = z.object({
@@ -26,7 +28,7 @@ export async function POST(req: NextRequest) {
   // Verify lesson belongs to teacher's group
   const lesson = await prisma.lesson.findUnique({
     where: { id: lessonId },
-    include: { group: { select: { teacherId: true } } },
+    include: { group: { select: { teacherId: true, name: true } } },
   });
 
   if (!lesson || lesson.group.teacherId !== auth.id) {
@@ -57,6 +59,15 @@ export async function POST(req: NextRequest) {
     update: { present, ...scores, markedAt: new Date() },
     create: { lessonId, studentId, present, ...scores },
   });
+
+  // Avto-push: farzand kelmagan bo'lsa ota-onaga Telegram xabar (fire-and-forget)
+  if (!present) {
+    void (async () => {
+      const student = await prisma.user.findUnique({ where: { id: studentId }, select: { name: true } });
+      const name = escapeHtml(student?.name || 'Farzandingiz');
+      await pushToParent(studentId, `❗️ <b>${name}</b> bugungi darsga kelmadi (${escapeHtml(lesson.group.name)}).`);
+    })();
+  }
 
   return NextResponse.json(attendance);
 }

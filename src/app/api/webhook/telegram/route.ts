@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { logger } from '@/lib/logger';
-import { verifyTgLinkToken } from '@/lib/tg-token';
+import { verifyTgLinkToken, clearTgLinkToken } from '@/lib/tg-token';
 import { sendMessage, editMessageText, answerCallbackQuery } from '@/lib/telegram';
 import { getChildrenReport, getChildReport } from '@/lib/parent-report';
 import {
@@ -93,6 +93,9 @@ async function handleStart(msg: TgMessage): Promise<void> {
       return;
     }
   }
+
+  // Bir martalik: token bog'langach bekor qilinadi
+  await clearTgLinkToken(parentId);
 
   const parent = await prisma.user.findUnique({ where: { id: parentId }, select: { name: true } });
   await showChildrenMenu(chatId, parentId, parent?.name || 'Foydalanuvchi', true);

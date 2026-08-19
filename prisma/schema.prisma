@@ -29,6 +29,8 @@ model User {
   telegramChatId   String?   @unique // bog'langan Telegram chat/user id (bitta akkaunt = bitta ota-ona)
   telegramUsername String?   // @username (ko'rsatish uchun, ixtiyoriy)
   telegramLinkedAt DateTime? // Telegram bog'langan vaqt
+  tgLinkToken      String?   @unique // deep-link uchun bir martalik token (Telegram start param: <=64, [A-Za-z0-9_-])
+  tgLinkTokenExp   DateTime? // token amal qilish muddati (15 min)
   createdAt DateTime @default(now())
 
   teacherGroups Group[]

@@ -397,7 +397,7 @@ export default function GroupsPage() {
                                 href={`/dashboard/admin/groups/${group.id}`}
                                 onClick={e => e.stopPropagation()}
                                 title="Guruh davomatini ochish"
-                                className="text-sm font-bold text-slate-800 hover:text-[#2660A4] hover:underline transition-colors"
+                                className="text-sm font-bold text-slate-800 hover:text-[var(--brand-primary)] hover:underline transition-colors"
                               >
                                 {idx + 1}. {group.name}
                               </Link>

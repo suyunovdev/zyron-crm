@@ -5,17 +5,26 @@
    ham dark: klasslar qo'llanardi). */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Brend temasi — har mijoz (instance) o'z rangini oladi. Standart qiymatlar bu
+   yerda; layout.tsx <html> ga BRAND_COLORS'dan haqiqiy qiymatni qo'yadi (generic
+   brendda mijoz nomidan hosil bo'ladi). Butun UI shu uchtaga bog'langan. */
+:root {
+  --brand-primary: #2660A4;
+  --brand-primary-dark: #1d4e87;
+  --brand-primary-light: #3a7bc8;
+}
+
 @theme inline {
-  --color-brand-blue: #2660A4;
-  --color-brand-blue-dark: #1d4e87;
-  --color-brand-blue-light: #3a7bc8;
+  --color-brand-blue: var(--brand-primary);
+  --color-brand-blue-dark: var(--brand-primary-dark);
+  --color-brand-blue-light: var(--brand-primary-light);
   --color-brand-green: #22AA79;
   --color-brand-green-dark: #1a8a62;
   --color-brand-green-light: #2ec48e;
   --color-brand-grey: #7F8080;
-  --color-primary: #2660A4;
-  --color-primary-dark: #1d4e87;
-  --color-primary-light: #3a7bc8;
+  --color-primary: var(--brand-primary);
+  --color-primary-dark: var(--brand-primary-dark);
+  --color-primary-light: var(--brand-primary-light);
   --color-accent: #22AA79;
   --color-surface: #f8fafc;
   --color-surface-dark: #0f172a;
@@ -412,14 +421,14 @@ html.dark .glass {
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #2660A4, #22AA79);
+  background: linear-gradient(135deg, var(--brand-primary), #22AA79);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .gradient-bg {
-  background: linear-gradient(135deg, #2660A4, #22AA79);
+  background: linear-gradient(135deg, var(--brand-primary), #22AA79);
 }
 
 .hero-gradient {

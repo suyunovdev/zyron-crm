@@ -544,14 +544,14 @@ export default function AdminGroupDetailPage() {
         <span className="text-sm text-slate-500 flex items-center gap-1.5"><CalendarPlus className="w-4 h-4" /> Darslarni yarat:</span>
         <input type="date" value={fromDate}
           onChange={e => setFromDate(e.target.value)}
-          className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+          className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
         <span className="text-sm text-slate-400">dan</span>
         <input type="date" value={untilDate} min={fromDate || lastLessonDate || undefined}
           onChange={e => setUntilDate(e.target.value)}
-          className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+          className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
         <span className="text-sm text-slate-400">gacha</span>
         <button onClick={generateUntil} disabled={busy || !untilDate}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2660A4] text-white text-xs font-semibold hover:bg-[#1d4e87] disabled:opacity-60">
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--brand-primary)] text-white text-xs font-semibold hover:bg-[var(--brand-primary-dark)] disabled:opacity-60">
           {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CalendarPlus className="w-3.5 h-3.5" />} Yaratish
         </button>
         <span className="text-xs text-slate-400 ml-auto">
@@ -568,12 +568,12 @@ export default function AdminGroupDetailPage() {
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={`px-5 py-3 text-sm font-medium transition-all relative ${
-                  activeTab === tab.key ? 'text-[#2660A4]' : 'text-slate-400 hover:text-slate-600'
+                  activeTab === tab.key ? 'text-[var(--brand-primary)]' : 'text-slate-400 hover:text-slate-600'
                 }`}
               >
                 {tab.label}
                 {activeTab === tab.key && (
-                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#2660A4] rounded-t" />
+                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[var(--brand-primary)] rounded-t" />
                 )}
               </button>
             ))}
@@ -598,7 +598,7 @@ export default function AdminGroupDetailPage() {
                       className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all border ${
                         isCurrent
                           ? isCurrentMonth
-                            ? 'bg-[#2660A4] text-white border-[#2660A4]'
+                            ? 'bg-[var(--brand-primary)] text-white border-[var(--brand-primary)]'
                             : 'bg-slate-800 text-white border-slate-800'
                           : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700 bg-white'
                       }`}
@@ -661,7 +661,7 @@ export default function AdminGroupDetailPage() {
                               </div>
                               <div className="flex items-center gap-2 min-w-0">
                                 <span
-                                  className="text-sm text-slate-800 truncate cursor-pointer hover:text-[#2660A4]"
+                                  className="text-sm text-slate-800 truncate cursor-pointer hover:text-[var(--brand-primary)]"
                                   onClick={() => router.push(`/dashboard/admin/students/${student.id}`)}
                                 >
                                   <span className="font-bold">{student.name.split(' ')[0]}</span>
@@ -748,7 +748,7 @@ export default function AdminGroupDetailPage() {
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800">
               {!addOpen ? (
                 <button onClick={() => { setEditId(null); setAddOpen(true); }}
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#2660A4] hover:underline">
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)] hover:underline">
                   <Plus className="w-4 h-4" /> Yangi dars qo&apos;shish
                 </button>
               ) : (
@@ -773,7 +773,7 @@ export default function AdminGroupDetailPage() {
                   </div>
                   <div className="flex gap-2">
                     <button onClick={addLesson} disabled={busy || !addForm.scheduledDate}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-[#2660A4] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
                       {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Qo&apos;shish
                     </button>
                     <button onClick={() => setAddOpen(false)}
@@ -795,7 +795,7 @@ export default function AdminGroupDetailPage() {
                   return (
                     <div key={lesson.id} className={`px-6 py-4 flex items-start gap-4 ${isToday ? 'bg-blue-50/30' : 'hover:bg-slate-50/50'} transition-colors`}>
                       <div className={`w-11 h-11 rounded-lg flex flex-col items-center justify-center flex-shrink-0 ${
-                        isToday ? 'bg-[#2660A4] text-white' : 'bg-slate-100 text-slate-600'
+                        isToday ? 'bg-[var(--brand-primary)] text-white' : 'bg-slate-100 text-slate-600'
                       }`}>
                         <span className="text-base font-bold leading-none">{d}</span>
                         <span className="text-[9px] uppercase leading-none mt-0.5">{MONTHS_UZ[m - 1]}</span>
@@ -823,7 +823,7 @@ export default function AdminGroupDetailPage() {
                           </div>
                           <div className="flex gap-2">
                             <button onClick={saveLesson} disabled={busy || !editForm.scheduledDate}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-[#2660A4] px-3 py-2 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3 py-2 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
                               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Saqlash
                             </button>
                             <button onClick={() => setEditId(null)}
@@ -834,7 +834,7 @@ export default function AdminGroupDetailPage() {
                         <>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs font-bold text-[#2660A4]">{lesson.order}-dars</span>
+                              <span className="text-xs font-bold text-[var(--brand-primary)]">{lesson.order}-dars</span>
                               <span className="text-xs text-slate-400 flex items-center gap-1">
                                 <Clock className="w-3 h-3" /> {lesson.scheduledTime} · {lesson.duration}
                               </span>
@@ -859,7 +859,7 @@ export default function AdminGroupDetailPage() {
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
                             <button onClick={() => startEdit(lesson)} title="Tahrirlash"
-                              className="p-2 rounded-lg text-slate-400 hover:text-[#2660A4] hover:bg-slate-100">
+                              className="p-2 rounded-lg text-slate-400 hover:text-[var(--brand-primary)] hover:bg-slate-100">
                               <Pencil className="w-4 h-4" />
                             </button>
                             <button onClick={() => deleteLesson(lesson)} title="O'chirish"
@@ -887,7 +887,7 @@ export default function AdminGroupDetailPage() {
               </label>
               <div className="mt-1.5 flex items-center gap-2">
                 <select value={pendingTeacherId} onChange={e => setPendingTeacherId(e.target.value)} disabled={busy}
-                  className="flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20 disabled:opacity-60">
+                  className="flex-1 rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20 disabled:opacity-60">
                   <option value="">Tanlanmagan</option>
                   {allTeachers.map(t => (
                     <option key={t.id} value={t.id}>{t.name}{t.subject ? ` — ${t.subject}` : ''}</option>
@@ -895,7 +895,7 @@ export default function AdminGroupDetailPage() {
                 </select>
                 <button onClick={saveMentor}
                   disabled={busy || !pendingTeacherId || pendingTeacherId === (group.teacher?.id || '')}
-                  className="flex items-center gap-1.5 rounded-lg bg-[#2660A4] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap">
+                  className="flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap">
                   {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Saqlash
                 </button>
               </div>
@@ -910,7 +910,7 @@ export default function AdminGroupDetailPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="Ism yoki telefon bo'yicha qidiring..."
-                  className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                  className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
               </div>
               {search.trim() && (
                 <div className="mt-2 rounded-xl border border-slate-200 divide-y divide-slate-100 max-h-60 overflow-y-auto">
@@ -918,11 +918,11 @@ export default function AdminGroupDetailPage() {
                     <p className="px-3 py-3 text-sm text-slate-400 text-center">Topilmadi (yoki allaqachon guruhda)</p>
                   ) : searchResults.map(s => (
                     <button key={s.id} onClick={() => addStudent(s.id)} disabled={busy}
-                      className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-[#2660A4]/[0.06] text-left disabled:opacity-60">
+                      className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-[var(--brand-primary)]/[0.06] text-left disabled:opacity-60">
                       <span className="text-sm text-slate-800">
                         {s.name}{s.phone && <span className="text-xs text-slate-400 ml-2">{s.phone}</span>}
                       </span>
-                      <Plus className="w-4 h-4 text-[#2660A4] flex-shrink-0" />
+                      <Plus className="w-4 h-4 text-[var(--brand-primary)] flex-shrink-0" />
                     </button>
                   ))}
                 </div>
@@ -940,7 +940,7 @@ export default function AdminGroupDetailPage() {
                   <div key={student.id} className="flex items-center justify-between px-4 py-2.5">
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="text-xs text-slate-400 w-5">{i + 1}.</span>
-                      <span className="text-sm font-medium text-slate-800 truncate cursor-pointer hover:text-[#2660A4]"
+                      <span className="text-sm font-medium text-slate-800 truncate cursor-pointer hover:text-[var(--brand-primary)]"
                         onClick={() => router.push(`/dashboard/admin/students/${student.id}`)}>{student.name}</span>
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded flex-shrink-0 ${
                         student.status === 'active' ? 'bg-emerald-100 text-emerald-700' : student.status === 'frozen' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'
@@ -972,19 +972,19 @@ export default function AdminGroupDetailPage() {
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Guruh nomi</label>
                   <input value={groupForm.name} onChange={e => setGroupForm(f => ({ ...f, name: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Fan / Yo&apos;nalish</label>
                   <input value={groupForm.subject} onChange={e => setGroupForm(f => ({ ...f, subject: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Dars kunlari</label>
                   <select value={groupForm.dayType} onChange={e => setGroupForm(f => ({ ...f, dayType: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20">
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20">
                     <option value="toq">Toq (Dush/Chor/Jum)</option>
                     <option value="juft">Juft (Sesh/Pay/Shan)</option>
                     <option value="boshqa">Boshqa</option>
@@ -993,14 +993,14 @@ export default function AdminGroupDetailPage() {
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Dars vaqti</label>
                   <input type="time" value={groupForm.time} onChange={e => setGroupForm(f => ({ ...f, time: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Dars davomiyligi</label>
                   <select value={groupForm.duration} onChange={e => setGroupForm(f => ({ ...f, duration: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20">
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20">
                     <option value="1.5 soat">1.5 soat</option>
                     <option value="2 soat">2 soat</option>
                     <option value="2.5 soat">2.5 soat</option>
@@ -1010,12 +1010,12 @@ export default function AdminGroupDetailPage() {
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Dars xonasi</label>
                   <input value={groupForm.room} onChange={e => setGroupForm(f => ({ ...f, room: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Turi</label>
                   <select value={groupForm.mode} onChange={e => setGroupForm(f => ({ ...f, mode: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20">
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20">
                     <option value="offline">Offline</option>
                     <option value="online">Online</option>
                   </select>
@@ -1025,29 +1025,29 @@ export default function AdminGroupDetailPage() {
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Narx (so&apos;m)</label>
                   <input type="number" value={groupForm.price} onChange={e => setGroupForm(f => ({ ...f, price: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Maks. o&apos;quvchi</label>
                   <input type="number" value={groupForm.maxStudents} onChange={e => setGroupForm(f => ({ ...f, maxStudents: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Oyiga dars</label>
                   <input type="number" value={groupForm.lessonsPerMonth} onChange={e => setGroupForm(f => ({ ...f, lessonsPerMonth: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Boshlanish sanasi</label>
                   <input type="date" value={groupForm.startDate} onChange={e => setGroupForm(f => ({ ...f, startDate: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Holati</label>
                   <select value={groupForm.status} onChange={e => setGroupForm(f => ({ ...f, status: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20">
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20">
                     <option value="active">Aktiv</option>
                     <option value="archived">Arxiv</option>
                   </select>
@@ -1057,7 +1057,7 @@ export default function AdminGroupDetailPage() {
             <div className="flex gap-2 justify-end px-5 py-3 bg-slate-50 border-t border-slate-100">
               <button onClick={() => setShowEditGroup(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Bekor</button>
               <button onClick={saveGroupEdit} disabled={savingGroup}
-                className="flex items-center gap-1.5 rounded-lg bg-[#2660A4] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
+                className="flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
                 {savingGroup ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Saqlash
               </button>
             </div>

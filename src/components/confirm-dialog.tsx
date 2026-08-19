@@ -85,7 +85,7 @@ export function ConfirmDialog() {
           <button
             autoFocus={!p.danger}
             onClick={() => close(true)}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold text-white ${p.danger ? 'bg-red-600 hover:bg-red-700' : 'bg-[#2660A4] hover:bg-[#1f4f88]'}`}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold text-white ${p.danger ? 'bg-red-600 hover:bg-red-700' : 'bg-[var(--brand-primary)] hover:bg-[#1f4f88]'}`}
           >
             {p.confirmText || 'Ha'}
           </button>

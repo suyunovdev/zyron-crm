@@ -27,7 +27,7 @@ export default function SystemPage() {
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              tab === t.id ? 'bg-[#2660A4] text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+              tab === t.id ? 'bg-[var(--brand-primary)] text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
             <t.icon className="w-4 h-4" /> {t.label}
           </button>
         ))}

@@ -47,28 +47,28 @@ export default function TicketsView({ canCreate = false }: { canCreate?: boolean
     <div className="max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-          <TicketIcon className="w-6 h-6 text-[#2660A4]" /> Ticketlar
+          <TicketIcon className="w-6 h-6 text-[var(--brand-primary)]" /> Ticketlar
         </h1>
         {canCreate && (
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#2660A4] text-white text-sm font-medium hover:bg-[#1d4e87]">
+          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[var(--brand-primary)] text-white text-sm font-medium hover:bg-[var(--brand-primary-dark)]">
             <Plus className="w-4 h-4" /> Yangi ticket
           </button>
         )}
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-[#2660A4]" /></div>
+        <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-[var(--brand-primary)]" /></div>
       ) : tickets.length === 0 ? (
         <div className="text-center py-16 text-sm text-slate-400">Ticket yo&apos;q</div>
       ) : (
         <div className="space-y-2">
           {tickets.map(t => (
             <button key={t.id} onClick={() => openTicket(t.id)}
-              className={`w-full text-left rounded-xl border bg-white p-4 hover:border-[#2660A4]/40 transition-colors ${t.unread ? 'border-[#2660A4]/50' : 'border-slate-200'}`}>
+              className={`w-full text-left rounded-xl border bg-white p-4 hover:border-[var(--brand-primary)]/40 transition-colors ${t.unread ? 'border-[var(--brand-primary)]/50' : 'border-slate-200'}`}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    {t.unread && <CircleDot className="w-3.5 h-3.5 text-[#2660A4] shrink-0" />}
+                    {t.unread && <CircleDot className="w-3.5 h-3.5 text-[var(--brand-primary)] shrink-0" />}
                     <span className="font-semibold text-slate-800 truncate">{t.subject}</span>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5 truncate">{t.lastMessage}</p>
@@ -141,7 +141,7 @@ function ThreadView({ ticket, onBack, onChange }: { ticket: TicketDetail; onBack
           const fromTeacher = m.senderRole === 'teacher';
           return (
             <div key={m.id} className={`flex ${(ticket.myRole === 'author' ? fromTeacher : !fromTeacher) ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${(ticket.myRole === 'author' ? fromTeacher : !fromTeacher) ? 'bg-[#2660A4] text-white' : 'bg-white border border-slate-200 text-slate-800'}`}>
+              <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${(ticket.myRole === 'author' ? fromTeacher : !fromTeacher) ? 'bg-[var(--brand-primary)] text-white' : 'bg-white border border-slate-200 text-slate-800'}`}>
                 <p className="text-[11px] opacity-70 mb-0.5">{m.senderName} • {timeAgo(m.createdAt)}</p>
                 <p className="text-sm whitespace-pre-wrap">{m.body}</p>
               </div>
@@ -152,9 +152,9 @@ function ThreadView({ ticket, onBack, onChange }: { ticket: TicketDetail; onBack
 
       <div className="flex gap-2 items-end sticky bottom-0 bg-transparent">
         <textarea value={reply} onChange={e => setReply(e.target.value)} rows={2} placeholder="Javob yozing..."
-          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/30" />
+          className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30" />
         <button onClick={send} disabled={sending || !reply.trim()}
-          className="p-3 rounded-lg bg-[#2660A4] text-white hover:bg-[#1d4e87] disabled:opacity-50">
+          className="p-3 rounded-lg bg-[var(--brand-primary)] text-white hover:bg-[var(--brand-primary-dark)] disabled:opacity-50">
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         </button>
       </div>
@@ -195,7 +195,7 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
     onCreated();
   };
 
-  const inputCls = 'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/30';
+  const inputCls = 'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -212,7 +212,7 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
             <div className="flex gap-2 mt-1">
               {(['admin', 'parent'] as const).map(rt => (
                 <button key={rt} onClick={() => setRecipientType(rt)}
-                  className={`flex-1 rounded-lg border px-3 py-2 text-sm ${recipientType === rt ? 'border-[#2660A4] bg-[#2660A4]/5 text-[#2660A4] font-medium' : 'border-slate-200 text-slate-600'}`}>
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm ${recipientType === rt ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/5 text-[var(--brand-primary)] font-medium' : 'border-slate-200 text-slate-600'}`}>
                   {rt === 'admin' ? 'Admin' : 'Ota-ona'}
                 </button>
               ))}
@@ -252,7 +252,7 @@ function CreateModal({ onClose, onCreated }: { onClose: () => void; onCreated: (
         </div>
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200">
           <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100">Bekor</button>
-          <button onClick={submit} disabled={saving} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2660A4] text-white text-sm font-medium hover:bg-[#1d4e87] disabled:opacity-60">
+          <button onClick={submit} disabled={saving} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--brand-primary)] text-white text-sm font-medium hover:bg-[var(--brand-primary-dark)] disabled:opacity-60">
             {saving && <Loader2 className="w-4 h-4 animate-spin" />} Yuborish
           </button>
         </div>

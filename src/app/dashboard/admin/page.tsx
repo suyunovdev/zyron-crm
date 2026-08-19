@@ -235,7 +235,7 @@ export default function AdminDashboardPage() {
                   const barColor = rate >= 80 ? 'bg-emerald-500' : rate >= 50 ? 'bg-amber-500' : 'bg-red-500';
                   const rateColor = rate >= 80 ? 'text-emerald-600' : rate >= 50 ? 'text-amber-600' : 'text-red-600';
                   return (
-                    <Link key={b.id} href={`/dashboard/admin/system/branches/${b.id}`} className="block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-[#2660A4]/40 transition-all">
+                    <Link key={b.id} href={`/dashboard/admin/system/branches/${b.id}`} className="block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-[var(--brand-primary)]/40 transition-all">
                       <div className="flex items-start justify-between gap-2 mb-4">
                         <p className="font-bold text-slate-900 truncate">{b.name}</p>
                         <span className={`text-sm font-bold ${rateColor} shrink-0`}>{rate}%</span>
@@ -284,7 +284,7 @@ export default function AdminDashboardPage() {
 
           {/* ── Small stat cards row ── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link href="/dashboard/admin/students?status=archived" className="block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-[#2660A4]/40 transition-all">
+            <Link href="/dashboard/admin/students?status=archived" className="block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-[var(--brand-primary)]/40 transition-all">
               <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
                 <UserX className="w-4 h-4" />
                 Ketgan o&apos;quvchilar
@@ -295,7 +295,7 @@ export default function AdminDashboardPage() {
               </div>
             </Link>
 
-            <Link href="/dashboard/admin/students?status=frozen" className="block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-[#2660A4]/40 transition-all">
+            <Link href="/dashboard/admin/students?status=frozen" className="block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-[var(--brand-primary)]/40 transition-all">
               <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
                 <Snowflake className="w-4 h-4" />
                 Muzlatilgan
@@ -306,7 +306,7 @@ export default function AdminDashboardPage() {
               </div>
             </Link>
 
-            <Link href="/dashboard/admin/teachers" className="block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-[#2660A4]/40 transition-all">
+            <Link href="/dashboard/admin/teachers" className="block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-[var(--brand-primary)]/40 transition-all">
               <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
                 <UserPlus className="w-4 h-4" />
                 O&apos;qituvchilar
@@ -317,7 +317,7 @@ export default function AdminDashboardPage() {
               </div>
             </Link>
 
-            <Link href="/dashboard/admin/groups" className="block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-[#2660A4]/40 transition-all">
+            <Link href="/dashboard/admin/groups" className="block bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-[var(--brand-primary)]/40 transition-all">
               <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
                 <FolderOpen className="w-4 h-4" />
                 Guruhlar
@@ -343,7 +343,7 @@ export default function AdminDashboardPage() {
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
                 {unfilledGroups.map(group => (
                   <Link key={group.id} href={`/dashboard/admin/groups/${group.id}`}
-                    className="border border-slate-200 rounded-xl p-4 block hover:shadow-md hover:border-[#2660A4]/40 transition-all">
+                    className="border border-slate-200 rounded-xl p-4 block hover:shadow-md hover:border-[var(--brand-primary)]/40 transition-all">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-bold text-emerald-600 uppercase">{group.subject}</span>
                       <span className="text-xs text-slate-400">{group.name}</span>

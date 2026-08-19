@@ -136,7 +136,7 @@ function ReportModal({ open, onClose, theme }: { open: boolean; onClose: () => v
     if (loading) {
       return (
         <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-6 h-6 animate-spin text-[#2660A4]" />
+          <Loader2 className="w-6 h-6 animate-spin text-[var(--brand-primary)]" />
           <span className={`ml-2 text-sm ${textSecondary}`}>Yuklanmoqda...</span>
         </div>
       );
@@ -480,17 +480,17 @@ function ReportModal({ open, onClose, theme }: { open: boolean; onClose: () => v
               type="month"
               value={month}
               onChange={e => setMonth(e.target.value)}
-              className={`w-full rounded-lg border pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2660A4]/30 ${inputBg}`}
+              className={`w-full rounded-lg border pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 ${inputBg}`}
             />
           </div>
           <div ref={dropdownRef} className="relative flex-1">
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              className={`w-full flex items-center justify-between rounded-lg border px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#2660A4]/30 ${inputBg} ${
-                dropdownOpen ? 'ring-2 ring-[#2660A4]/30' : ''
+              className={`w-full flex items-center justify-between rounded-lg border px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 ${inputBg} ${
+                dropdownOpen ? 'ring-2 ring-[var(--brand-primary)]/30' : ''
               }`}
             >
-              <span className={category === 'finance' ? 'text-[#2660A4] font-semibold' : ''}>{selectedLabel}</span>
+              <span className={category === 'finance' ? 'text-[var(--brand-primary)] font-semibold' : ''}>{selectedLabel}</span>
               {dropdownOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
             </button>
             {dropdownOpen && (
@@ -501,7 +501,7 @@ function ReportModal({ open, onClose, theme }: { open: boolean; onClose: () => v
                     onClick={() => { setCategory(c.value); setDropdownOpen(false); }}
                     className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
                       category === c.value
-                        ? 'text-[#2660A4] font-semibold'
+                        ? 'text-[var(--brand-primary)] font-semibold'
                         : `${textPrimary} ${isDark ? 'hover:bg-[#334155]' : 'hover:bg-slate-50'}`
                     }`}
                   >
@@ -523,7 +523,7 @@ function ReportModal({ open, onClose, theme }: { open: boolean; onClose: () => v
           <div className={`flex items-center justify-end px-6 py-3 border-t ${borderColor}`}>
             <button
               onClick={downloadReport}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2660A4] text-white text-sm font-medium hover:bg-[#1d4e87] transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--brand-primary)] text-white text-sm font-medium hover:bg-[var(--brand-primary-dark)] transition-colors"
             >
               <Download className="w-4 h-4" />
               Yuklab olish (CSV)
@@ -735,10 +735,10 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
                   onClick={(e) => handleNavClick(item, e)}
                   className={`flex flex-col items-center gap-1.5 py-2.5 px-1 rounded-xl text-center transition-all ${
                     isActive
-                      ? theme === 'dark' ? 'bg-[#2660A4]/25 text-white' : 'bg-[#2660A4]/10 text-[#2660A4] font-semibold'
+                      ? theme === 'dark' ? 'bg-[var(--brand-primary)]/25 text-white' : 'bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] font-semibold'
                       : theme === 'dark'
                         ? 'text-slate-400 hover:bg-[#1e293b] hover:text-slate-200'
-                        : 'text-[#2660A4] hover:bg-[#2660A4]/[0.07]'
+                        : 'text-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/[0.07]'
                   }`}
                 >
                   <div className="relative">
@@ -825,7 +825,7 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
         )}
         {/* Top bar */}
         <header className={`flex-shrink-0 z-20 h-14 flex items-center justify-between px-4 lg:px-6 ${
-          theme === 'dark' ? 'bg-[#111e34] border-b border-[#1e3556]' : 'bg-[#2660A4]'
+          theme === 'dark' ? 'bg-[#111e34] border-b border-[#1e3556]' : 'bg-[var(--brand-primary)]'
         }`}>
           {/* Mobile menu (only if sidebar exists) */}
           {hasSidebar ? (

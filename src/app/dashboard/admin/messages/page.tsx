@@ -98,7 +98,7 @@ export default function AdminMessagesPage() {
   return (
     <div className="max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2 mb-4">
-        <MessageSquare className="w-6 h-6 text-[#2660A4]" /> Ota-onalarga xabar
+        <MessageSquare className="w-6 h-6 text-[var(--brand-primary)]" /> Ota-onalarga xabar
       </h1>
 
       {/* Tabs */}
@@ -106,8 +106,8 @@ export default function AdminMessagesPage() {
         {([['send', 'Yuborish'], ['history', 'Tarix']] as const).map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
             className={`pb-2.5 text-sm font-semibold border-b-2 transition-colors ${
-              tab === k ? 'border-[#2660A4] text-[#2660A4]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
-            {label}{k === 'send' && selected.size > 0 && <span className="ml-1.5 text-xs bg-[#2660A4] text-white rounded-full px-1.5">{selected.size}</span>}
+              tab === k ? 'border-[var(--brand-primary)] text-[var(--brand-primary)]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
+            {label}{k === 'send' && selected.size > 0 && <span className="ml-1.5 text-xs bg-[var(--brand-primary)] text-white rounded-full px-1.5">{selected.size}</span>}
           </button>
         ))}
       </div>
@@ -120,15 +120,15 @@ export default function AdminMessagesPage() {
               <h2 className="text-base font-bold text-slate-900">Xabar</h2>
               <p className="text-xs text-slate-400 mt-0.5">O&apos;ngdan o&apos;quvchilarni belgilang</p>
             </div>
-            <div className={`rounded-lg px-3 py-2.5 text-sm font-medium ${selected.size > 0 ? 'bg-[#2660A4]/10 text-[#2660A4]' : 'bg-slate-50 text-slate-400'}`}>
+            <div className={`rounded-lg px-3 py-2.5 text-sm font-medium ${selected.size > 0 ? 'bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]' : 'bg-slate-50 text-slate-400'}`}>
               {selected.size > 0 ? `${selected.size} o'quvchi tanlandi` : 'O\'quvchi tanlanmagan'}
             </div>
             <textarea value={body} onChange={e => setBody(e.target.value)} rows={6} placeholder="Xabar matni..."
-              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400">{body.length} belgi</span>
               <button onClick={send} disabled={sending || selected.size === 0}
-                className="flex items-center gap-1.5 rounded-lg bg-[#2660A4] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
+                className="flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
                 {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} Yuborish
               </button>
             </div>
@@ -142,7 +142,7 @@ export default function AdminMessagesPage() {
                 <div className="relative flex-1 min-w-[180px]">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Qidirish..."
-                    className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                    className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -150,7 +150,7 @@ export default function AdminMessagesPage() {
                   const active = statusFilter === c.value;
                   const cls = c.danger
                     ? (active ? 'border-red-400 bg-red-50 text-red-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50')
-                    : (active ? 'border-[#2660A4] bg-[#2660A4]/5 text-[#2660A4]' : 'border-slate-200 text-slate-500 hover:bg-slate-50');
+                    : (active ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)]/5 text-[var(--brand-primary)]' : 'border-slate-200 text-slate-500 hover:bg-slate-50');
                   return (
                     <button key={c.value} onClick={() => setStatusFilter(c.value)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${cls}`}>
@@ -163,7 +163,7 @@ export default function AdminMessagesPage() {
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
                   <input type="checkbox" checked={allSelected} onChange={toggleAll}
-                    className="w-4 h-4 rounded accent-[#2660A4]" disabled={selectableIds.length === 0} />
+                    className="w-4 h-4 rounded accent-[var(--brand-primary)]" disabled={selectableIds.length === 0} />
                   Barchasini tanlash <span className="text-xs text-slate-400">({filtered.length})</span>
                 </label>
                 {selected.size > 0 && (
@@ -183,9 +183,9 @@ export default function AdminMessagesPage() {
                   const checked = selected.has(s.id);
                   return (
                     <label key={s.id} className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
-                      !s.hasParent ? 'opacity-50 cursor-not-allowed' : checked ? 'bg-[#2660A4]/5' : 'hover:bg-slate-50/70'}`}>
+                      !s.hasParent ? 'opacity-50 cursor-not-allowed' : checked ? 'bg-[var(--brand-primary)]/5' : 'hover:bg-slate-50/70'}`}>
                       <input type="checkbox" checked={checked} disabled={!s.hasParent} onChange={() => toggle(s.id)}
-                        className="w-4 h-4 rounded accent-[#2660A4] flex-shrink-0" />
+                        className="w-4 h-4 rounded accent-[var(--brand-primary)] flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-semibold text-slate-800 truncate">{s.name}</span>

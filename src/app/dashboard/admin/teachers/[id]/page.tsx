@@ -152,7 +152,7 @@ export default function TeacherProfilePage() {
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             {/* Avatar */}
-            <div className="w-16 h-16 bg-gradient-to-br from-[#2660A4] to-[#22AA79] rounded-2xl flex items-center justify-center flex-shrink-0">
+            <div className="w-16 h-16 bg-gradient-to-br from-[var(--brand-primary)] to-[#22AA79] rounded-2xl flex items-center justify-center flex-shrink-0">
               <span className="text-white text-2xl font-bold">
                 {teacher.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
               </span>
@@ -247,14 +247,14 @@ export default function TeacherProfilePage() {
           <button
             onClick={() => setActiveTab('groups')}
             className={`pb-2.5 text-sm font-semibold border-b-2 transition-colors ${
-              activeTab === 'groups' ? 'border-[#2660A4] text-[#2660A4]' : 'border-transparent text-slate-400 hover:text-slate-600'
+              activeTab === 'groups' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)]' : 'border-transparent text-slate-400 hover:text-slate-600'
             }`}>
             Guruhlar ({activeGroups.length})
           </button>
           <button
             onClick={() => setActiveTab('history')}
             className={`pb-2.5 text-sm font-semibold border-b-2 transition-colors ${
-              activeTab === 'history' ? 'border-[#2660A4] text-[#2660A4]' : 'border-transparent text-slate-400 hover:text-slate-600'
+              activeTab === 'history' ? 'border-[var(--brand-primary)] text-[var(--brand-primary)]' : 'border-transparent text-slate-400 hover:text-slate-600'
             }`}>
             Guruhlar tarixi ({archivedGroups.length})
           </button>
@@ -284,7 +284,7 @@ export default function TeacherProfilePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {activeGroups.map((g, idx) => (
               <div key={g.id} onClick={() => router.push(`/dashboard/admin/groups/${g.id}`)}
-                className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-[#2660A4]/40 transition-all cursor-pointer">
+                className="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-[var(--brand-primary)]/40 transition-all cursor-pointer">
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <h3 className="text-sm font-bold text-slate-900">{idx + 1}.{g.name}</h3>
@@ -387,18 +387,18 @@ export default function TeacherProfilePage() {
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Ism</label>
                 <input value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Telefon</label>
                   <input value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Daraja</label>
                   <select value={editForm.level} onChange={e => setEditForm(f => ({ ...f, level: e.target.value }))}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20">
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20">
                     <option value="">—</option>
                     <option value="junior">Junior</option>
                     <option value="middle">Middle</option>
@@ -409,19 +409,19 @@ export default function TeacherProfilePage() {
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Fan / Yo&apos;nalish</label>
                 <input value={editForm.subject} onChange={e => setEditForm(f => ({ ...f, subject: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Yangi parol (ixtiyoriy)</label>
                 <input value={editForm.password} onChange={e => setEditForm(f => ({ ...f, password: e.target.value }))}
                   placeholder="O'zgartirmaslik uchun bo'sh qoldiring"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
               </div>
             </div>
             <div className="flex gap-2 justify-end px-5 py-3 bg-slate-50 border-t border-slate-100">
               <button onClick={() => setShowEdit(false)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Bekor</button>
               <button onClick={saveEdit} disabled={saving}
-                className="flex items-center gap-1.5 rounded-lg bg-[#2660A4] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
+                className="flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Saqlash
               </button>
             </div>

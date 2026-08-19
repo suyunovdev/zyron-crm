@@ -41,7 +41,7 @@ export function Donut({ data, size = 150 }: { data: { label: string; value: numb
 }
 
 // ── Gorizontal bar diagramma ──
-export function Bars({ data, color = '#2660A4', unit = '' }: { data: { label: string; value: number }[]; color?: string; unit?: string }) {
+export function Bars({ data, color = 'var(--brand-primary)', unit = '' }: { data: { label: string; value: number }[]; color?: string; unit?: string }) {
   const max = Math.max(1, ...data.map(d => d.value));
   if (data.length === 0) return <p className="text-sm text-slate-400 text-center py-6">Ma&apos;lumot yo&apos;q</p>;
   return (
@@ -61,7 +61,7 @@ export function Bars({ data, color = '#2660A4', unit = '' }: { data: { label: st
 
 // ── Chiziq/maydon (area) diagramma — oylar bo'yicha trend ──
 export function LineArea({
-  data, color = '#2660A4', unit = '', height = 200, valueFmt,
+  data, color = 'var(--brand-primary)', unit = '', height = 200, valueFmt,
 }: { data: { label: string; value: number }[]; color?: string; unit?: string; height?: number; valueFmt?: (n: number) => string }) {
   if (data.length === 0) return <p className="text-sm text-slate-400 text-center py-6">Ma&apos;lumot yo&apos;q</p>;
   const W = 560, H = height, padL = 8, padR = 8, padT = 16, padB = 26;

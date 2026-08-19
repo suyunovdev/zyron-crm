@@ -358,7 +358,7 @@ export default function LeadsPage() {
                         {lead.name}{lead.surname ? ` ${lead.surname}` : ''}
                       </td>
                       <td className="px-5 py-3.5 text-sm text-slate-600">
-                        <a href={`tel:${lead.phone}`} className="hover:text-[#2660A4] flex items-center gap-1">
+                        <a href={`tel:${lead.phone}`} className="hover:text-[var(--brand-primary)] flex items-center gap-1">
                           <Phone className="w-3.5 h-3.5" />
                           {lead.phone}
                         </a>

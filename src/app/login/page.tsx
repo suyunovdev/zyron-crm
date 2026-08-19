@@ -107,7 +107,7 @@ export default function LoginPage() {
           </div>
 
           <div className="flex-1 flex flex-col justify-center w-full max-w-sm mx-auto md:mx-0">
-            <span className="inline-flex items-center gap-1.5 self-start text-[11px] font-semibold text-[#2660A4] bg-[#2660A4]/10 px-2.5 py-1 rounded-full mb-3">
+            <span className="inline-flex items-center gap-1.5 self-start text-[11px] font-semibold text-[var(--brand-primary)] bg-[var(--brand-primary)]/10 px-2.5 py-1 rounded-full mb-3">
               <c.Icon className="w-3.5 h-3.5" /> {c.badge}
             </span>
             <h1 className="text-2xl font-bold text-slate-900 mb-1.5">Xush kelibsiz</h1>
@@ -134,7 +134,7 @@ export default function LoginPage() {
                   value={login}
                   onChange={(e) => setLogin(e.target.value)}
                   placeholder="Loginingizni kiriting"
-                  className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-[#2660A4] focus:ring-2 focus:ring-[#2660A4]/20 outline-none transition-all text-slate-900"
+                  className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20 outline-none transition-all text-slate-900"
                   required
                 />
               </div>
@@ -152,7 +152,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Parolni kiriting"
-                    className="w-full px-4 pr-12 py-3 rounded-lg border border-slate-200 focus:border-[#2660A4] focus:ring-2 focus:ring-[#2660A4]/20 outline-none transition-all text-slate-900"
+                    className="w-full px-4 pr-12 py-3 rounded-lg border border-slate-200 focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20 outline-none transition-all text-slate-900"
                     required
                   />
                   <button
@@ -169,7 +169,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#2660A4] text-white py-3.5 rounded-lg font-bold text-base hover:bg-[#1d4e87] transition-all shadow-lg shadow-[#2660A4]/25 disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full bg-[var(--brand-primary)] text-white py-3.5 rounded-lg font-bold text-base hover:bg-[var(--brand-primary-dark)] transition-all shadow-lg shadow-[var(--brand-primary)]/25 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -194,9 +194,9 @@ export default function LoginPage() {
                       type="button"
                       onClick={() => demoLogin(a.login, a.pass)}
                       disabled={loading}
-                      className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl border border-slate-200 hover:border-[#2660A4] hover:bg-[#2660A4]/5 transition-all disabled:opacity-60"
+                      className="flex flex-col items-center gap-1 px-2 py-3 rounded-xl border border-slate-200 hover:border-[var(--brand-primary)] hover:bg-[var(--brand-primary)]/5 transition-all disabled:opacity-60"
                     >
-                      <a.Icon className="w-5 h-5 text-[#2660A4]" />
+                      <a.Icon className="w-5 h-5 text-[var(--brand-primary)]" />
                       <span className="text-[12px] font-semibold text-slate-700 leading-tight">{a.label}</span>
                       <span className="text-[10px] text-slate-400 leading-tight">{a.hint}</span>
                     </button>
@@ -223,7 +223,7 @@ export default function LoginPage() {
         </div>
 
         {/* Right side — Illustration */}
-        <div className="hidden md:flex w-1/2 bg-gradient-to-br from-[#2660A4] via-[#1d4e87] to-[#22AA79] items-center justify-center p-10 relative overflow-hidden">
+        <div className="hidden md:flex w-1/2 bg-gradient-to-br from-[var(--brand-primary)] via-[var(--brand-primary-dark)] to-[#22AA79] items-center justify-center p-10 relative overflow-hidden">
           {/* Decorative elements */}
           <div className="absolute inset-0 opacity-20">
             <div className="absolute top-10 right-10 w-20 h-20 border-2 border-white/30 rounded-full" />

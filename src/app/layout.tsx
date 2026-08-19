@@ -1,7 +1,13 @@
 import type { Metadata, Viewport } from "next";
+import type { CSSProperties } from "react";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import ThemeProvider from "@/components/ThemeProvider";
 import { BRAND_NAME, BRAND_SHORT, BRAND_COLORS, APP_URL } from "@/lib/brand";
+
+// CSP nonce faqat dynamic render qilinganda inject qilinadi — butun ilovani
+// dynamic render'ga o'tkazamiz (kam trafikli, auth-gated CRM; SSG shart emas).
+export const dynamic = "force-dynamic";
 import { Toaster } from "@/components/toast";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import "./globals.css";
@@ -49,19 +55,30 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html
       lang="uz"
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       suppressHydrationWarning
+      style={
+        {
+          // Brend rangi butun UI ga (globals.css --brand-* orqali). Har instance
+          // o'z BRAND_COLORS'ini oladi; generic brendda mijoz nomidan hosil bo'ladi.
+          '--brand-primary': BRAND_COLORS.primary,
+          '--brand-primary-dark': BRAND_COLORS.primaryDark,
+          '--brand-primary-light': BRAND_COLORS.primaryLight,
+        } as CSSProperties
+      }
     >
       <head>
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'||((!t)&&window.matchMedia('(prefers-color-scheme:dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})()`,
           }}

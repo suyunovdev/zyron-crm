@@ -168,7 +168,7 @@ export default function TeachersPage() {
               <div key={teacher.id} onClick={() => router.push(`/dashboard/admin/teachers/${teacher.id}`)} className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-all cursor-pointer">
                 <div className="flex items-start gap-3 mb-3">
                   {/* Avatar */}
-                  <div className="w-14 h-14 bg-gradient-to-br from-[#2660A4] to-[#22AA79] rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <div className="w-14 h-14 bg-gradient-to-br from-[var(--brand-primary)] to-[#22AA79] rounded-2xl flex items-center justify-center flex-shrink-0">
                     <span className="text-white text-lg font-bold">{initials(teacher.name)}</span>
                   </div>
                   <div className="min-w-0">
@@ -231,7 +231,7 @@ export default function TeachersPage() {
                     <tr key={teacher.id} onClick={() => router.push(`/dashboard/admin/teachers/${teacher.id}`)} className="hover:bg-slate-50 transition-colors cursor-pointer">
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 bg-gradient-to-br from-[#2660A4] to-[#22AA79] rounded-lg flex items-center justify-center">
+                          <div className="w-9 h-9 bg-gradient-to-br from-[var(--brand-primary)] to-[#22AA79] rounded-lg flex items-center justify-center">
                             <span className="text-white text-xs font-bold">{initials(teacher.name)}</span>
                           </div>
                           <span className="text-sm font-semibold text-slate-900">{teacher.name}</span>

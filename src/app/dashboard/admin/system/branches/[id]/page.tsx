@@ -118,7 +118,7 @@ export default function BranchDetailPage() {
       {/* Header */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 mb-5">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#2660A4] to-[#22AA79] flex items-center justify-center flex-shrink-0">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--brand-primary)] to-[#22AA79] flex items-center justify-center flex-shrink-0">
             <Building2 className="w-7 h-7 text-white" />
           </div>
           <div>
@@ -136,10 +136,10 @@ export default function BranchDetailPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         {kpis.map(kp => (
           <button key={kp.key} onClick={() => openMetric(kp.key)}
-            className="text-left bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-[#2660A4]/40 transition-all group">
+            className="text-left bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md hover:border-[var(--brand-primary)]/40 transition-all group">
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-1.5 text-xs text-slate-400"><kp.icon className="w-3.5 h-3.5" /> {kp.label}</div>
-              <BarChart3 className="w-3.5 h-3.5 text-slate-300 group-hover:text-[#2660A4]" />
+              <BarChart3 className="w-3.5 h-3.5 text-slate-300 group-hover:text-[var(--brand-primary)]" />
             </div>
             <p className={`text-xl font-bold ${kp.accent || 'text-slate-900'}`}>{kp.val}{kp.sub && <span className="text-xs font-normal text-slate-400 ml-1">{kp.sub}</span>}</p>
           </button>
@@ -152,7 +152,7 @@ export default function BranchDetailPage() {
           {TABS.map(t => (
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`px-3 py-3 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${
-                tab === t.key ? 'border-[#2660A4] text-[#2660A4]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
+                tab === t.key ? 'border-[var(--brand-primary)] text-[var(--brand-primary)]' : 'border-transparent text-slate-400 hover:text-slate-600'}`}>
               {t.label} <span className="text-xs text-slate-400">{t.n}</span>
             </button>
           ))}
@@ -216,7 +216,7 @@ export default function BranchDetailPage() {
                     <p className="font-semibold text-slate-800 truncate">{a.name}</p>
                     <p className="text-xs text-slate-400 mt-0.5 font-mono">{a.login}{a.phone ? ` · ${a.phone}` : ''}</p>
                   </div>
-                  <ShieldCheck className="w-4 h-4 text-[#2660A4] shrink-0" />
+                  <ShieldCheck className="w-4 h-4 text-[var(--brand-primary)] shrink-0" />
                 </div>
               ))}
             </div>
@@ -303,7 +303,7 @@ function MetricModal({ metric, an, loading, branch, onClose }:
 
         <div className="p-5 overflow-y-auto space-y-6">
           {loading || !an ? (
-            <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-[#2660A4]" /></div>
+            <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-[var(--brand-primary)]" /></div>
           ) : (
             <>
               {metric === 'students' && (
@@ -319,12 +319,12 @@ function MetricModal({ metric, an, loading, branch, onClose }:
                 </>
               )}
               {metric === 'groups' && (
-                <Section title="Guruhlar bo'yicha o'quvchilar"><Bars data={an.studentsPerGroup} color="#2660A4" /></Section>
+                <Section title="Guruhlar bo'yicha o'quvchilar"><Bars data={an.studentsPerGroup} color="var(--brand-primary)" /></Section>
               )}
               {metric === 'teachers' && (
                 <>
                   <Section title="Guruh soni"><Bars data={an.teachersLoad.map(t => ({ label: t.name, value: t.groups }))} color="#8b5cf6" /></Section>
-                  <Section title="O'quvchi soni"><Bars data={an.teachersLoad.map(t => ({ label: t.name, value: t.students }))} color="#2660A4" /></Section>
+                  <Section title="O'quvchi soni"><Bars data={an.teachersLoad.map(t => ({ label: t.name, value: t.students }))} color="var(--brand-primary)" /></Section>
                 </>
               )}
               {metric === 'admins' && (
@@ -332,7 +332,7 @@ function MetricModal({ metric, an, loading, branch, onClose }:
                   {branch.admins.length === 0 ? <Empty /> : branch.admins.map(a => (
                     <div key={a.id} className="flex items-center justify-between py-3">
                       <div><p className="font-semibold text-slate-800">{a.name}</p><p className="text-xs text-slate-400 font-mono">{a.login}</p></div>
-                      <ShieldCheck className="w-4 h-4 text-[#2660A4]" />
+                      <ShieldCheck className="w-4 h-4 text-[var(--brand-primary)]" />
                     </div>
                   ))}
                 </div>
@@ -343,7 +343,7 @@ function MetricModal({ metric, an, loading, branch, onClose }:
                   <Section title="To'lov usullari">
                     <Donut data={[
                       { label: 'Naqd', value: an.methods.cash, color: '#22AA79' },
-                      { label: 'Karta', value: an.methods.card, color: '#2660A4' },
+                      { label: 'Karta', value: an.methods.card, color: 'var(--brand-primary)' },
                       { label: 'O\'tkazma', value: an.methods.transfer, color: '#8b5cf6' },
                     ]} />
                   </Section>

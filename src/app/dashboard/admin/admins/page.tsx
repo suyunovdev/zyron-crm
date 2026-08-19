@@ -95,7 +95,7 @@ export default function AdminsPage() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[#2660A4] text-white text-sm font-medium hover:bg-[#1d4e87] transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-[var(--brand-primary)] text-white text-sm font-medium hover:bg-[var(--brand-primary-dark)] transition-colors"
         >
           <Plus className="w-4 h-4" /> Yangi admin
         </button>
@@ -162,7 +162,7 @@ export default function AdminsPage() {
                           ) : (
                             <>
                               <button onClick={() => setEditCred(a)} title="Login/parolni tahrirlash"
-                                className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-[#2660A4]">
+                                className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-[var(--brand-primary)]">
                                 <KeyRound className="w-4 h-4" />
                               </button>
                               <button onClick={() => changeRole(a)} title="Rolni o'zgartirish"
@@ -238,14 +238,14 @@ function CredEditModal({ admin, onClose, onSaved }: { admin: Admin; onClose: () 
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Login</label>
             <input value={login} onChange={e => setLogin(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+              className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
           </div>
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Yangi parol (ixtiyoriy)</label>
             <div className="relative">
               <input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
                 placeholder="O'zgartirmaslik uchun bo'sh qoldiring"
-                className="w-full rounded-lg border border-slate-200 px-3 pr-10 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/20" />
+                className="w-full rounded-lg border border-slate-200 px-3 pr-10 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
               <button type="button" onClick={() => setShowPw(v => !v)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                 {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -255,7 +255,7 @@ function CredEditModal({ admin, onClose, onSaved }: { admin: Admin; onClose: () 
         <div className="flex gap-2 justify-end px-5 py-3 bg-slate-50 border-t border-slate-100">
           <button onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Bekor</button>
           <button onClick={save} disabled={saving}
-            className="flex items-center gap-1.5 rounded-lg bg-[#2660A4] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
+            className="flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />} Saqlash
           </button>
         </div>
@@ -307,7 +307,7 @@ function CreateAdminModal({ branches, onClose, onCreated }: { branches: Branch[]
                 type={f.type}
                 value={form[f.k]}
                 onChange={e => setForm(s => ({ ...s, [f.k]: e.target.value }))}
-                className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/30"
+                className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30"
               />
             </div>
           ))}
@@ -316,7 +316,7 @@ function CreateAdminModal({ branches, onClose, onCreated }: { branches: Branch[]
             <select
               value={form.role}
               onChange={e => setForm(s => ({ ...s, role: e.target.value as 'admin' | 'superadmin' }))}
-              className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/30"
+              className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30"
             >
               <option value="admin">Admin</option>
               <option value="superadmin">Superadmin</option>
@@ -328,7 +328,7 @@ function CreateAdminModal({ branches, onClose, onCreated }: { branches: Branch[]
               <select
                 value={form.branchId}
                 onChange={e => setForm(s => ({ ...s, branchId: e.target.value }))}
-                className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/30"
+                className="w-full mt-1 rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30"
               >
                 <option value="">— Filialsiz —</option>
                 {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -340,7 +340,7 @@ function CreateAdminModal({ branches, onClose, onCreated }: { branches: Branch[]
         <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200">
           <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Bekor</button>
           <button onClick={submit} disabled={saving}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2660A4] text-white text-sm font-medium hover:bg-[#1d4e87] disabled:opacity-60">
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--brand-primary)] text-white text-sm font-medium hover:bg-[var(--brand-primary-dark)] disabled:opacity-60">
             {saving && <Loader2 className="w-4 h-4 animate-spin" />} Yaratish
           </button>
         </div>

@@ -80,7 +80,7 @@ export function AvatarUpload({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={avatar} alt={name} className="w-full h-full rounded-2xl object-cover border border-slate-200" />
         ) : (
-          <div className="w-full h-full rounded-2xl bg-gradient-to-br from-[#2660A4] to-[#22AA79] flex items-center justify-center">
+          <div className="w-full h-full rounded-2xl bg-gradient-to-br from-[var(--brand-primary)] to-[#22AA79] flex items-center justify-center">
             <span className="text-white font-bold" style={{ fontSize: size / 2.8 }}>{initials}</span>
           </div>
         )}
@@ -94,7 +94,7 @@ export function AvatarUpload({
       <div className="flex flex-col gap-2">
         <input ref={inputRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
         <button onClick={() => inputRef.current?.click()} disabled={busy}
-          className="flex items-center gap-1.5 rounded-lg bg-[#2660A4] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
+          className="flex items-center gap-1.5 rounded-lg bg-[var(--brand-primary)] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[#1f4f88] disabled:opacity-50">
           <Camera className="w-4 h-4" /> {avatar ? 'Rasmni almashtirish' : 'Rasm yuklash'}
         </button>
         {avatar && (

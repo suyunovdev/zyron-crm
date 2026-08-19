@@ -12,10 +12,10 @@ import { Building2, Send, UserCog, DatabaseBackup, ShieldAlert, Skull, Loader2, 
 const fmt = (n: number) => (n || 0).toLocaleString('uz-UZ');
 
 const card = 'rounded-xl border border-slate-200 bg-white p-5';
-const input = 'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2660A4]/30';
-const btn = 'flex items-center gap-2 px-4 py-2 rounded-lg bg-[#2660A4] text-white text-sm font-medium hover:bg-[#1d4e87] disabled:opacity-60';
+const input = 'w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30';
+const btn = 'flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--brand-primary)] text-white text-sm font-medium hover:bg-[var(--brand-primary-dark)] disabled:opacity-60';
 
-function Loading() { return <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-[#2660A4]" /></div>; }
+function Loading() { return <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-[var(--brand-primary)]" /></div>; }
 
 export function SettingsTab() {
   const [s, setS] = useState<Record<string, string>>({});
@@ -71,7 +71,7 @@ export function AnalyticsTab() {
         <div className="flex items-end gap-2 h-32">
           {d.revenueTrend.map((r: any) => (
             <div key={r.month} className="flex-1 flex flex-col items-center gap-1">
-              <div className="w-full bg-[#2660A4] rounded-t" style={{ height: `${(r.revenue / maxRev) * 100}%`, minHeight: 2 }} />
+              <div className="w-full bg-[var(--brand-primary)] rounded-t" style={{ height: `${(r.revenue / maxRev) * 100}%`, minHeight: 2 }} />
               <span className="text-[9px] text-slate-400">{r.month.slice(5)}</span>
             </div>
           ))}
@@ -108,14 +108,14 @@ export function BranchesTab() {
             <div key={b.id} className="flex justify-between items-center py-3 border-b border-slate-50 last:border-0 gap-3">
               <Link href={`/dashboard/admin/system/branches/${b.id}`} className="min-w-0 flex-1 flex items-center gap-2 group -my-1 py-1 rounded-lg hover:bg-slate-50/70 transition-colors">
                 <div className="min-w-0">
-                  <p className="font-medium text-slate-800 truncate group-hover:text-[#2660A4]">{b.name}</p>
+                  <p className="font-medium text-slate-800 truncate group-hover:text-[var(--brand-primary)]">{b.name}</p>
                   <p className="text-xs text-slate-400">{b._count.users} xodim • {b._count.groups} guruh</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#2660A4] shrink-0" />
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[var(--brand-primary)] shrink-0" />
               </Link>
               <div className="flex items-center gap-1.5 shrink-0">
                 <button onClick={() => setAdminFor({ id: b.id, name: b.name })}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2660A4]/10 text-[#2660A4] text-xs font-medium hover:bg-[#2660A4]/20">
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--brand-primary)]/10 text-[var(--brand-primary)] text-xs font-medium hover:bg-[var(--brand-primary)]/20">
                   <UserPlus className="w-3.5 h-3.5" /> Admin qo’shish
                 </button>
                 <button onClick={() => del(b.id)} className="p-1.5 rounded text-red-500 hover:bg-red-50"><Trash2 className="w-4 h-4" /></button>
@@ -154,7 +154,7 @@ function BranchCreateModal({ onClose, onCreated }: { onClose: () => void; onCrea
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 bg-white">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><Building2 className="w-5 h-5 text-[#2660A4]" /> Yangi filial + admin</h2>
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><Building2 className="w-5 h-5 text-[var(--brand-primary)]" /> Yangi filial + admin</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
         </div>
         {creds ? (
@@ -220,7 +220,7 @@ function BranchAdminModal({ branch, onClose, onCreated }: { branch: { id: string
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 bg-white">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><Building2 className="w-5 h-5 text-[#2660A4]" /> {branch.name} — admin</h2>
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><Building2 className="w-5 h-5 text-[var(--brand-primary)]" /> {branch.name} — admin</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
         </div>
         {creds ? (

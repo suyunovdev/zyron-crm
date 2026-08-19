@@ -32,19 +32,19 @@ export default function TeacherProfilePage() {
     <div className="max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-          <UserCircle className="w-6 h-6 text-[#2660A4]" /> Profil
+          <UserCircle className="w-6 h-6 text-[var(--brand-primary)]" /> Profil
         </h1>
         <input type="month" value={month} onChange={e => setMonth(e.target.value)}
           className="rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white text-slate-700" />
       </div>
 
       {loading || !d ? (
-        <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-[#2660A4]" /></div>
+        <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-[var(--brand-primary)]" /></div>
       ) : (
         <>
           {/* Ustoz ma'lumoti */}
           <div className="rounded-xl border border-slate-200 bg-white p-5 mb-4 flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-[#2660A4] flex items-center justify-center text-white text-lg font-bold">
+            <div className="w-14 h-14 rounded-2xl bg-[var(--brand-primary)] flex items-center justify-center text-white text-lg font-bold">
               {d.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
             </div>
             <div>

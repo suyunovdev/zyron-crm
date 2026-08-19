@@ -1,0 +1,25 @@
+# Zyron CRM — bitta mijoz (tenant) uchun nginx site shabloni.
+# provision-tenant.sh __DOMAIN__ va __PORT__ o'rniga haqiqiy qiymat qo'yadi.
+#
+# MUHIM: Next.js 16 bilan `Connection: upgrade` / Upgrade header 502 beradi.
+# Shu sabab bu yerda proxy minimal ushlab turiladi — QO'SHMANG.
+#
+# certbot --nginx keyinchalik 443 (HTTPS) blokini va HTTP->HTTPS redirectni
+# avtomatik qo'shadi. Bu shablon faqat 80-portni beradi (certbot uchun asos).
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name __DOMAIN__;
+
+    # Yuklama hajmi (avatar/rasm yuklash uchun bemalol)
+    client_max_body_size 10M;
+
+    location / {
+        proxy_pass http://127.0.0.1:__PORT__;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

@@ -13,6 +13,12 @@ export interface ChildReport {
   groups: Array<Record<string, unknown> & {
     id: string;
     name: string;
+    subject?: string;
+    price?: number;
+    time?: string | null;
+    dayType?: string | null;
+    room?: string | null;
+    teacher?: { id: string; name: string; phone?: string | null };
     ranking: {
       childRank: number;
       totalStudents: number;

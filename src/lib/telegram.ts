@@ -18,8 +18,13 @@ export function escapeHtml(s: string): string {
     .replace(/>/g, '&gt;');
 }
 
+export interface InlineButton {
+  text: string;
+  callback_data?: string;
+  url?: string;
+}
 export interface InlineKeyboard {
-  inline_keyboard: { text: string; callback_data: string }[][];
+  inline_keyboard: InlineButton[][];
 }
 
 interface TgOutcome<T = unknown> { ok: boolean; result?: T; error?: string }

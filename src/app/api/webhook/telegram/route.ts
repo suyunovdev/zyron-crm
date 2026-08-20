@@ -5,10 +5,13 @@ import { verifyTgLinkToken, clearTgLinkToken } from '@/lib/tg-token';
 import { sendMessage, editMessageText, answerCallbackQuery } from '@/lib/telegram';
 import { getChildrenReport, getChildReport } from '@/lib/parent-report';
 import {
-  childrenKeyboard, metricsKeyboard, backKeyboard,
-  welcomeText, chooseChildText, childMenuText,
-  gradesText, attendanceText, ratingText, debtText,
+  childrenKeyboard, metricsKeyboard, backKeyboard, introKeyboard,
+  welcomeText, chooseChildText, childMenuText, introText,
+  gradesText, attendanceText, ratingText, debtText, groupsText, topicsText,
 } from '@/lib/tg-format';
+
+// Ota-ona platformasi (mijoz subdomeni) — intro tugmasi uchun.
+const PLATFORM_URL = process.env.PLATFORM_CLIENT_URL || 'https://my.akaukalarmarkazi.uz';
 
 // Telegram webhook — ota-onalar boti.
 // Xavfsizlik: X-Telegram-Bot-Api-Secret-Token == TELEGRAM_WEBHOOK_SECRET.
@@ -60,7 +63,16 @@ async function handleStart(msg: TgMessage): Promise<void> {
 
   const token = (msg.text || '').split(/\s+/)[1];
   if (!token) {
-    await sendMessage(chatId, "Salom! Bu bot ota-onalar uchun. Iltimos, platformadagi «Telegram'ga ulanish» tugmasi orqali kiring.");
+    // Tokensiz /start: bog'langan bo'lsa menyu, aks holda tanishuv (intro) + platforma tugmasi
+    const linked = await prisma.user.findUnique({
+      where: { telegramChatId: chatId },
+      select: { id: true, name: true },
+    });
+    if (linked) {
+      await showChildrenMenu(chatId, linked.id, linked.name, true);
+    } else {
+      await sendMessage(chatId, introText(), introKeyboard(PLATFORM_URL));
+    }
     return;
   }
 
@@ -172,6 +184,10 @@ async function handleCallback(cq: TgCallback): Promise<void> {
     await editMessageText(chatId, messageId, ratingText(child), backKeyboard(childId));
   } else if (action === 'd') {
     await editMessageText(chatId, messageId, debtText(child), backKeyboard(childId));
+  } else if (action === 'gr') {
+    await editMessageText(chatId, messageId, groupsText(child), backKeyboard(childId));
+  } else if (action === 't') {
+    await editMessageText(chatId, messageId, topicsText(child), backKeyboard(childId));
   }
 
   await answerCallbackQuery(cq.id);

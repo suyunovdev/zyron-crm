@@ -32,9 +32,18 @@ export function metricsKeyboard(childId: string, hasSiblings: boolean): InlineKe
       { text: '🏆 Reyting', callback_data: `r:${childId}` },
       { text: '💰 Qarzdorlik', callback_data: `d:${childId}` },
     ],
+    [
+      { text: '📚 Guruhlar', callback_data: `gr:${childId}` },
+      { text: '📖 Mavzular', callback_data: `t:${childId}` },
+    ],
   ];
   if (hasSiblings) rows.push([{ text: '◀️ Farzandlar', callback_data: 'back' }]);
   return { inline_keyboard: rows };
+}
+
+/** Tanishuv (intro) uchun — platformaga o'tuvchi URL tugmasi. */
+export function introKeyboard(platformUrl: string): InlineKeyboard {
+  return { inline_keyboard: [[{ text: '🌐 Platformaga kirish', url: platformUrl }]] };
 }
 
 /** Ko'rsatkich ko'rsatilgach — farzand menyusiga qaytish tugmasi. */
@@ -55,6 +64,24 @@ export function welcomeText(parentName: string): string {
 
 export function chooseChildText(): string {
   return `Farzandingizni tanlang:`;
+}
+
+/** Tanishuv — botga birinchi (ulanmagan) kirganda. */
+export function introText(): string {
+  return (
+    `👋 Assalomu alaykum!\n\n` +
+    `Bu — <b>Aka-Uka o'quv markazi</b>ning ota-onalar uchun rasmiy boti.\n\n` +
+    `Shu bot orqali farzandingizning:\n` +
+    `📊 Baholari\n` +
+    `📅 Davomati\n` +
+    `🏆 Guruhdagi reytingi\n` +
+    `💰 To'lov va qarzdorligi\n` +
+    `📚 Guruhlari va o'tilgan mavzular\n\n` +
+    `— bilan doimo xabardor bo'lasiz. Bundan tashqari, farzandingiz darsga kelmasa ` +
+    `yoki to'lov qabul qilinsa — sizga avtomatik xabar keladi.\n\n` +
+    `<b>Boshlash uchun:</b> platformaga kiring va profilingizdagi ` +
+    `«Telegram'ga ulanish» tugmasini bosing.`
+  );
 }
 
 /** Bitta farzand menyusi sarlavhasi. */
@@ -135,5 +162,41 @@ export function debtText(child: ChildReport): string {
   } else {
     out += `Balans: <b>0 so'm</b> — qarzdorlik yo'q ✅`;
   }
+  return out;
+}
+
+const DAY_LABELS: Record<string, string> = { toq: 'Dush/Chor/Jum', juft: 'Sesh/Pay/Shan' };
+
+/** 📚 Guruhlar — ustoz, jadval, xona, narx. */
+export function groupsText(child: ChildReport): string {
+  let out = `📚 <b>${escapeHtml(child.name)}</b> — guruhlar\n`;
+  if (child.groups.length === 0) return out + `\nHozircha guruh yo'q.`;
+
+  for (const g of child.groups) {
+    out += hr + `🔹 <b>${escapeHtml(String(g.name))}</b>`;
+    if (g.subject) out += ` — ${escapeHtml(g.subject)}`;
+    out += '\n';
+    if (g.teacher?.name) out += `   👩‍🏫 Ustoz: ${escapeHtml(g.teacher.name)}\n`;
+    const day = g.dayType ? (DAY_LABELS[g.dayType] || g.dayType) : '';
+    const sched = [day, g.time].filter(Boolean).join(', ');
+    if (sched) out += `   🕒 ${escapeHtml(sched)}\n`;
+    if (g.room) out += `   📍 ${escapeHtml(g.room)}\n`;
+    if (typeof g.price === 'number' && g.price > 0) out += `   💵 ${som(g.price)}/oy`;
+  }
+  return out;
+}
+
+/** 📖 O'tilgan mavzular — so'nggi darslar mavzusi + davomat. */
+export function topicsText(child: ChildReport): string {
+  let out = `📖 <b>${escapeHtml(child.name)}</b> — o'tilgan mavzular\n\n`;
+  const lessons = child.recentLessons.slice(0, 8);
+  if (lessons.length === 0) return out + `Hozircha o'tilgan darslar yo'q.`;
+
+  out += lessons.map(l => {
+    const mark = l.present === null ? '•' : l.present ? '✅' : '❌';
+    const topic = l.topic ? escapeHtml(l.topic) : '<i>mavzu belgilanmagan</i>';
+    const when = l.isToday ? 'Bugun' : fmtDayMonth(l.date);
+    return `${mark} <b>${when}</b> — ${topic}\n   <i>${escapeHtml(l.groupName)}</i>`;
+  }).join('\n');
   return out;
 }

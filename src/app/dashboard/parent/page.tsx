@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/skeleton';
 import {
   Users, Wallet, Clock, CalendarDays, MapPin, Medal, BookOpen,
+  LayoutGrid, Trophy, CreditCard,
 } from 'lucide-react';
 import { fmtDate, fmtDayMonth, fmtMonth } from '@/lib/date';
 import { TelegramConnectModal } from '@/components/parent/TelegramConnectModal';
@@ -46,6 +47,7 @@ export default function ParentDashboardPage() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedChild, setSelectedChild] = useState<string | null>(null);
+  const [tab, setTab] = useState<'umumiy' | 'mavzular' | 'reyting' | 'tolovlar'>('umumiy');
 
   // O'tilgan mavzular — oylik filter
   const [lessons, setLessons] = useState<LessonItem[]>([]);
@@ -185,73 +187,28 @@ export default function ParentDashboardPage() {
                 </div>
               </div>
 
-              {/* ── O'tilgan mavzular — oylik filter (barchasi) ── */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <BookOpen className="w-5 h-5 text-blue-500" /> O&apos;tilgan mavzular
-                  </h2>
-                  {!lessonsLoading && monthLessons.length > 0 && (
-                    <span className="text-xs font-semibold text-slate-400">{monthLessons.length} ta dars</span>
-                  )}
-                </div>
-
-                {/* Oylik filter chiplari */}
-                {lessonMonths.length > 0 && (
-                  <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {lessonMonths.map(m => (
-                      <button key={m} onClick={() => setSelectedMonth(m)}
-                        className={`flex-none px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
-                          selectedMonth === m
-                            ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/25'
-                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-blue-300'
-                        }`}>
-                        {fmtMonth(m)}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {lessonsLoading ? (
-                  <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-5 space-y-3">
-                    {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-                  </div>
-                ) : monthLessons.length === 0 ? (
-                  <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-8 text-center text-sm text-slate-400">
-                    O&apos;tilgan darslar yo&apos;q
-                  </div>
-                ) : (
-                  <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700 overflow-hidden">
-                    {monthLessons.map((l, i) => (
-                      <div key={i} className={`px-5 py-3 flex items-center gap-3 ${l.isToday ? 'bg-blue-50/60 dark:bg-blue-900/15' : ''}`}>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-sm truncate ${l.topic ? 'font-semibold text-slate-800 dark:text-white' : 'text-slate-400 italic'}`}>
-                            {l.topic || 'Mavzu belgilanmagan'}
-                          </p>
-                          <p className="text-xs text-slate-400 mt-0.5">
-                            {l.groupName} &middot;{' '}
-                            {l.isToday
-                              ? <span className="text-blue-600 dark:text-blue-400 font-semibold">Bugun</span>
-                              : fmtDayMonth(l.date)}
-                          </p>
-                        </div>
-                        {l.present !== null && (
-                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full flex-none ${
-                            l.present ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-50 text-red-500 dark:bg-red-900/30 dark:text-red-400'
-                          }`}>
-                            {l.present ? 'Keldi' : 'Kelmadi'}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+              {/* ── Tablar ── */}
+              <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-2xl">
+                {([
+                  { key: 'umumiy', label: 'Umumiy', Icon: LayoutGrid },
+                  { key: 'mavzular', label: 'Mavzular', Icon: BookOpen },
+                  { key: 'reyting', label: 'Reyting', Icon: Trophy },
+                  { key: 'tolovlar', label: "To'lovlar", Icon: CreditCard },
+                ] as const).map(t => (
+                  <button key={t.key} onClick={() => setTab(t.key)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-1 rounded-xl text-[11px] sm:text-xs font-semibold transition-all ${
+                      tab === t.key
+                        ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                    }`}>
+                    <t.Icon className="w-4 h-4 flex-none" /> {t.label}
+                  </button>
+                ))}
               </div>
 
-              {/* ── Guruhlar ── */}
-              <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-3">Guruhlar</h2>
-                {child.groups.length === 0 ? (
+              {/* ══ UMUMIY: guruhlar (ixcham, reytingsiz) ══ */}
+              {tab === 'umumiy' && (
+                child.groups.length === 0 ? (
                   <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-8 text-center text-sm text-slate-400">
                     Guruhlar mavjud emas
                   </div>
@@ -261,63 +218,146 @@ export default function ParentDashboardPage() {
                       const dayLabel = g.dayType === 'toq' ? 'Dush/Chor/Jum' : g.dayType === 'juft' ? 'Sesh/Pay/Shan' : '';
                       const r = g.ranking;
                       return (
-                        <div key={g.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
-                          <div className="p-5">
-                            <div className="flex items-start justify-between mb-2">
-                              <div>
-                                <h3 className="text-sm font-bold text-slate-900 dark:text-white">{g.name}</h3>
-                                <p className="text-xs text-slate-400">{g.subject}</p>
-                              </div>
-                              {r.childRank > 0 && (
-                                <span className="text-xs text-slate-500 dark:text-slate-400">
-                                  Reyting: <span className="font-bold text-slate-800 dark:text-white">{r.childRank}</span>/{r.totalStudents}
-                                </span>
-                              )}
+                        <div key={g.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-5">
+                          <div className="flex items-start justify-between mb-2 gap-2">
+                            <div className="min-w-0">
+                              <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">{g.name}</h3>
+                              <p className="text-xs text-slate-400">{g.subject}</p>
                             </div>
-                            <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-slate-500 mb-3">
-                              <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {g.teacher.name}</span>
-                              {g.time && <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {g.time}</span>}
-                              {dayLabel && <span className="flex items-center gap-1"><CalendarDays className="w-3 h-3" /> {dayLabel}</span>}
-                              {g.room && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {g.room}</span>}
-                            </div>
-                            <div className="flex items-center gap-3 text-xs pt-3 border-t border-slate-100 dark:border-slate-700">
-                              <span className="text-slate-400">Narx: <span className="font-bold text-slate-700 dark:text-slate-200">{g.price?.toLocaleString()} so&apos;m/oy</span></span>
-                            </div>
+                            {r.childRank > 0 && (
+                              <button onClick={() => setTab('reyting')}
+                                className="flex-none flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-xs font-bold text-amber-700 dark:text-amber-400 hover:bg-amber-100 transition-colors">
+                                <Trophy className="w-3.5 h-3.5" /> {r.childRank}/{r.totalStudents}
+                              </button>
+                            )}
                           </div>
-
-                          <div className="border-t border-slate-100 dark:border-slate-700">
-                              <div className="px-5 py-3 bg-slate-50/50 dark:bg-slate-700/30">
-                                <p className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                                  <Medal className="w-4 h-4 text-amber-500" /> Guruh reytingi
-                                </p>
-                              </div>
-                              <div className="divide-y divide-slate-50 dark:divide-slate-700">
-                                {r.leaderboard.map(entry => {
-                                  const badge = getRankBadge(entry.rank);
-                                  return (
-                                    <div key={entry.rank}
-                                      className={`px-5 py-2.5 flex items-center gap-3 ${entry.isChild ? 'bg-blue-50/70 dark:bg-blue-900/20' : ''}`}>
-                                      <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${badge.cls}`}>{badge.icon}</span>
-                                      <p className={`flex-1 min-w-0 text-sm truncate ${entry.isChild ? 'font-bold text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-slate-300'}`}>
-                                        {entry.name}{entry.isChild && <span className="ml-1.5 text-[10px] text-blue-500">(Farzandingiz)</span>}
-                                      </p>
-                                      <span className={`text-sm font-bold ${entry.pct >= 80 ? 'text-emerald-600' : entry.pct >= 50 ? 'text-amber-600' : 'text-red-500'}`}>{entry.pct}%</span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
+                          <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-slate-500 mb-3">
+                            <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {g.teacher.name}</span>
+                            {g.time && <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {g.time}</span>}
+                            {dayLabel && <span className="flex items-center gap-1"><CalendarDays className="w-3 h-3" /> {dayLabel}</span>}
+                            {g.room && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {g.room}</span>}
+                          </div>
+                          <div className="text-xs pt-3 border-t border-slate-100 dark:border-slate-700">
+                            <span className="text-slate-400">Narx: <span className="font-bold text-slate-700 dark:text-slate-200">{g.price?.toLocaleString()} so&apos;m/oy</span></span>
+                          </div>
                         </div>
                       );
                     })}
                   </div>
-                )}
-              </div>
+                )
+              )}
 
-              {/* ── So'nggi to'lovlar ── */}
-              {child.recentPayments.length > 0 && (
+              {/* ══ MAVZULAR: oylik filter ══ */}
+              {tab === 'mavzular' && (
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-3">So&apos;nggi to&apos;lovlar</h2>
+                  {lessonMonths.length > 0 && (
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 flex-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        {lessonMonths.map(m => (
+                          <button key={m} onClick={() => setSelectedMonth(m)}
+                            className={`flex-none px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                              selectedMonth === m
+                                ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/25'
+                                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-blue-300'
+                            }`}>
+                            {fmtMonth(m)}
+                          </button>
+                        ))}
+                      </div>
+                      {!lessonsLoading && monthLessons.length > 0 && (
+                        <span className="flex-none text-xs font-semibold text-slate-400">{monthLessons.length} ta</span>
+                      )}
+                    </div>
+                  )}
+
+                  {lessonsLoading ? (
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-5 space-y-3">
+                      {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                    </div>
+                  ) : monthLessons.length === 0 ? (
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-8 text-center text-sm text-slate-400">
+                      O&apos;tilgan darslar yo&apos;q
+                    </div>
+                  ) : (
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700 overflow-hidden">
+                      {monthLessons.map((l, i) => (
+                        <div key={i} className={`px-5 py-3 flex items-center gap-3 ${l.isToday ? 'bg-blue-50/60 dark:bg-blue-900/15' : ''}`}>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm truncate ${l.topic ? 'font-semibold text-slate-800 dark:text-white' : 'text-slate-400 italic'}`}>
+                              {l.topic || 'Mavzu belgilanmagan'}
+                            </p>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              {l.groupName} &middot;{' '}
+                              {l.isToday
+                                ? <span className="text-blue-600 dark:text-blue-400 font-semibold">Bugun</span>
+                                : fmtDayMonth(l.date)}
+                            </p>
+                          </div>
+                          {l.present !== null && (
+                            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full flex-none ${
+                              l.present ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-red-50 text-red-500 dark:bg-red-900/30 dark:text-red-400'
+                            }`}>
+                              {l.present ? 'Keldi' : 'Kelmadi'}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ══ REYTING: har guruh leaderboard ══ */}
+              {tab === 'reyting' && (
+                child.groups.length === 0 ? (
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-8 text-center text-sm text-slate-400">
+                    Guruhlar mavjud emas
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {child.groups.map(g => {
+                      const r = g.ranking;
+                      return (
+                        <div key={g.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
+                          <div className="px-5 py-3 flex items-center justify-between bg-slate-50/50 dark:bg-slate-700/30">
+                            <p className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-1.5 min-w-0">
+                              <Medal className="w-4 h-4 text-amber-500 flex-none" /> <span className="truncate">{g.name}</span>
+                            </p>
+                            {r.childRank > 0 && (
+                              <span className="flex-none text-xs text-slate-500 dark:text-slate-400">
+                                O&apos;rin: <span className="font-bold text-slate-800 dark:text-white">{r.childRank}</span>/{r.totalStudents}
+                              </span>
+                            )}
+                          </div>
+                          <div className="divide-y divide-slate-50 dark:divide-slate-700">
+                            {r.leaderboard.map(entry => {
+                              const badge = getRankBadge(entry.rank);
+                              return (
+                                <div key={entry.rank}
+                                  className={`px-5 py-2.5 flex items-center gap-3 ${entry.isChild ? 'bg-blue-50/70 dark:bg-blue-900/20' : ''}`}>
+                                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${badge.cls}`}>{badge.icon}</span>
+                                  <p className={`flex-1 min-w-0 text-sm truncate ${entry.isChild ? 'font-bold text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-slate-300'}`}>
+                                    {entry.name}{entry.isChild && <span className="ml-1.5 text-[10px] text-blue-500">(Farzandingiz)</span>}
+                                  </p>
+                                  <span className={`text-sm font-bold ${entry.pct >= 80 ? 'text-emerald-600' : entry.pct >= 50 ? 'text-amber-600' : 'text-red-500'}`}>{entry.pct}%</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              )}
+
+              {/* ══ TO'LOVLAR ══ */}
+              {tab === 'tolovlar' && (
+                child.recentPayments.length === 0 ? (
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-8 text-center text-sm text-slate-400">
+                    To&apos;lovlar tarixi yo&apos;q
+                  </div>
+                ) : (
                   <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700">
                     {child.recentPayments.map((p, i) => (
                       <div key={i} className="px-5 py-3 flex items-center justify-between">
@@ -329,7 +369,7 @@ export default function ParentDashboardPage() {
                       </div>
                     ))}
                   </div>
-                </div>
+                )
               )}
             </>
           )}

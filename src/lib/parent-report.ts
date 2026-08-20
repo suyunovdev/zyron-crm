@@ -185,3 +185,53 @@ export async function getChildReport(parentId: string, childId: string): Promise
   const all = await getChildrenReport(parentId);
   return all.find(c => c.id === childId) || null;
 }
+
+export interface LessonItem {
+  topic: string | null;
+  date: string;        // "YYYY-MM-DD"
+  month: string;       // "YYYY-MM"
+  groupName: string;
+  present: boolean | null;
+  isToday: boolean;
+}
+
+/**
+ * Farzandning BARCHA o'tilgan darslari (mavzular) — oylik filter uchun.
+ * EGALIK tekshiruvi bilan. months — mavjud oylar (kamayish tartibida, filter chiplari uchun).
+ */
+export async function getChildLessons(
+  parentId: string,
+  childId: string,
+): Promise<{ months: string[]; lessons: LessonItem[] }> {
+  const child = await prisma.user.findUnique({
+    where: { id: childId },
+    select: { parentId: true, groupStudents: { select: { groupId: true } } },
+  });
+  if (!child || child.parentId !== parentId) return { months: [], lessons: [] };
+
+  const groupIds = child.groupStudents.map(gs => gs.groupId);
+  if (groupIds.length === 0) return { months: [], lessons: [] };
+
+  const today = todayTz();
+  const rows = await prisma.lesson.findMany({
+    where: { groupId: { in: groupIds }, scheduledDate: { lte: today } },
+    select: {
+      topic: true, scheduledDate: true,
+      group: { select: { name: true } },
+      attendances: { where: { studentId: childId }, select: { present: true } },
+    },
+    orderBy: [{ scheduledDate: 'desc' }, { order: 'desc' }],
+  });
+
+  const lessons: LessonItem[] = rows.map(l => ({
+    topic: l.topic || null,
+    date: l.scheduledDate,
+    month: l.scheduledDate.slice(0, 7),
+    groupName: l.group.name,
+    present: l.attendances.length ? l.attendances[0].present : null,
+    isToday: l.scheduledDate === today,
+  }));
+
+  const months = [...new Set(lessons.map(l => l.month))]; // allaqachon kamayish tartibida
+  return { months, lessons };
+}

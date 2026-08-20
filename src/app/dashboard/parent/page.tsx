@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { Skeleton } from '@/components/skeleton';
 import {
-  Users, Wallet, Clock, CalendarDays, MapPin, Trophy, Medal, BookOpen,
+  Users, Wallet, Clock, CalendarDays, MapPin, Medal, BookOpen,
 } from 'lucide-react';
-import { fmtDate, fmtDayMonth } from '@/lib/date';
+import { fmtDate, fmtDayMonth, fmtMonth } from '@/lib/date';
 import { TelegramConnectModal } from '@/components/parent/TelegramConnectModal';
+
+interface LessonItem { topic: string | null; date: string; month: string; groupName: string; present: boolean | null; isToday: boolean }
 
 interface LeaderboardEntry {
   rank: number; name: string; present: number; total: number; pct: number;
@@ -44,7 +46,12 @@ export default function ParentDashboardPage() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedChild, setSelectedChild] = useState<string | null>(null);
-  const [openRanking, setOpenRanking] = useState<string | null>(null);
+
+  // O'tilgan mavzular — oylik filter
+  const [lessons, setLessons] = useState<LessonItem[]>([]);
+  const [lessonMonths, setLessonMonths] = useState<string[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [lessonsChildId, setLessonsChildId] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -59,8 +66,31 @@ export default function ParentDashboardPage() {
     }).catch(() => setLoading(false));
   }, []);
 
+  // Tanlangan farzand o'zgarganda barcha mavzularni yuklaymiz
+  useEffect(() => {
+    if (!selectedChild) return;
+    let alive = true;
+    fetch(`/api/parent/lessons?childId=${selectedChild}`)
+      .then(r => r.ok ? r.json() : { months: [], lessons: [] })
+      .then((d: { months: string[]; lessons: LessonItem[] }) => {
+        if (!alive) return;
+        setLessons(Array.isArray(d.lessons) ? d.lessons : []);
+        setLessonMonths(Array.isArray(d.months) ? d.months : []);
+        setSelectedMonth(d.months?.[0] ?? null);
+        setLessonsChildId(selectedChild);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setLessons([]); setLessonMonths([]); setSelectedMonth(null); setLessonsChildId(selectedChild);
+      });
+    return () => { alive = false; };
+  }, [selectedChild]);
+
   const firstName = user?.name?.split(' ')[0] || '';
   const child = children.find(c => c.id === selectedChild) || null;
+  const monthLessons = selectedMonth ? lessons.filter(l => l.month === selectedMonth) : lessons;
+  // Loading — derived (effekt ichida sync setState'dan qochish uchun)
+  const lessonsLoading = !!selectedChild && lessonsChildId !== selectedChild;
 
   if (loading) {
     return (
@@ -155,14 +185,44 @@ export default function ParentDashboardPage() {
                 </div>
               </div>
 
-              {/* ── O'tilgan mavzular (bugungisi ajratilgan) ── */}
-              {child.recentLessons.length > 0 && (
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+              {/* ── O'tilgan mavzular — oylik filter (barchasi) ── */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <BookOpen className="w-5 h-5 text-blue-500" /> O&apos;tilgan mavzular
                   </h2>
+                  {!lessonsLoading && monthLessons.length > 0 && (
+                    <span className="text-xs font-semibold text-slate-400">{monthLessons.length} ta dars</span>
+                  )}
+                </div>
+
+                {/* Oylik filter chiplari */}
+                {lessonMonths.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {lessonMonths.map(m => (
+                      <button key={m} onClick={() => setSelectedMonth(m)}
+                        className={`flex-none px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                          selectedMonth === m
+                            ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/25'
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-blue-300'
+                        }`}>
+                        {fmtMonth(m)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {lessonsLoading ? (
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-5 space-y-3">
+                    {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                  </div>
+                ) : monthLessons.length === 0 ? (
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-8 text-center text-sm text-slate-400">
+                    O&apos;tilgan darslar yo&apos;q
+                  </div>
+                ) : (
                   <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-700 overflow-hidden">
-                    {child.recentLessons.map((l, i) => (
+                    {monthLessons.map((l, i) => (
                       <div key={i} className={`px-5 py-3 flex items-center gap-3 ${l.isToday ? 'bg-blue-50/60 dark:bg-blue-900/15' : ''}`}>
                         <div className="flex-1 min-w-0">
                           <p className={`text-sm truncate ${l.topic ? 'font-semibold text-slate-800 dark:text-white' : 'text-slate-400 italic'}`}>
@@ -185,8 +245,8 @@ export default function ParentDashboardPage() {
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* ── Guruhlar ── */}
               <div>
@@ -200,7 +260,6 @@ export default function ParentDashboardPage() {
                     {child.groups.map(g => {
                       const dayLabel = g.dayType === 'toq' ? 'Dush/Chor/Jum' : g.dayType === 'juft' ? 'Sesh/Pay/Shan' : '';
                       const r = g.ranking;
-                      const isOpen = openRanking === g.id;
                       return (
                         <div key={g.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
                           <div className="p-5">
@@ -223,18 +282,13 @@ export default function ParentDashboardPage() {
                             </div>
                             <div className="flex items-center gap-3 text-xs pt-3 border-t border-slate-100 dark:border-slate-700">
                               <span className="text-slate-400">Narx: <span className="font-bold text-slate-700 dark:text-slate-200">{g.price?.toLocaleString()} so&apos;m/oy</span></span>
-                              <button onClick={() => setOpenRanking(isOpen ? null : g.id)}
-                                className="ml-auto flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-700/50 dark:text-slate-300 transition-colors">
-                                <Trophy className="w-3.5 h-3.5" /> {isOpen ? 'Yopish' : 'Reyting'}
-                              </button>
                             </div>
                           </div>
 
-                          {isOpen && (
-                            <div className="border-t border-slate-100 dark:border-slate-700">
+                          <div className="border-t border-slate-100 dark:border-slate-700">
                               <div className="px-5 py-3 bg-slate-50/50 dark:bg-slate-700/30">
                                 <p className="text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                                  <Medal className="w-4 h-4 text-amber-500" /> Davomat reytingi
+                                  <Medal className="w-4 h-4 text-amber-500" /> Guruh reytingi
                                 </p>
                               </div>
                               <div className="divide-y divide-slate-50 dark:divide-slate-700">
@@ -253,7 +307,6 @@ export default function ParentDashboardPage() {
                                 })}
                               </div>
                             </div>
-                          )}
                         </div>
                       );
                     })}

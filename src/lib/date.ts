@@ -29,8 +29,16 @@ export function todayTz(): string {
 // mahalliy zonasida ko'rsatiladi (O'zbekiston UTC+5, prod TZ=Asia/Tashkent).
 
 const MONTHS_SHORT = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyn', 'Iyl', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek'];
+const MONTHS_FULL = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'];
 const WEEKDAYS_SHORT = ['Yak', 'Dush', 'Sesh', 'Chor', 'Pay', 'Jum', 'Shan'];
 const pad2 = (n: number) => String(n).padStart(2, '0');
+
+/** "2026-08" → "Avgust 2026" */
+export function fmtMonth(ym: string): string {
+  const [y, m] = (ym || '').split('-').map(Number);
+  if (!y || !m || m < 1 || m > 12) return ym;
+  return `${MONTHS_FULL[m - 1]} ${y}`;
+}
 
 /** "24.07.2026" */
 export function fmtDate(input: string | number | Date): string {

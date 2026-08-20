@@ -3,11 +3,12 @@ import { prisma } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import { verifyTgLinkToken, clearTgLinkToken } from '@/lib/tg-token';
 import { sendMessage, editMessageText, answerCallbackQuery } from '@/lib/telegram';
-import { getChildrenReport, getChildReport } from '@/lib/parent-report';
+import { getChildrenReport, getChildReport, getChildLessons } from '@/lib/parent-report';
 import {
   childrenKeyboard, metricsKeyboard, backKeyboard, introKeyboard,
   welcomeText, chooseChildText, childMenuText, introText,
-  gradesText, attendanceText, ratingText, debtText, groupsText, topicsText,
+  gradesText, attendanceText, ratingText, debtText, groupsText,
+  topicsMonthsKeyboard, topicsMonthsText, monthTopicsText, monthTopicsKeyboard,
 } from '@/lib/tg-format';
 
 // Ota-ona platformasi (mijoz subdomeni) — intro tugmasi uchun.
@@ -161,7 +162,7 @@ async function handleCallback(cq: TgCallback): Promise<void> {
     return;
   }
 
-  const [action, childId] = data.split(':');
+  const [action, childId, extra] = data.split(':'); // extra: tm: uchun oy (YYYY-MM)
   if (!childId) {
     await answerCallbackQuery(cq.id);
     return;
@@ -187,7 +188,14 @@ async function handleCallback(cq: TgCallback): Promise<void> {
   } else if (action === 'gr') {
     await editMessageText(chatId, messageId, groupsText(child), backKeyboard(childId));
   } else if (action === 't') {
-    await editMessageText(chatId, messageId, topicsText(child), backKeyboard(childId));
+    // O'tilgan mavzular — oy tanlash
+    const { months } = await getChildLessons(parent.id, childId);
+    await editMessageText(chatId, messageId, topicsMonthsText(child.name, months.length > 0), topicsMonthsKeyboard(childId, months));
+  } else if (action === 'tm') {
+    // Tanlangan oydagi barcha mavzular
+    const { lessons } = await getChildLessons(parent.id, childId);
+    const monthLessons = lessons.filter(l => l.month === extra);
+    await editMessageText(chatId, messageId, monthTopicsText(child.name, extra || '', monthLessons), monthTopicsKeyboard(childId));
   }
 
   await answerCallbackQuery(cq.id);

@@ -1,7 +1,7 @@
-import type { ChildReport } from '@/lib/parent-report';
+import type { ChildReport, LessonItem } from '@/lib/parent-report';
 import type { InlineKeyboard } from '@/lib/telegram';
 import { escapeHtml } from '@/lib/telegram';
-import { fmtDayMonth } from '@/lib/date';
+import { fmtDayMonth, fmtMonth } from '@/lib/date';
 
 // Telegram bot xabar matnlari (o'zbekcha) va inline keyboardlar — sof funksiyalar.
 
@@ -186,12 +186,31 @@ export function groupsText(child: ChildReport): string {
   return out;
 }
 
-/** 📖 O'tilgan mavzular — so'nggi darslar mavzusi + davomat. */
-export function topicsText(child: ChildReport): string {
-  let out = `📖 <b>${escapeHtml(child.name)}</b> — o'tilgan mavzular\n\n`;
-  const lessons = child.recentLessons.slice(0, 8);
-  if (lessons.length === 0) return out + `Hozircha o'tilgan darslar yo'q.`;
+/** 📖 O'tilgan mavzular — oy tanlash klaviaturasi (tm:<childId>:<YYYY-MM>). */
+export function topicsMonthsKeyboard(childId: string, months: string[]): InlineKeyboard {
+  const rows: { text: string; callback_data: string }[][] = [];
+  // Har qatorda 2 ta oy
+  for (let i = 0; i < months.length; i += 2) {
+    rows.push(
+      months.slice(i, i + 2).map(m => ({ text: `📅 ${fmtMonth(m)}`, callback_data: `tm:${childId}:${m}` })),
+    );
+  }
+  rows.push([{ text: '◀️ Orqaga', callback_data: `kid:${childId}` }]);
+  return { inline_keyboard: rows };
+}
 
+/** Oy tanlash sarlavhasi. */
+export function topicsMonthsText(childName: string, hasAny: boolean): string {
+  const head = `📖 <b>${escapeHtml(childName)}</b> — o'tilgan mavzular`;
+  return hasAny ? `${head}\n\nQaysi oyni ko'rmoqchisiz?` : `${head}\n\nHozircha o'tilgan darslar yo'q.`;
+}
+
+/** 📖 Tanlangan oydagi barcha mavzular. */
+export function monthTopicsText(childName: string, ym: string, lessons: LessonItem[]): string {
+  let out = `📖 <b>${escapeHtml(childName)}</b> — ${fmtMonth(ym)}\n`;
+  if (lessons.length === 0) return out + `\nBu oyda dars yo'q.`;
+  out += `<i>Jami ${lessons.length} ta dars</i>\n`;
+  out += hr.replace(/\n/g, '') + '\n';
   out += lessons.map(l => {
     const mark = l.present === null ? '•' : l.present ? '✅' : '❌';
     const topic = l.topic ? escapeHtml(l.topic) : '<i>mavzu belgilanmagan</i>';
@@ -199,4 +218,14 @@ export function topicsText(child: ChildReport): string {
     return `${mark} <b>${when}</b> — ${topic}\n   <i>${escapeHtml(l.groupName)}</i>`;
   }).join('\n');
   return out;
+}
+
+/** Oy mavzulari ostidagi tugmalar — oylar ro'yxatiga va farzand menyusiga qaytish. */
+export function monthTopicsKeyboard(childId: string): InlineKeyboard {
+  return {
+    inline_keyboard: [[
+      { text: '◀️ Oylar', callback_data: `t:${childId}` },
+      { text: '🏠 Menyu', callback_data: `kid:${childId}` },
+    ]],
+  };
 }

@@ -63,7 +63,7 @@ export function SettingsTab() {
           <button
             role="switch" aria-checked={autoAbsentOn} aria-label="Avtomatik davomat"
             onClick={toggleAutoAbsent} disabled={toggling}
-            className={`relative flex-none w-12 h-7 rounded-full transition-colors disabled:opacity-60 ${autoAbsentOn ? 'bg-[#2660A4]' : 'bg-slate-300'}`}
+            className={`relative flex-none w-12 h-7 rounded-full transition-colors disabled:opacity-60 ${autoAbsentOn ? 'bg-[var(--brand-primary)]' : 'bg-slate-300'}`}
           >
             <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${autoAbsentOn ? 'translate-x-5' : ''}`} />
           </button>

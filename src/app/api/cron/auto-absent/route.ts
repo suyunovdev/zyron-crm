@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { attendanceWindow } from '@/lib/api-utils';
+import { getSetting } from '@/lib/settings';
 
 // Cron endpoint: belgilanmagan o'quvchilarni avtomatik "absent" qiladi.
 // Muhlat teacher davomat oynasi bilan mos: dars kuni oxiri (ertasi 00:00)
@@ -16,6 +17,12 @@ export async function GET(req: NextRequest) {
   const secret = req.headers.get('x-cron-secret');
   if (secret !== expected) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Superadmin sozlamasi: avtomatik davomat o'chirilgan bo'lsa — hech kimni belgilamaymiz.
+  // Fail-safe: faqat aniq 'false' o'chiradi (sozlama yo'q/default bo'lsa yoqiq qoladi).
+  if ((await getSetting('autoAbsentEnabled')) === 'false') {
+    return NextResponse.json({ ok: true, skipped: true, reason: 'disabled' });
   }
 
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tashkent' }));

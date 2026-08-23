@@ -21,10 +21,24 @@ export function SettingsTab() {
   const [s, setS] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [toggling, setToggling] = useState(false);
   useEffect(() => { fetch('/api/superadmin/settings').then(r => r.json()).then(d => { setS(d); setLoading(false); }); }, []);
   const save = async () => {
     const res = await fetch('/api/superadmin/settings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(s) });
     if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 2000); }
+  };
+  // Avtomatik davomat toggle — darrov saqlanadi (alohida "Saqlash" kutmaydi)
+  const autoAbsentOn = s.autoAbsentEnabled !== 'false'; // default: yoqiq
+  const toggleAutoAbsent = async () => {
+    const next = autoAbsentOn ? 'false' : 'true';
+    setToggling(true);
+    setS(p => ({ ...p, autoAbsentEnabled: next }));
+    try {
+      const res = await fetch('/api/superadmin/settings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ autoAbsentEnabled: next }) });
+      if (res.ok) toast.success(next === 'true' ? 'Avtomatik davomat yoqildi' : 'Avtomatik davomat o\'chirildi');
+      else { setS(p => ({ ...p, autoAbsentEnabled: autoAbsentOn ? 'true' : 'false' })); toast.error('Saqlashda xatolik'); }
+    } catch { setS(p => ({ ...p, autoAbsentEnabled: autoAbsentOn ? 'true' : 'false' })); toast.error('Tarmoq xatosi'); }
+    finally { setToggling(false); }
   };
   if (loading) return <Loading />;
   const fields = [
@@ -35,15 +49,38 @@ export function SettingsTab() {
     { k: 'currency', label: 'Valyuta' },
   ];
   return (
-    <div className={card}>
-      <div className="space-y-3 max-w-md">
-        {fields.map(f => (
-          <div key={f.k}>
-            <label className="text-xs font-medium text-slate-500">{f.label}</label>
-            <input className={input} value={s[f.k] ?? ''} onChange={e => setS(p => ({ ...p, [f.k]: e.target.value }))} />
+    <div className="space-y-4">
+      {/* Avtomatik davomat (auto-absent) toggle */}
+      <div className={card}>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-800">Avtomatik davomat (auto-absent)</p>
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed max-w-md">
+              Yoqilganda — ustoz belgilamagan davomat kun oxirida avtomatik «yo&apos;q» qilinadi.
+              O&apos;chirilganda — avtomatik belgilanmaydi, ustozning o&apos;zi belgilashi kerak.
+            </p>
           </div>
-        ))}
-        <button onClick={save} className={btn}>{saved ? 'Saqlandi ✓' : 'Saqlash'}</button>
+          <button
+            role="switch" aria-checked={autoAbsentOn} aria-label="Avtomatik davomat"
+            onClick={toggleAutoAbsent} disabled={toggling}
+            className={`relative flex-none w-12 h-7 rounded-full transition-colors disabled:opacity-60 ${autoAbsentOn ? 'bg-[#2660A4]' : 'bg-slate-300'}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${autoAbsentOn ? 'translate-x-5' : ''}`} />
+          </button>
+        </div>
+      </div>
+
+      {/* Markaz sozlamalari */}
+      <div className={card}>
+        <div className="space-y-3 max-w-md">
+          {fields.map(f => (
+            <div key={f.k}>
+              <label className="text-xs font-medium text-slate-500">{f.label}</label>
+              <input className={input} value={s[f.k] ?? ''} onChange={e => setS(p => ({ ...p, [f.k]: e.target.value }))} />
+            </div>
+          ))}
+          <button onClick={save} className={btn}>{saved ? 'Saqlandi ✓' : 'Saqlash'}</button>
+        </div>
       </div>
     </div>
   );

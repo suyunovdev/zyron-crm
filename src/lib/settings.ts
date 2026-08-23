@@ -7,6 +7,7 @@ export const SETTING_DEFAULTS: Record<string, string> = {
   defaultLessonsPerMonth: '12',
   defaultSalaryShare: '70', // ustoz standart ulushi (%)
   currency: 'so\'m',
+  autoAbsentEnabled: 'true', // avtomatik davomat (auto-absent) yoqilgan/o'chirilgan
 };
 
 export async function getSettings(): Promise<Record<string, string>> {

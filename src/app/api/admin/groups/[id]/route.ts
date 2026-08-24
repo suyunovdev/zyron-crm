@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { scopedBranchId } from '@/lib/branch-scope';
+import { currentMonthTz } from '@/lib/date';
 
 export async function GET(
   _req: NextRequest,
@@ -39,7 +40,26 @@ export async function GET(
       return NextResponse.json({ error: 'Bu guruh boshqa filialga tegishli' }, { status: 403 });
     }
 
-    return NextResponse.json(group);
+    // Joriy oy to'lovi (badge uchun) — bitta groupBy so'rov
+    const studentIds = group.students.map(gs => gs.student.id);
+    const paidSet = new Set<string>();
+    if (studentIds.length) {
+      const rows = await prisma.payment.groupBy({
+        by: ['studentId'],
+        where: { studentId: { in: studentIds }, month: currentMonthTz() },
+        _sum: { amount: true },
+      });
+      for (const r of rows) if ((r._sum.amount || 0) > 0) paidSet.add(r.studentId);
+    }
+    const withPaid = {
+      ...group,
+      students: group.students.map(gs => ({
+        ...gs,
+        student: { ...gs.student, paidThisMonth: paidSet.has(gs.student.id) },
+      })),
+    };
+
+    return NextResponse.json(withPaid);
   } catch (error) {
     logger.error('[GET /api/admin/groups/[id]]', error);
     return NextResponse.json({ error: 'Server xatosi' }, { status: 500 });

@@ -112,3 +112,43 @@ export function LineArea({
   };
   return <Chart type="area" series={[{ name: 'Qiymat', data: data.map(d => d.value) }]} options={options} height={height} width="100%" />;
 }
+
+// ── Ko'p chiziqli (manba bo'yicha trend) ──
+export function MultiLine({
+  categories, series, height = 320,
+}: { categories: string[]; series: { name: string; color: string; data: number[] }[]; height?: number }) {
+  const p = usePalette();
+  if (series.length === 0) return <p className="text-sm text-slate-400 text-center py-6">Ma&apos;lumot yo&apos;q</p>;
+  const options: ApexOptions = {
+    chart: {
+      type: 'line', fontFamily: 'inherit', foreColor: p.ink, background: 'transparent',
+      toolbar: { show: true, tools: { download: true, zoom: true, zoomin: true, zoomout: true, pan: false, reset: true, selection: false } },
+      zoom: { enabled: true, type: 'x' },
+    },
+    theme: { mode: p.mode },
+    colors: series.map(s => s.color),
+    stroke: { curve: 'smooth', width: 3 },
+    markers: { size: 3, strokeWidth: 2, strokeColors: p.stroke, hover: { size: 6 } },
+    legend: { position: 'top', horizontalAlign: 'left', fontSize: '13px', labels: { colors: p.ink }, markers: { size: 6 } },
+    dataLabels: { enabled: false },
+    xaxis: { categories, labels: { style: { colors: p.ink } }, axisBorder: { show: false }, axisTicks: { show: false } },
+    yaxis: { labels: { formatter: (v: number) => fmt(v), style: { colors: p.ink } }, min: 0 },
+    grid: { borderColor: p.grid, strokeDashArray: 4 },
+    tooltip: { theme: p.mode, shared: true, intersect: false },
+  };
+  return <Chart type="line" series={series.map(s => ({ name: s.name, data: s.data }))} options={options} height={height} width="100%" />;
+}
+
+// ── Sparkline (KPI kartochkalar uchun mini trend) ──
+export function Sparkline({ data, color, height = 44 }: { data: number[]; color?: string; height?: number }) {
+  const col = useBrandColor(color);
+  const options: ApexOptions = {
+    chart: { type: 'area', sparkline: { enabled: true }, background: 'transparent' },
+    colors: [col],
+    stroke: { curve: 'smooth', width: 2 },
+    fill: { type: 'gradient', gradient: { opacityFrom: 0.35, opacityTo: 0 } },
+    tooltip: { enabled: false },
+    markers: { size: 0 },
+  };
+  return <Chart type="area" series={[{ name: '', data }]} options={options} height={height} width="100%" />;
+}

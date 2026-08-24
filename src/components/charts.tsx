@@ -1,32 +1,37 @@
 'use client';
 
-// Yengil, dependency'siz SVG chartlar. Theme-aware (dark/light globals.css orqali).
+// Recharts asosidagi chartlar. Bir xil API (Donut/Bars/LineArea) — barcha joyда ishlatiladi.
+import {
+  PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  AreaChart, Area, CartesianGrid, LabelList,
+} from 'recharts';
 
-const fmt = (n: number) => n.toLocaleString('en-US').replace(/,/g, ' ');
+const fmt = (n: number) => (n ?? 0).toLocaleString('en-US').replace(/,/g, ' ');
+const AXIS = '#94a3b8';   // slate-400 — light/dark ikkalasida o'qiladi
+const GRID = '#e2e8f0';   // slate-200
+const tooltipStyle = { borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' };
 
-// ── Donut (halqa) diagramma + legenda ──
-export function Donut({ data, size = 150 }: { data: { label: string; value: number; color: string }[]; size?: number }) {
+// ── Donut (halqa) + legenda ──
+export function Donut({ data, size = 170 }: { data: { label: string; value: number; color: string }[]; size?: number }) {
   const total = data.reduce((s, d) => s + d.value, 0);
-  const r = size / 2 - 14;
-  const c = 2 * Math.PI * r;
-  let offset = 0;
   return (
-    <div className="flex items-center gap-5 flex-wrap">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="flex-shrink-0">
-        <g transform={`translate(${size / 2},${size / 2}) rotate(-90)`}>
-          <circle r={r} fill="none" stroke="var(--chart-track,#e8edf3)" strokeWidth="14" />
-          {total > 0 && data.map((d, i) => {
-            const len = (d.value / total) * c;
-            const seg = <circle key={i} r={r} fill="none" stroke={d.color} strokeWidth="14"
-              strokeDasharray={`${len} ${c - len}`} strokeDashoffset={-offset} strokeLinecap="butt" />;
-            offset += len;
-            return seg;
-          })}
-        </g>
-        <text x="50%" y="47%" textAnchor="middle" className="fill-slate-800 dark:fill-slate-100" style={{ fontSize: size / 7, fontWeight: 800 }}>{fmt(total)}</text>
-        <text x="50%" y="62%" textAnchor="middle" className="fill-slate-400" style={{ fontSize: size / 13 }}>jami</text>
-      </svg>
-      <div className="space-y-1.5">
+    <div className="flex items-center gap-6 flex-wrap">
+      <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={data} dataKey="value" nameKey="label" innerRadius="64%" outerRadius="100%"
+              paddingAngle={2} strokeWidth={0} isAnimationActive>
+              {data.map((d, i) => <Cell key={i} fill={d.color} />)}
+            </Pie>
+            <Tooltip formatter={(v, n) => [fmt(Number(v)), String(n ?? '')]} contentStyle={tooltipStyle} />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <span className="text-2xl font-extrabold text-slate-800 dark:text-slate-100 tabular-nums">{fmt(total)}</span>
+          <span className="text-xs text-slate-400">jami</span>
+        </div>
+      </div>
+      <div className="space-y-1.5 min-w-[180px]">
         {data.map((d, i) => (
           <div key={i} className="flex items-center gap-2 text-sm">
             <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: d.color }} />
@@ -40,65 +45,48 @@ export function Donut({ data, size = 150 }: { data: { label: string; value: numb
   );
 }
 
-// ── Gorizontal bar diagramma ──
+// ── Gorizontal bar ──
 export function Bars({ data, color = 'var(--brand-primary)', unit = '' }: { data: { label: string; value: number }[]; color?: string; unit?: string }) {
-  const max = Math.max(1, ...data.map(d => d.value));
   if (data.length === 0) return <p className="text-sm text-slate-400 text-center py-6">Ma&apos;lumot yo&apos;q</p>;
   return (
-    <div className="space-y-2.5">
-      {data.map((d, i) => (
-        <div key={i} className="flex items-center gap-3">
-          <span className="text-sm text-slate-600 dark:text-slate-300 w-32 truncate flex-shrink-0" title={d.label}>{d.label}</span>
-          <div className="flex-1 h-6 bg-slate-100 dark:bg-slate-800 rounded-md overflow-hidden relative">
-            <div className="h-full rounded-md transition-all" style={{ width: `${(d.value / max) * 100}%`, background: color, minWidth: d.value > 0 ? 4 : 0 }} />
-          </div>
-          <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 w-24 text-right tabular-nums flex-shrink-0">{fmt(d.value)}{unit}</span>
-        </div>
-      ))}
-    </div>
+    <ResponsiveContainer width="100%" height={data.length * 44 + 10}>
+      <BarChart data={data} layout="vertical" margin={{ top: 4, right: 44, bottom: 4, left: 4 }} barCategoryGap="22%">
+        <XAxis type="number" hide />
+        <YAxis type="category" dataKey="label" width={130} tickLine={false} axisLine={false}
+          tick={{ fontSize: 12, fill: AXIS }} />
+        <Tooltip cursor={{ fill: 'rgba(148,163,184,0.12)' }} formatter={(v) => [`${fmt(Number(v))}${unit}`, '']} contentStyle={tooltipStyle} />
+        <Bar dataKey="value" fill={color} radius={[0, 6, 6, 0]} barSize={18} isAnimationActive>
+          <LabelList dataKey="value" position="right" formatter={(v) => `${fmt(Number(v))}${unit}`} style={{ fontSize: 12, fontWeight: 600, fill: AXIS }} />
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
   );
 }
 
-// ── Chiziq/maydon (area) diagramma — oylar bo'yicha trend ──
+// ── Chiziq/maydon (area) trend ──
 export function LineArea({
-  data, color = 'var(--brand-primary)', unit = '', height = 200, valueFmt,
+  data, color = 'var(--brand-primary)', unit = '', height = 220, valueFmt,
 }: { data: { label: string; value: number }[]; color?: string; unit?: string; height?: number; valueFmt?: (n: number) => string }) {
   if (data.length === 0) return <p className="text-sm text-slate-400 text-center py-6">Ma&apos;lumot yo&apos;q</p>;
-  const W = 560, H = height, padL = 8, padR = 8, padT = 16, padB = 26;
-  const iw = W - padL - padR, ih = H - padT - padB;
-  const max = Math.max(1, ...data.map(d => d.value));
-  const min = Math.min(0, ...data.map(d => d.value));
-  const range = max - min || 1;
-  const n = data.length;
-  const x = (i: number) => padL + (n === 1 ? iw / 2 : (i / (n - 1)) * iw);
-  const y = (v: number) => padT + ih - ((v - min) / range) * ih;
-  const pts = data.map((d, i) => `${x(i)},${y(d.value)}`).join(' ');
-  const areaPts = `${padL},${padT + ih} ${pts} ${padL + iw},${padT + ih}`;
-  const gid = `g${Math.random().toString(36).slice(2, 7)}`;
-  const vf = valueFmt || ((v: number) => fmt(v) + unit);
+  const vf = valueFmt || ((v: number) => `${fmt(v)}${unit}`);
+  const gid = 'area-grad';
   return (
-    <div className="w-full overflow-x-auto">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ minWidth: 420 }} preserveAspectRatio="none">
+    <ResponsiveContainer width="100%" height={height}>
+      <AreaChart data={data} margin={{ top: 20, right: 16, bottom: 4, left: 0 }}>
         <defs>
           <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={color} stopOpacity="0.28" />
-            <stop offset="1" stopColor={color} stopOpacity="0" />
+            <stop offset="0%" stopColor={color} stopOpacity={0.28} />
+            <stop offset="100%" stopColor={color} stopOpacity={0} />
           </linearGradient>
         </defs>
-        {/* grid */}
-        {[0, 0.5, 1].map((f, i) => (
-          <line key={i} x1={padL} x2={padL + iw} y1={padT + ih * f} y2={padT + ih * f} stroke="var(--chart-grid,#eef1f5)" strokeWidth="1" />
-        ))}
-        <polygon points={areaPts} fill={`url(#${gid})`} />
-        <polyline points={pts} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
-        {data.map((d, i) => (
-          <g key={i}>
-            <circle cx={x(i)} cy={y(d.value)} r="3.5" fill={color} />
-            <text x={x(i)} y={y(d.value) - 9} textAnchor="middle" className="fill-slate-500 dark:fill-slate-300" style={{ fontSize: 11, fontWeight: 600 }}>{vf(d.value)}</text>
-            <text x={x(i)} y={H - 8} textAnchor="middle" className="fill-slate-400" style={{ fontSize: 10 }}>{d.label}</text>
-          </g>
-        ))}
-      </svg>
-    </div>
+        <CartesianGrid vertical={false} stroke={GRID} strokeDasharray="3 3" />
+        <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: AXIS }} />
+        <YAxis hide />
+        <Tooltip formatter={(v) => [vf(Number(v)), '']} contentStyle={tooltipStyle} />
+        <Area type="monotone" dataKey="value" stroke={color} strokeWidth={2.5} fill={`url(#${gid})`} dot={{ r: 3, fill: color }} activeDot={{ r: 5 }} isAnimationActive>
+          <LabelList dataKey="value" position="top" formatter={(v) => vf(Number(v))} style={{ fontSize: 11, fontWeight: 600, fill: AXIS }} />
+        </Area>
+      </AreaChart>
+    </ResponsiveContainer>
   );
 }

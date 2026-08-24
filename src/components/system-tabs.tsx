@@ -9,6 +9,7 @@ import { toast } from '@/components/toast';
 import { confirmDialog } from '@/components/confirm-dialog';
 import { Building2, Send, UserCog, DatabaseBackup, ShieldAlert, Skull, Loader2, Plus, Trash2, Download, UserPlus, X, ChevronRight } from 'lucide-react';
 import { LeadStatsView } from '@/components/LeadStatsView';
+import { Bars, LineArea } from '@/components/charts';
 
 const fmt = (n: number) => (n || 0).toLocaleString('uz-UZ');
 
@@ -96,7 +97,8 @@ export function AnalyticsTab() {
   const [d, setD] = useState<any>(null);
   useEffect(() => { fetch('/api/superadmin/analytics').then(r => r.json()).then(setD); }, []);
   if (!d) return <Loading />;
-  const maxRev = Math.max(...d.revenueTrend.map((r: any) => r.revenue), 1);
+  const trend = d.revenueTrend.map((r: any) => ({ label: r.month.slice(5), value: r.revenue }));
+  const teachers = d.topTeachers.map((t: any) => ({ label: t.name, value: t.revenue }));
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -111,22 +113,11 @@ export function AnalyticsTab() {
       </div>
       <div className={card}>
         <p className="text-sm font-semibold text-slate-700 mb-3">Tushum trendi (6 oy)</p>
-        <div className="flex items-end gap-2 h-32">
-          {d.revenueTrend.map((r: any) => (
-            <div key={r.month} className="flex-1 flex flex-col items-center gap-1">
-              <div className="w-full bg-[var(--brand-primary)] rounded-t" style={{ height: `${(r.revenue / maxRev) * 100}%`, minHeight: 2 }} />
-              <span className="text-[9px] text-slate-400">{r.month.slice(5)}</span>
-            </div>
-          ))}
-        </div>
+        <LineArea data={trend} unit=" so'm" />
       </div>
       <div className={card}>
-        <p className="text-sm font-semibold text-slate-700 mb-2">Top ustozlar (tushum)</p>
-        {d.topTeachers.map((t: any, i: number) => (
-          <div key={i} className="flex justify-between py-1.5 border-b border-slate-50 last:border-0 text-sm">
-            <span className="text-slate-700">{t.name}</span><span className="font-medium text-slate-900">{fmt(t.revenue)} so’m</span>
-          </div>
-        ))}
+        <p className="text-sm font-semibold text-slate-700 mb-3">Top ustozlar (tushum)</p>
+        <Bars data={teachers} unit=" so'm" />
       </div>
     </div>
   );

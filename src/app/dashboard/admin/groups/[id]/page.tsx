@@ -676,11 +676,10 @@ export default function AdminGroupDetailPage() {
                                 }`}>
                                   {student.status === 'active' ? 'Aktiv' : student.status === 'frozen' ? 'Muzlatilgan' : 'Arxiv'}
                                 </span>
-                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded flex-shrink-0 ${
-                                  student.paidThisMonth ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'
-                                }`}>
-                                  {student.paidThisMonth ? "To'langan" : "To'lanmagan"}
-                                </span>
+                                <span
+                                  title={student.paidThisMonth ? "To'langan" : "To'lanmagan"}
+                                  className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ring-2 ring-white shadow-sm ${student.paidThisMonth ? 'bg-emerald-500' : 'bg-red-500'}`}
+                                />
                               </div>
                             </div>
                           </td>

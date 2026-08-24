@@ -178,11 +178,34 @@ model Lead {
   note        String?
   prepayment  Int?     // oldindan to'lov summasi
   branchId    String?  // filial (multi-branch)
+  subject          String?  // tanlangan fan (Telegram lid-bot)
+  preferredTeacher String?  // tanlangan o'qituvchi "Ism (Daraja)" (Telegram lid-bot)
+  feedbackLiked    String?  // yoqqan tomonlari (lid-bot feedback)
+  feedbackDisliked String?  // yoqmagan/takliflar (lid-bot feedback)
+  telegramChatId   String?  // lid-bot chat id (qayta aloqa uchun — NON-unique)
   createdAt   DateTime @default(now())
 
   @@index([status])
   @@index([createdAt])
   @@index([branchId])
+}
+
+// Telegram lid-bot suhbat holati (bosqichma-bosqich funnel). Yakuniy lid Lead ga yoziladi.
+model BotSession {
+  id           String   @id @default(cuid())
+  chatId       String   @unique          // Telegram chat/user id
+  step         String   @default("idle") // idle|branch|name|phone|subject|teacher|fb_liked|fb_disliked|done
+  branchId     String?
+  branchName   String?
+  name         String?
+  phone        String?
+  subject      String?
+  teacherName  String?
+  teacherLevel String?
+  optionsJson  String?                    // joriy bosqich variantlari (index→qiymat)
+  leadId       String?                    // yaratilgan Lead id (feedback yangilash uchun)
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
 }
 
 // Audit jurnali — kim nima o'zgartirgani (javobgarlik/nazorat)

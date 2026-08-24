@@ -26,6 +26,10 @@ interface Lead {
   status: string;
   note: string | null;
   prepayment?: number;
+  subject?: string | null;
+  preferredTeacher?: string | null;
+  feedbackLiked?: string | null;
+  feedbackDisliked?: string | null;
   createdAt: string;
 }
 
@@ -344,6 +348,7 @@ export default function LeadsPage() {
                     <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">Ism</th>
                     <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">Telefon</th>
                     <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">Fan</th>
+                    <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">O&apos;qituvchi</th>
                     <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">Qo&apos;shilgan sana</th>
                     <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">LeadID</th>
                     <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">Status</th>
@@ -355,7 +360,17 @@ export default function LeadsPage() {
                   {filteredLeads.map(lead => (
                     <tr key={lead.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-5 py-3.5 text-sm font-medium text-slate-900">
-                        {lead.name}{lead.surname ? ` ${lead.surname}` : ''}
+                        <div className="flex items-center gap-1.5">
+                          {lead.source === 'telegram' && (
+                            <span title="Telegram bot orqali" className="text-sky-500">✈️</span>
+                          )}
+                          <span>{lead.name}{lead.surname ? ` ${lead.surname}` : ''}</span>
+                          {(lead.feedbackLiked || lead.feedbackDisliked) && (
+                            <span
+                              title={`Yoqqan: ${lead.feedbackLiked || '—'}\nYoqmagan/taklif: ${lead.feedbackDisliked || '—'}`}
+                              className="cursor-help">💬</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-5 py-3.5 text-sm text-slate-600">
                         <a href={`tel:${lead.phone}`} className="hover:text-[var(--brand-primary)] flex items-center gap-1">
@@ -364,11 +379,14 @@ export default function LeadsPage() {
                         </a>
                       </td>
                       <td className="px-5 py-3.5 text-sm">
-                        {lead.note ? (
-                          <span className="text-slate-700">{lead.note.split('|')[0]?.replace('Fan:', '').trim() || '—'}</span>
-                        ) : (
-                          <span className="text-slate-300">—</span>
-                        )}
+                        {lead.subject
+                          ? <span className="text-slate-700">{lead.subject}</span>
+                          : lead.note
+                            ? <span className="text-slate-700">{lead.note.split('|')[0]?.replace('Fan:', '').trim() || '—'}</span>
+                            : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-5 py-3.5 text-sm text-slate-600">
+                        {lead.preferredTeacher || <span className="text-slate-300">—</span>}
                       </td>
                       <td className="px-5 py-3.5 text-sm text-slate-500">
                         {fmtDate(lead.createdAt)}

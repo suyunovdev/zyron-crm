@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { fmtDate } from "@/lib/date";
 import { BOT_SOURCE_OPTIONS, sourceLabel } from "@/lib/lead-source";
+import { LeadStatsView } from "@/components/LeadStatsView";
 
 interface Lead {
   id: string;
@@ -86,6 +87,7 @@ const TABS = [
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<'list' | 'stats'>('list');
   const [activeTab, setActiveTab] = useState("all");
   const [showModal, setShowModal] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -303,15 +305,27 @@ export default function LeadsPage() {
     <>
       <div className="space-y-5">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-900">Yangi lidlar</h1>
-          <button onClick={() => setShowModal(true)}
-            className="inline-flex items-center gap-2 bg-amber-500 text-white px-4 py-2.5 rounded-lg hover:bg-amber-600 transition-colors font-semibold text-sm">
-            <Plus className="w-4 h-4" />
-            Yangi qo&apos;shish
-          </button>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <h1 className="text-2xl font-bold text-slate-900">Yangi lidlar</h1>
+            <div className="flex gap-1 bg-slate-100 rounded-lg p-1 flex-shrink-0">
+              <button onClick={() => setView('list')}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${view === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Lidlar</button>
+              <button onClick={() => setView('stats')}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${view === 'stats' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>📊 Tahlil</button>
+            </div>
+          </div>
+          {view === 'list' && (
+            <button onClick={() => setShowModal(true)}
+              className="inline-flex items-center gap-2 bg-amber-500 text-white px-4 py-2.5 rounded-lg hover:bg-amber-600 transition-colors font-semibold text-sm flex-shrink-0">
+              <Plus className="w-4 h-4" />
+              Yangi qo&apos;shish
+            </button>
+          )}
         </div>
 
+        {view === 'stats' && <LeadStatsView />}
+        {view === 'list' && (<>
         {/* Search + filters */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1 max-w-md">
@@ -438,6 +452,7 @@ export default function LeadsPage() {
           )}
         </div>
         )}
+        </>)}
       </div>
 
       {/* Multi-step Modal */}

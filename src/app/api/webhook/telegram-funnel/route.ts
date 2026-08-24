@@ -10,9 +10,10 @@ import {
 import {
   pickKeyboard, membershipKeyboard, phoneKeyboard, removeKeyboard, skipKeyboard, restartKeyboard,
   membershipText, chooseBranchText, askNameText, askPhoneText, invalidPhoneText,
-  chooseSubjectText, askOtherSubjectText, chooseTeacherText, noTeachersText,
+  chooseSubjectText, askOtherSubjectText, chooseTeacherText, noTeachersText, chooseSourceText,
   askFeedbackLikedText, askFeedbackDislikedText, submittedText, thankYouText, staffLeadText,
 } from '@/lib/funnel-messages';
+import { BOT_SOURCE_OPTIONS, SOURCE_LABELS } from '@/lib/lead-source';
 
 // Lid yig'uvchi Telegram bot webhook (bo'lajak o'quvchilar funnel).
 // Xavfsizlik: X-Telegram-Bot-Api-Secret-Token == TELEGRAM_LEAD_WEBHOOK_SECRET.
@@ -125,7 +126,7 @@ async function handleCallback(cq: TgCallback): Promise<void> {
     await answerCallbackQuery(cq.id);
     await prisma.botSession.update({ where: { chatId }, data: {
       step: 'idle', branchId: null, branchName: null, name: null, phone: null,
-      subject: null, teacherName: null, teacherLevel: null, optionsJson: null, leadId: null,
+      subject: null, teacherName: null, teacherLevel: null, source: null, optionsJson: null, leadId: null,
     } }).catch(() => {});
     await startFlow(chatId, cq.from.id);
     return;
@@ -143,7 +144,7 @@ async function handleCallback(cq: TgCallback): Promise<void> {
   if (data === 'tany') {
     await answerCallbackQuery(cq.id);
     await patch(chatId, { teacherName: null, teacherLevel: null });
-    await createLeadAndProceed(chatId);
+    await showSources(chatId);
     return;
   }
   if (data === 'fbskip') {
@@ -174,6 +175,10 @@ async function handleCallback(cq: TgCallback): Promise<void> {
       const t = opts[i] as { name: string; level: string | null } | undefined;
       if (!t) return;
       await patch(chatId, { teacherName: t.name, teacherLevel: t.level });
+      await showSources(chatId);
+    } else if (s.step === 'source') {
+      const src = opts[i] as string | undefined;
+      await patch(chatId, { source: src || 'other' });
       await createLeadAndProceed(chatId);
     }
     return;
@@ -235,12 +240,20 @@ async function showTeachers(chatId: string): Promise<void> {
   });
   if (teachers.length === 0) {
     await sendMessage(chatId, noTeachersText());
-    await createLeadAndProceed(chatId);
+    await showSources(chatId);
     return;
   }
   await patch(chatId, { step: 'teacher', optionsJson: JSON.stringify(teachers) });
   const labels = teachers.map(t => `👩‍🏫 ${t.name}${t.level ? ` — ${LEVEL_LABELS[t.level] || t.level}` : ''}`);
   await sendMessage(chatId, chooseTeacherText(), pickKeyboard(labels, [{ text: '🤝 Farqi yo’q', data: 'tany' }]));
+}
+
+/** "Bizni qayerdan bildingiz?" — manba tanlash. */
+async function showSources(chatId: string): Promise<void> {
+  const slugs = BOT_SOURCE_OPTIONS.map(o => o.slug);
+  await patch(chatId, { step: 'source', optionsJson: JSON.stringify(slugs) });
+  const labels = BOT_SOURCE_OPTIONS.map(o => `${o.emoji} ${o.label}`);
+  await sendMessage(chatId, chooseSourceText(), pickKeyboard(labels));
 }
 
 async function createLeadAndProceed(chatId: string): Promise<void> {
@@ -250,16 +263,17 @@ async function createLeadAndProceed(chatId: string): Promise<void> {
   const teacher = s.teacherName
     ? `${s.teacherName}${s.teacherLevel ? ` (${LEVEL_LABELS[s.teacherLevel] || s.teacherLevel})` : ''}`
     : null;
+  const src = s.source || 'other';
   const leadId = name.charAt(0).toLowerCase() + Math.random().toString(36).substring(2, 6);
   const note = [
     s.subject ? `Fan: ${s.subject}` : '',
     teacher ? `O'qituvchi: ${teacher}` : '',
-    'Manba: Telegram bot',
+    `Manba: ${SOURCE_LABELS[src] || src} (Telegram bot)`,
   ].filter(Boolean).join(' | ');
 
   const lead = await prisma.lead.create({
     data: {
-      leadId, name, phone, source: 'telegram', status: 'new',
+      leadId, name, phone, source: src, status: 'new',
       branchId: s.branchId || null,
       subject: s.subject || null,
       preferredTeacher: teacher,

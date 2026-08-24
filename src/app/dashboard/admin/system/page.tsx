@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { SlidersHorizontal, BarChart3, Building2, Send, UserCog, DatabaseBackup, ShieldAlert, Skull } from 'lucide-react';
-import { SettingsTab, AnalyticsTab, BranchesTab, BroadcastTab, ImpersonateTab, BackupTab, SecurityTab, DangerTab } from '@/components/system-tabs';
+import { SlidersHorizontal, BarChart3, Building2, Send, UserCog, DatabaseBackup, ShieldAlert, Skull, TrendingUp } from 'lucide-react';
+import { SettingsTab, AnalyticsTab, LeadStatsTab, BranchesTab, BroadcastTab, ImpersonateTab, BackupTab, SecurityTab, DangerTab } from '@/components/system-tabs';
 
-type Tab = 'settings' | 'analytics' | 'branches' | 'broadcast' | 'impersonate' | 'backup' | 'security' | 'danger';
+type Tab = 'settings' | 'analytics' | 'leadstats' | 'branches' | 'broadcast' | 'impersonate' | 'backup' | 'security' | 'danger';
 const TABS: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
   { id: 'settings', label: 'Sozlamalar', icon: SlidersHorizontal },
   { id: 'analytics', label: 'Analitika', icon: BarChart3 },
+  { id: 'leadstats', label: 'Lidlar tahlili', icon: TrendingUp },
   { id: 'branches', label: 'Filiallar', icon: Building2 },
   { id: 'broadcast', label: 'Tarqatma', icon: Send },
   { id: 'impersonate', label: 'Kirish', icon: UserCog },
@@ -34,6 +35,7 @@ export default function SystemPage() {
       </div>
       {tab === 'settings' && <SettingsTab />}
       {tab === 'analytics' && <AnalyticsTab />}
+      {tab === 'leadstats' && <LeadStatsTab />}
       {tab === 'branches' && <BranchesTab />}
       {tab === 'broadcast' && <BroadcastTab />}
       {tab === 'impersonate' && <ImpersonateTab />}

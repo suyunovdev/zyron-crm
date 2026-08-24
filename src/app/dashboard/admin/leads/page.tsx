@@ -9,6 +9,7 @@ import {
   Plus, Trash2, ChevronDown, Phone, User, TrendingUp, X, Loader2, Search, UserPlus,
 } from "lucide-react";
 import { fmtDate } from "@/lib/date";
+import { BOT_SOURCE_OPTIONS, sourceLabel } from "@/lib/lead-source";
 
 interface Lead {
   id: string;
@@ -30,6 +31,7 @@ interface Lead {
   preferredTeacher?: string | null;
   feedbackLiked?: string | null;
   feedbackDisliked?: string | null;
+  telegramChatId?: string | null;
   createdAt: string;
 }
 
@@ -361,7 +363,7 @@ export default function LeadsPage() {
                     <tr key={lead.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-5 py-3.5 text-sm font-medium text-slate-900">
                         <div className="flex items-center gap-1.5">
-                          {lead.source === 'telegram' && (
+                          {lead.telegramChatId && (
                             <span title="Telegram bot orqali" className="text-sky-500">✈️</span>
                           )}
                           <span>{lead.name}{lead.surname ? ` ${lead.surname}` : ''}</span>
@@ -570,10 +572,9 @@ export default function LeadsPage() {
                     <select value={form.source} onChange={e => setForm({ ...form, source: e.target.value })}
                       className={`${inputClass} bg-white`}>
                       <option value="">Tanlang</option>
-                      <option value="Telegram">Telegram</option>
-                      <option value="Instagram">Instagram</option>
-                      <option value="Do'stlar">Do&apos;stlar</option>
-                      <option value="Boshqa">Boshqa</option>
+                      {BOT_SOURCE_OPTIONS.map(o => (
+                        <option key={o.slug} value={o.slug}>{o.emoji} {o.label}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -641,7 +642,7 @@ export default function LeadsPage() {
                 {enrollLead.source && (
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-500">Manba</span>
-                    <span className="font-medium text-slate-700">{enrollLead.source}</span>
+                    <span className="font-medium text-slate-700">{sourceLabel(enrollLead.source)}</span>
                   </div>
                 )}
                 {enrollLead.prepayment && enrollLead.prepayment > 0 && (

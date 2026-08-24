@@ -94,6 +94,10 @@ export function chooseTeacherText(): string {
   return `👩‍🏫 O’zingizga ma’qul o’qituvchini tanlang (daraja ko’rsatilgan):`;
 }
 
+export function chooseSourceText(): string {
+  return `📣 Bizni qayerdan bildingiz?`;
+}
+
 export function askFeedbackLikedText(): string {
   return `💬 O’quv markazimizning yoqqan tomonlari nimalar? 🙂\n\n(yozing yoki o’tkazib yuboring)`;
 }

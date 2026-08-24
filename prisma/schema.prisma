@@ -194,7 +194,7 @@ model Lead {
 model BotSession {
   id           String   @id @default(cuid())
   chatId       String   @unique          // Telegram chat/user id
-  step         String   @default("idle") // idle|branch|name|phone|subject|teacher|fb_liked|fb_disliked|done
+  step         String   @default("idle") // idle|branch|name|phone|subject|teacher|source|fb_liked|fb_disliked|done
   branchId     String?
   branchName   String?
   name         String?
@@ -202,6 +202,7 @@ model BotSession {
   subject      String?
   teacherName  String?
   teacherLevel String?
+  source       String?  // lid manbasi (qayerdan eshitgan) — kanonik slug
   optionsJson  String?                    // joriy bosqich variantlari (index→qiymat)
   leadId       String?                    // yaratilgan Lead id (feedback yangilash uchun)
   updatedAt    DateTime @updatedAt

@@ -4,11 +4,11 @@ import { logger } from '@/lib/logger';
 import { createNotification } from '@/lib/notify';
 import { normalizePhone } from '@/lib/eskiz';
 import {
-  sendMessage, editMessageText, answerCallbackQuery,
+  sendMessage, deleteMessage, answerCallbackQuery,
   isChannelMember, notifyStaff,
 } from '@/lib/telegram-funnel';
 import {
-  pickKeyboard, membershipKeyboard, phoneKeyboard, removeKeyboard, skipKeyboard, restartKeyboard,
+  pickKeyboard, membershipKeyboard, phoneKeyboard, skipKeyboard, restartKeyboard,
   membershipText, chooseBranchText, askNameText, askPhoneText, invalidPhoneText,
   chooseSubjectText, askOtherSubjectText, chooseTeacherText, noTeachersText, chooseSourceText,
   askFeedbackLikedText, askFeedbackDislikedText, submittedText, thankYouText, staffLeadText,
@@ -59,38 +59,56 @@ async function patch(chatId: string, data: Record<string, unknown>) {
   await prisma.botSession.upsert({ where: { chatId }, update: data, create: { chatId, ...data } });
 }
 
+// ─── Toza chat: savolni almashtirish ───
+type Markup = Parameters<typeof sendMessage>[2];
+/** Oldingi bot savolini o'chirib, yangi savol yuboradi va uning id'sini saqlaydi (chat tarixi qisqa qoladi). */
+async function ask(chatId: string, text: string, markup?: Markup): Promise<void> {
+  const s = await prisma.botSession.findUnique({ where: { chatId }, select: { lastMsgId: true } });
+  if (s?.lastMsgId) await deleteMessage(chatId, s.lastMsgId).catch(() => {});
+  const res = await sendMessage(chatId, text, markup);
+  const mid = (res as { result?: { message_id?: number } })?.result?.message_id ?? null;
+  await prisma.botSession.upsert({ where: { chatId }, update: { lastMsgId: mid }, create: { chatId, lastMsgId: mid } });
+}
+/** Foydalanuvchi xabarini o'chirish (javob berilgach chatni tozalash). */
+async function delMsg(chatId: string, messageId?: number): Promise<void> {
+  if (messageId) await deleteMessage(chatId, messageId).catch(() => {});
+}
+
 // ─── Message (matn/kontakt) ───
 async function handleMessage(msg: TgMessage): Promise<void> {
   const from = msg.from;
   if (!from) return;
   const chatId = String(from.id);
+  const text = (msg.text || '').trim();
 
-  if ((msg.text || '').startsWith('/start')) {
+  // Foydalanuvchi javobini o'chiramiz — chat tarixi qisqa qoladi.
+  await delMsg(chatId, msg.message_id);
+
+  if (text.startsWith('/start')) {
     await startFlow(chatId, from.id);
     return;
   }
 
   const s = await getSession(chatId);
-  const text = (msg.text || '').trim();
 
   switch (s.step) {
     case 'name': {
-      if (!text) { await sendMessage(chatId, askNameText()); return; }
+      if (!text) { await ask(chatId, askNameText()); return; }
       await patch(chatId, { name: text, step: 'phone' });
-      await sendMessage(chatId, askPhoneText(), phoneKeyboard());
+      await ask(chatId, askPhoneText(), phoneKeyboard());
       return;
     }
     case 'phone': {
       const raw = msg.contact?.phone_number || text;
       const phone = raw ? normalizePhone(raw) : null;
-      if (!phone) { await sendMessage(chatId, invalidPhoneText(), phoneKeyboard()); return; }
+      if (!phone) { await ask(chatId, invalidPhoneText(), phoneKeyboard()); return; }
       await patch(chatId, { phone: '+' + phone, step: 'subject' });
-      await sendMessage(chatId, '✅ Raqam qabul qilindi.', removeKeyboard()); // reply keyboardni olib tashlash
+      // phoneKeyboard one_time_keyboard — reply keyboard o'zi yopiladi.
       await showSubjects(chatId);
       return;
     }
     case 'subject_other': {
-      if (!text) { await sendMessage(chatId, askOtherSubjectText()); return; }
+      if (!text) { await ask(chatId, askOtherSubjectText()); return; }
       await patch(chatId, { subject: text, step: 'teacher' });
       await showTeachers(chatId);
       return;
@@ -98,7 +116,7 @@ async function handleMessage(msg: TgMessage): Promise<void> {
     case 'fb_liked': {
       if (text) await updateLead(chatId, { feedbackLiked: text });
       await patch(chatId, { step: 'fb_disliked' });
-      await sendMessage(chatId, askFeedbackDislikedText(), skipKeyboard());
+      await ask(chatId, askFeedbackDislikedText(), skipKeyboard());
       return;
     }
     case 'fb_disliked': {
@@ -107,7 +125,7 @@ async function handleMessage(msg: TgMessage): Promise<void> {
       return;
     }
     default:
-      await sendMessage(chatId, 'Boshlash uchun /start bosing.');
+      await ask(chatId, 'Boshlash uchun /start bosing.');
   }
 }
 
@@ -115,11 +133,10 @@ async function handleMessage(msg: TgMessage): Promise<void> {
 async function handleCallback(cq: TgCallback): Promise<void> {
   const chatId = String(cq.from.id);
   const data = cq.data || '';
-  const messageId = cq.message?.message_id;
 
   if (data === 'chk') {
     await answerCallbackQuery(cq.id);
-    await startFlow(chatId, cq.from.id, messageId);
+    await startFlow(chatId, cq.from.id);
     return;
   }
   if (data === 'restart') {
@@ -138,7 +155,7 @@ async function handleCallback(cq: TgCallback): Promise<void> {
   if (data === 'subother') {
     await answerCallbackQuery(cq.id);
     await patch(chatId, { step: 'subject_other' });
-    await sendMessage(chatId, askOtherSubjectText());
+    await ask(chatId, askOtherSubjectText());
     return;
   }
   if (data === 'tany') {
@@ -151,7 +168,7 @@ async function handleCallback(cq: TgCallback): Promise<void> {
     await answerCallbackQuery(cq.id);
     if (s.step === 'fb_liked') {
       await patch(chatId, { step: 'fb_disliked' });
-      await sendMessage(chatId, askFeedbackDislikedText(), skipKeyboard());
+      await ask(chatId, askFeedbackDislikedText(), skipKeyboard());
     } else {
       await finish(chatId);
     }
@@ -165,7 +182,7 @@ async function handleCallback(cq: TgCallback): Promise<void> {
       const b = opts[i] as { id: string; name: string } | undefined;
       if (!b) return;
       await patch(chatId, { branchId: b.id, branchName: b.name, step: 'name' });
-      await sendMessage(chatId, askNameText());
+      await ask(chatId, askNameText());
     } else if (s.step === 'subject') {
       const subj = opts[i] as string | undefined;
       if (!subj) return;
@@ -188,13 +205,12 @@ async function handleCallback(cq: TgCallback): Promise<void> {
 }
 
 // ─── Bosqichlar ───
-async function startFlow(chatId: string, userId: number, editMsgId?: number): Promise<void> {
+async function startFlow(chatId: string, userId: number): Promise<void> {
   const member = await isChannelMember(userId);
   if (!member) {
     const channel = process.env.TELEGRAM_LEAD_CHANNEL || '';
     const url = channel.startsWith('@') ? `https://t.me/${channel.slice(1)}` : 'https://t.me/';
-    if (editMsgId) await editMessageText(chatId, editMsgId, membershipText(), membershipKeyboard(url));
-    else await sendMessage(chatId, membershipText(), membershipKeyboard(url));
+    await ask(chatId, membershipText(), membershipKeyboard(url));
     return;
   }
   await showBranches(chatId);
@@ -205,16 +221,16 @@ async function showBranches(chatId: string): Promise<void> {
   if (branches.length === 0) {
     // Filial yo'q — to'g'ridan-to'g'ri ism
     await patch(chatId, { branchId: null, branchName: null, step: 'name', optionsJson: null });
-    await sendMessage(chatId, askNameText());
+    await ask(chatId, askNameText());
     return;
   }
   if (branches.length === 1) {
     await patch(chatId, { branchId: branches[0].id, branchName: branches[0].name, step: 'name', optionsJson: null });
-    await sendMessage(chatId, askNameText());
+    await ask(chatId, askNameText());
     return;
   }
   await patch(chatId, { step: 'branch', optionsJson: JSON.stringify(branches) });
-  await sendMessage(chatId, chooseBranchText(), pickKeyboard(branches.map(b => `🏢 ${b.name}`)));
+  await ask(chatId, chooseBranchText(), pickKeyboard(branches.map(b => `🏢 ${b.name}`)));
 }
 
 async function showSubjects(chatId: string): Promise<void> {
@@ -225,7 +241,7 @@ async function showSubjects(chatId: string): Promise<void> {
   });
   const subjects = [...new Set(teachers.map(t => t.subject).filter((x): x is string => !!x))].sort();
   await patch(chatId, { step: 'subject', optionsJson: JSON.stringify(subjects) });
-  await sendMessage(chatId, chooseSubjectText(), pickKeyboard(
+  await ask(chatId, chooseSubjectText(), pickKeyboard(
     subjects.map(x => `📖 ${x}`),
     [{ text: '➕ Boshqa fan', data: 'subother' }],
   ));
@@ -239,21 +255,21 @@ async function showTeachers(chatId: string): Promise<void> {
     orderBy: { name: 'asc' },
   });
   if (teachers.length === 0) {
-    await sendMessage(chatId, noTeachersText());
-    await showSources(chatId);
+    // O'qituvchi yo'q — eslatma to'g'ridan-to'g'ri manba savolining tepasiga qo'shiladi.
+    await showSources(chatId, noTeachersText() + '\n\n');
     return;
   }
   await patch(chatId, { step: 'teacher', optionsJson: JSON.stringify(teachers) });
   const labels = teachers.map(t => `👩‍🏫 ${t.name}${t.level ? ` — ${LEVEL_LABELS[t.level] || t.level}` : ''}`);
-  await sendMessage(chatId, chooseTeacherText(), pickKeyboard(labels, [{ text: '🤝 Farqi yo’q', data: 'tany' }]));
+  await ask(chatId, chooseTeacherText(), pickKeyboard(labels, [{ text: '🤝 Farqi yo’q', data: 'tany' }]));
 }
 
 /** "Bizni qayerdan bildingiz?" — manba tanlash. */
-async function showSources(chatId: string): Promise<void> {
+async function showSources(chatId: string, prefix = ''): Promise<void> {
   const slugs = BOT_SOURCE_OPTIONS.map(o => o.slug);
   await patch(chatId, { step: 'source', optionsJson: JSON.stringify(slugs) });
   const labels = BOT_SOURCE_OPTIONS.map(o => `${o.emoji} ${o.label}`);
-  await sendMessage(chatId, chooseSourceText(), pickKeyboard(labels));
+  await ask(chatId, prefix + chooseSourceText(), pickKeyboard(labels));
 }
 
 async function createLeadAndProceed(chatId: string): Promise<void> {
@@ -298,8 +314,7 @@ async function createLeadAndProceed(chatId: string): Promise<void> {
     source: `${SOURCE_LABELS[src] || src} (Telegram bot)`, leadId,
   }));
 
-  await sendMessage(chatId, submittedText());
-  await sendMessage(chatId, askFeedbackLikedText(), skipKeyboard());
+  await ask(chatId, `${submittedText()}\n\n${askFeedbackLikedText()}`, skipKeyboard());
 }
 
 async function updateLead(chatId: string, data: Record<string, unknown>): Promise<void> {
@@ -311,5 +326,5 @@ async function updateLead(chatId: string, data: Record<string, unknown>): Promis
 async function finish(chatId: string): Promise<void> {
   const s = await getSession(chatId);
   await patch(chatId, { step: 'done' });
-  await sendMessage(chatId, thankYouText(s.name || ''), restartKeyboard());
+  await ask(chatId, thankYouText(s.name || ''), restartKeyboard());
 }

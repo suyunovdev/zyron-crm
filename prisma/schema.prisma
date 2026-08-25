@@ -205,6 +205,7 @@ model BotSession {
   source       String?  // lid manbasi (qayerdan eshitgan) — kanonik slug
   optionsJson  String?                    // joriy bosqich variantlari (index→qiymat)
   leadId       String?                    // yaratilgan Lead id (feedback yangilash uchun)
+  lastMsgId    Int?                       // oxirgi bot savoli message_id — keyingi savolda o'chiriladi (toza chat)
   updatedAt    DateTime @updatedAt
   createdAt    DateTime @default(now())
 }

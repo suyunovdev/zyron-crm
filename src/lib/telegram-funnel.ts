@@ -73,6 +73,11 @@ export function answerCallbackQuery(callbackQueryId: string, text?: string) {
   return tgCall('answerCallbackQuery', { callback_query_id: callbackQueryId, ...(text ? { text } : {}) });
 }
 
+/** Xabarni o'chirish (toza chat — savol/javoblarni tozalash). Xato bo'lsa jim yutadi. */
+export function deleteMessage(chatId: number | string, messageId: number) {
+  return tgCall('deleteMessage', { chat_id: chatId, message_id: messageId });
+}
+
 interface ChatMember { status: string }
 /**
  * Foydalanuvchi kanalga a'zomi? (member/administrator/creator = a'zo).

@@ -292,8 +292,11 @@ async function createLeadAndProceed(chatId: string): Promise<void> {
     branchId: s.branchId || null,
   }).catch(() => {});
 
-  // Staff guruhga (agar sozlangan)
-  await notifyStaff(staffLeadText({ name, phone, branchName: s.branchName, subject: s.subject, teacher }));
+  // Staff guruhga (agar sozlangan) — to'liq ma'lumot bilan
+  await notifyStaff(staffLeadText({
+    name, phone, branchName: s.branchName, subject: s.subject, teacher,
+    source: `${SOURCE_LABELS[src] || src} (Telegram bot)`, leadId,
+  }));
 
   await sendMessage(chatId, submittedText());
   await sendMessage(chatId, askFeedbackLikedText(), skipKeyboard());

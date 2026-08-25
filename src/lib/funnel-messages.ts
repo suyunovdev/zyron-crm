@@ -121,15 +121,19 @@ export function thankYouText(name: string): string {
 
 /** Staff guruhga yangi ariza xabari. */
 export function staffLeadText(d: {
-  name: string; phone: string; branchName?: string | null; subject?: string | null; teacher?: string | null;
+  name: string; phone: string; branchName?: string | null; subject?: string | null;
+  teacher?: string | null; source?: string | null; leadId?: string | null;
 }): string {
   const lines = [
     `🆕 <b>Yangi ariza</b> (Telegram bot)`,
-    `👤 ${escapeHtml(d.name)}`,
+    ``,
+    `👤 <b>${escapeHtml(d.name)}</b>`,
     `📞 ${escapeHtml(d.phone)}`,
   ];
   if (d.branchName) lines.push(`🏢 ${escapeHtml(d.branchName)}`);
   if (d.subject) lines.push(`📚 ${escapeHtml(d.subject)}`);
   if (d.teacher) lines.push(`👩‍🏫 ${escapeHtml(d.teacher)}`);
+  if (d.source) lines.push(`📊 Manba: ${escapeHtml(d.source)}`);
+  if (d.leadId) lines.push(``, `🆔 <code>${escapeHtml(d.leadId)}</code>`);
   return lines.join('\n');
 }

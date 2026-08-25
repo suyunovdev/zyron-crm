@@ -7,11 +7,12 @@ import { confirmDialog } from '@/components/confirm-dialog';
 import { createPortal } from "react-dom";
 import {
   Plus, Trash2, ChevronDown, Phone, User, TrendingUp, X, Loader2, Search, UserPlus,
+  SlidersHorizontal,
 } from "lucide-react";
 import { fmtDate } from "@/lib/date";
 import {
-  BOT_SOURCE_OPTIONS, sourceLabel, sourceMeta,
-  leadChannel, CHANNEL_LABELS, CHANNEL_EMOJI,
+  BOT_SOURCE_OPTIONS, SOURCE_OPTIONS, sourceLabel, sourceMeta, normalizeSource,
+  leadChannel, CHANNEL_LABELS, CHANNEL_EMOJI, type LeadChannel,
 } from "@/lib/lead-source";
 import { LeadStatsView } from "@/components/LeadStatsView";
 
@@ -99,6 +100,11 @@ export default function LeadsPage() {
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const dropdownBtnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterSource, setFilterSource] = useState("");
+  const [filterChannel, setFilterChannel] = useState<"" | LeadChannel>("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
   const [modalStep, setModalStep] = useState(1);
 
   const [form, setForm] = useState({
@@ -284,10 +290,25 @@ export default function LeadsPage() {
     return () => document.removeEventListener('click', handler);
   }, [openDropdown]);
 
-  const filteredLeads = leads.filter(l =>
-    !searchQuery || l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    l.phone.includes(searchQuery) || (l.leadId && l.leadId.includes(searchQuery))
-  );
+  const filteredLeads = leads.filter(l => {
+    // Qidiruv (ism/telefon/LeadID)
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const hit = l.name.toLowerCase().includes(q) || l.phone.includes(searchQuery) || (l.leadId && l.leadId.toLowerCase().includes(q));
+      if (!hit) return false;
+    }
+    // Manba (attribution)
+    if (filterSource && normalizeSource(l.source) !== filterSource) return false;
+    // Kanal (bot/sayt/qo'lda)
+    if (filterChannel && leadChannel(l) !== filterChannel) return false;
+    // Sana oralig'i
+    if (dateFrom && new Date(l.createdAt) < new Date(dateFrom + "T00:00:00")) return false;
+    if (dateTo && new Date(l.createdAt) > new Date(dateTo + "T23:59:59")) return false;
+    return true;
+  });
+
+  const activeFilterCount = [filterSource, filterChannel, dateFrom, dateTo].filter(Boolean).length;
+  const resetFilters = () => { setFilterSource(""); setFilterChannel(""); setDateFrom(""); setDateTo(""); };
 
   const totalLeads = leads.length;
   const enrolledLeads = leads.filter(l => l.status === "enrolled").length;
@@ -339,6 +360,16 @@ export default function LeadsPage() {
               value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
           </div>
+          <button onClick={() => setShowFilters(v => !v)}
+            className={`inline-flex items-center gap-2 px-3.5 py-2.5 rounded-lg border text-sm font-medium transition-colors flex-shrink-0 ${
+              showFilters || activeFilterCount ? "border-blue-500 bg-blue-50 text-blue-700" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}>
+            <SlidersHorizontal className="w-4 h-4" />
+            Filter
+            {activeFilterCount > 0 && (
+              <span className="bg-blue-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{activeFilterCount}</span>
+            )}
+          </button>
           <div className="flex gap-1 bg-slate-100 rounded-lg p-1 overflow-x-auto">
             {TABS.map(tab => (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
@@ -350,6 +381,51 @@ export default function LeadsPage() {
             ))}
           </div>
         </div>
+
+        {/* Kengaytirilgan filter paneli */}
+        {showFilters && (
+          <div className="bg-white border border-slate-200 rounded-xl p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Manba (qayerdan bildi)</label>
+                <select value={filterSource} onChange={e => setFilterSource(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                  <option value="">Barcha manbalar</option>
+                  {SOURCE_OPTIONS.map(o => <option key={o.slug} value={o.slug}>{o.emoji} {o.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Kanal (qanday keldi)</label>
+                <select value={filterChannel} onChange={e => setFilterChannel(e.target.value as "" | LeadChannel)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                  <option value="">Barcha kanallar</option>
+                  <option value="bot">🤖 Lid bot</option>
+                  <option value="website">🌐 Veb-sayt</option>
+                  <option value="manual">✍️ Qo&apos;lda</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Sanadan</label>
+                <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Sanagacha</label>
+                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30" />
+              </div>
+            </div>
+            <div className="flex items-center justify-between mt-3">
+              <span className="text-xs text-slate-500">{filteredLeads.length} ta lid topildi</span>
+              {activeFilterCount > 0 && (
+                <button onClick={resetFilters}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-red-500">
+                  <X className="w-3.5 h-3.5" /> Filterni tozalash
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Table */}
         {loading ? (

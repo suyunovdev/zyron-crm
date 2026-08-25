@@ -260,7 +260,7 @@ async function showTeachers(chatId: string): Promise<void> {
     return;
   }
   await patch(chatId, { step: 'teacher', optionsJson: JSON.stringify(teachers) });
-  const labels = teachers.map(t => `👩‍🏫 ${t.name}${t.level ? ` — ${LEVEL_LABELS[t.level] || t.level}` : ''}`);
+  const labels = teachers.map(t => `👩‍🏫 ${t.name}`);
   await ask(chatId, chooseTeacherText(), pickKeyboard(labels, [{ text: '🤝 Farqi yo’q', data: 'tany' }]));
 }
 

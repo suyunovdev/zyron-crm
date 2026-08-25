@@ -91,7 +91,7 @@ export function noTeachersText(): string {
 }
 
 export function chooseTeacherText(): string {
-  return `👩‍🏫 O’zingizga ma’qul o’qituvchini tanlang (daraja ko’rsatilgan):`;
+  return `👩‍🏫 O’zingizga ma’qul o’qituvchini tanlang:`;
 }
 
 export function chooseSourceText(): string {

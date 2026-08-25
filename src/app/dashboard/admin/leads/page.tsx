@@ -9,7 +9,10 @@ import {
   Plus, Trash2, ChevronDown, Phone, User, TrendingUp, X, Loader2, Search, UserPlus,
 } from "lucide-react";
 import { fmtDate } from "@/lib/date";
-import { BOT_SOURCE_OPTIONS, sourceLabel } from "@/lib/lead-source";
+import {
+  BOT_SOURCE_OPTIONS, sourceLabel, sourceMeta,
+  leadChannel, CHANNEL_LABELS, CHANNEL_EMOJI,
+} from "@/lib/lead-source";
 import { LeadStatsView } from "@/components/LeadStatsView";
 
 interface Lead {
@@ -86,6 +89,7 @@ const TABS = [
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [leadBotUsername, setLeadBotUsername] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'list' | 'stats'>('list');
   const [activeTab, setActiveTab] = useState("all");
@@ -118,6 +122,7 @@ export default function LeadsPage() {
       const res = await fetch(`/api/admin/leads${query}`);
       const data = await res.json();
       setLeads(data.leads || []);
+      if (data.leadBotUsername !== undefined) setLeadBotUsername(data.leadBotUsername);
     } catch {
       setLeads([]);
     } finally {
@@ -365,6 +370,7 @@ export default function LeadsPage() {
                     <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">Telefon</th>
                     <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">Fan</th>
                     <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">O&apos;qituvchi</th>
+                    <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">Manba</th>
                     <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">Qo&apos;shilgan sana</th>
                     <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">LeadID</th>
                     <th className="text-left text-xs font-medium text-slate-500 uppercase px-5 py-3">Status</th>
@@ -403,6 +409,29 @@ export default function LeadsPage() {
                       </td>
                       <td className="px-5 py-3.5 text-sm text-slate-600">
                         {lead.preferredTeacher || <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-5 py-3.5 text-sm">
+                        {(() => {
+                          const ch = leadChannel(lead);
+                          const sm = lead.source ? sourceMeta(lead.source) : null;
+                          const showAttr = sm && ch !== 'website';
+                          const chCls = ch === 'bot'
+                            ? 'bg-sky-50 text-sky-700 border-sky-200'
+                            : ch === 'website'
+                              ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                              : 'bg-slate-50 text-slate-600 border-slate-200';
+                          const chTxt = ch === 'bot' && leadBotUsername
+                            ? `${CHANNEL_LABELS.bot} · @${leadBotUsername}`
+                            : CHANNEL_LABELS[ch];
+                          return (
+                            <div className="flex flex-col gap-1">
+                              {showAttr && <span className="text-slate-700">{sm!.emoji} {sm!.label}</span>}
+                              <span className={`inline-flex items-center gap-1 w-fit px-2 py-0.5 rounded-full text-[11px] font-medium border ${chCls}`}>
+                                {CHANNEL_EMOJI[ch]} {chTxt}
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-5 py-3.5 text-sm text-slate-500">
                         {fmtDate(lead.createdAt)}

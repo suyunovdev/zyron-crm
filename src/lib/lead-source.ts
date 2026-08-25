@@ -54,3 +54,29 @@ export function normalizeSource(raw?: string | null): string {
 export function sourceLabel(raw?: string | null): string {
   return SOURCE_LABELS[normalizeSource(raw)] || 'Boshqa';
 }
+
+/** Manba (emoji + label) — ko'rsatish uchun. */
+export function sourceMeta(raw?: string | null): { emoji: string; label: string; color: string; slug: string } {
+  const slug = normalizeSource(raw);
+  return { slug, emoji: SOURCE_EMOJI[slug] || '🔎', label: SOURCE_LABELS[slug] || 'Boshqa', color: SOURCE_COLORS[slug] || '#94A3B8' };
+}
+
+// ── Lid kirish yo'li (kanal): qaysi vosita orqali keldi ──
+// bot = Telegram lid-bot (telegramChatId bor); website = sayt formasi; manual = admin qo'lda.
+export type LeadChannel = 'bot' | 'website' | 'manual';
+
+export function leadChannel(lead: { telegramChatId?: string | null; source?: string | null }): LeadChannel {
+  if (lead.telegramChatId) return 'bot';
+  if (normalizeSource(lead.source) === 'website') return 'website';
+  return 'manual';
+}
+
+export const CHANNEL_LABELS: Record<LeadChannel, string> = {
+  bot: 'Lid bot', website: 'Veb-sayt', manual: "Qo'lda kiritilgan",
+};
+export const CHANNEL_EMOJI: Record<LeadChannel, string> = {
+  bot: '🤖', website: '🌐', manual: '✍️',
+};
+export const CHANNEL_COLORS: Record<LeadChannel, string> = {
+  bot: '#229ED9', website: '#6366F1', manual: '#94A3B8',
+};

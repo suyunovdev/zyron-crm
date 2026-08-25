@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { scopedBranchId } from '@/lib/branch-scope';
 import { logger } from '@/lib/logger';
-import { normalizeSource } from '@/lib/lead-source';
+import { normalizeSource, leadChannel } from '@/lib/lead-source';
 
 // Lidlar tahlili (admin + superadmin) — davr/filial filtri, manba/status/filial, oylik trend
 // (jami + manba bo'yicha). Admin: o'z filiali + landing; superadmin: hammasi yoki tanlangan filial.
@@ -46,13 +46,14 @@ export async function GET(req: NextRequest) {
     }
 
     const where = { ...branchWhere, ...dateWhere };
-    const leads = await prisma.lead.findMany({ where, select: { source: true, status: true, branchId: true, createdAt: true } });
+    const leads = await prisma.lead.findMany({ where, select: { source: true, status: true, branchId: true, createdAt: true, telegramChatId: true } });
     const total = leads.length;
 
     const branches = await prisma.branch.findMany({ select: { id: true, name: true }, orderBy: { createdAt: 'asc' } });
     const branchNameById: Record<string, string> = Object.fromEntries(branches.map(b => [b.id, b.name]));
 
     const sourceCount: Record<string, number> = {};
+    const channelCount: Record<string, number> = { bot: 0, website: 0, manual: 0 };
     const statusCount: Record<string, number> = {};
     const branchCount: Record<string, number> = {};
     const monthCount: Record<string, number> = {};
@@ -62,6 +63,7 @@ export async function GET(req: NextRequest) {
     for (const l of leads) {
       const src = normalizeSource(l.source);
       sourceCount[src] = (sourceCount[src] || 0) + 1;
+      channelCount[leadChannel(l)] = (channelCount[leadChannel(l)] || 0) + 1;
       statusCount[l.status] = (statusCount[l.status] || 0) + 1;
       const bkey = l.branchId ? (branchNameById[l.branchId] || 'Nomaʼlum') : 'Filialsiz';
       branchCount[bkey] = (branchCount[bkey] || 0) + 1;
@@ -73,6 +75,8 @@ export async function GET(req: NextRequest) {
     }
 
     const bySource = Object.entries(sourceCount).map(([slug, count]) => ({ slug, count })).sort((a, b) => b.count - a.count);
+    const byChannel = (['bot', 'website', 'manual'] as const).map((key) => ({ key, count: channelCount[key] || 0 }));
+    const botLeads = channelCount.bot || 0;
     const byBranch = Object.entries(branchCount).map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count);
     const trend = months.map(m => ({ month: m, count: monthCount[m] || 0 }));
     const trendBySource = Object.entries(bySourceMonth).map(([slug, data]) => ({ slug, data }))
@@ -82,8 +86,8 @@ export async function GET(req: NextRequest) {
     const topSource = bySource[0] || null;
 
     return NextResponse.json({
-      total, thisMonth, conversion, topSource,
-      bySource, byStatus: statusCount, byBranch,
+      total, thisMonth, conversion, topSource, botLeads,
+      bySource, byChannel, byStatus: statusCount, byBranch,
       months, trend, trendBySource,
       period: periodRaw, appliedBranch: branchParam,
       branches: isSuper ? branches : [],

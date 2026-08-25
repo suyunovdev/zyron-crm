@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Donut, Bars, MultiLine, Sparkline } from '@/components/charts';
-import { SOURCE_LABELS, SOURCE_COLORS } from '@/lib/lead-source';
+import { SOURCE_LABELS, SOURCE_COLORS, CHANNEL_LABELS, CHANNEL_COLORS, CHANNEL_EMOJI, type LeadChannel } from '@/lib/lead-source';
 
 // Lidlar tahlili (marketing) — davr/filial filtri, KPI sparkline, manba bo'yicha ko'p chiziqli trend.
 const fmt = (n: number) => (n || 0).toLocaleString('uz-UZ');
@@ -16,9 +16,10 @@ const STATUS_LABELS: Record<string, string> = {
 const PERIODS = [{ k: '3', l: '3 oy' }, { k: '6', l: '6 oy' }, { k: '12', l: '12 oy' }, { k: 'all', l: 'Hammasi' }];
 
 interface LeadStats {
-  total: number; thisMonth: number; conversion: number;
+  total: number; thisMonth: number; conversion: number; botLeads: number;
   topSource: { slug: string; count: number } | null;
   bySource: { slug: string; count: number }[];
+  byChannel: { key: LeadChannel; count: number }[];
   byStatus: Record<string, number>;
   byBranch: { label: string; count: number }[];
   months: string[];
@@ -42,6 +43,8 @@ export function LeadStatsView() {
   if (!d) return <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-[var(--brand-primary)]" /></div>;
 
   const donut = d.bySource.map(s => ({ label: SOURCE_LABELS[s.slug] || s.slug, value: s.count, color: SOURCE_COLORS[s.slug] || '#94a3b8' }));
+  const channelDonut = (d.byChannel || []).filter(c => c.count > 0)
+    .map(c => ({ label: `${CHANNEL_EMOJI[c.key]} ${CHANNEL_LABELS[c.key]}`, value: c.count, color: CHANNEL_COLORS[c.key] }));
   const sourceBars = d.bySource.map(s => ({ label: SOURCE_LABELS[s.slug] || s.slug, value: s.count }));
   const spark = d.trend.map(t => t.count);
   const categories = d.months.map(monthLabel);
@@ -52,6 +55,7 @@ export function LeadStatsView() {
     { l: 'Jami lidlar', v: fmt(d.total), spark: true },
     { l: 'Bu oy', v: fmt(d.thisMonth), spark: true },
     { l: 'Konversiya', v: `${d.conversion}%`, spark: false },
+    { l: 'Bot orqali', v: fmt(d.botLeads), spark: false },
     { l: 'Top manba', v: d.topSource ? (SOURCE_LABELS[d.topSource.slug] || d.topSource.slug) : '—', spark: false },
   ];
 
@@ -78,7 +82,7 @@ export function LeadStatsView() {
       </div>
 
       {/* KPI + sparkline */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {kpis.map(x => (
           <div key={x.l} className={card}>
             <p className="text-xs text-slate-500">{x.l}</p>
@@ -88,10 +92,18 @@ export function LeadStatsView() {
         ))}
       </div>
 
-      {/* Manba ulushi (donut) */}
-      <div className={card}>
-        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Manba bo&apos;yicha — qayerdan bildi</p>
-        <Donut data={donut} />
+      {/* Manba (qayerdan bildi) + Kanal (qanday keldi) */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className={card}>
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Manba bo&apos;yicha — qayerdan bildi</p>
+          <Donut data={donut} />
+        </div>
+        <div className={card}>
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Kanal bo&apos;yicha — qanday keldi (bot / sayt / qo&apos;lda)</p>
+          {channelDonut.length > 0
+            ? <Donut data={channelDonut} />
+            : <p className="text-sm text-slate-400 text-center py-10">Ma&apos;lumot yo&apos;q</p>}
+        </div>
       </div>
 
       {/* Manba bo'yicha oylik trend (ko'p chiziqli) */}

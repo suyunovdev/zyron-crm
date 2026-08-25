@@ -43,7 +43,8 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ leads });
+    const leadBotUsername = process.env.TELEGRAM_LEAD_BOT_USERNAME || null;
+    return NextResponse.json({ leads, leadBotUsername });
   } catch (error) {
     logger.error("[GET /api/admin/leads]", error);
     return NextResponse.json({ error: "Server xatosi" }, { status: 500 });

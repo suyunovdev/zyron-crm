@@ -311,7 +311,7 @@ async function createLeadAndProceed(chatId: string): Promise<void> {
   // Staff guruhga (agar sozlangan) — to'liq ma'lumot bilan
   await notifyStaff(staffLeadText({
     name, phone, branchName: s.branchName, subject: s.subject, teacher,
-    source: `${SOURCE_LABELS[src] || src} (Telegram bot)`, leadId,
+    source: SOURCE_LABELS[src] || src, leadId,
   }));
 
   await ask(chatId, `${submittedText()}\n\n${askFeedbackLikedText()}`, skipKeyboard());

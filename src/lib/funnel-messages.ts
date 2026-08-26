@@ -119,13 +119,13 @@ export function thankYouText(name: string): string {
   );
 }
 
-/** Staff guruhga yangi ariza xabari. */
+/** Staff guruhga yangi ariza xabari. origin — qayerdan (Telegram bot / Veb-sayt). */
 export function staffLeadText(d: {
   name: string; phone: string; branchName?: string | null; subject?: string | null;
-  teacher?: string | null; source?: string | null; leadId?: string | null;
+  teacher?: string | null; source?: string | null; leadId?: string | null; origin?: string;
 }): string {
   const lines = [
-    `🆕 <b>Yangi ariza</b> (Telegram bot)`,
+    `🆕 <b>Yangi ariza</b> (${d.origin || 'Telegram bot'})`,
     ``,
     `👤 <b>${escapeHtml(d.name)}</b>`,
     `📞 ${escapeHtml(d.phone)}`,

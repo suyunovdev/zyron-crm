@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db';
 import { createNotification } from '@/lib/notify';
 import { logger } from '@/lib/logger';
 import { parseBody } from '@/lib/validate';
+import { notifyStaff } from '@/lib/telegram-funnel';
+import { staffLeadText } from '@/lib/funnel-messages';
 
 const LeadSchema = z.object({
   name: z.string().min(1).max(120),
@@ -64,6 +66,12 @@ export async function POST(req: NextRequest) {
       message: `${name} — ${phone}${subjectText ? ` (${subjectText})` : ''}`,
       link: '/dashboard/admin/leads',
     });
+
+    // Telegram staff guruhga (agar sozlangan) — bot lidlari bilan bir xil joyga
+    await notifyStaff(staffLeadText({
+      name, phone, subject: subjectText || null,
+      source: 'Veb-sayt (landing)', origin: 'Veb-sayt', leadId: lead.leadId,
+    }));
 
     return NextResponse.json({ ok: true, leadId: lead.leadId }, { status: 201 });
   } catch (error) {

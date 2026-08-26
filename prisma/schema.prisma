@@ -26,7 +26,7 @@ model User {
   branch    Branch?  @relation(fields: [branchId], references: [id])
   salaryShare  Int?     // ustoz uchun: yig'ilgan to'lovdan ulush (%)
   tokenVersion Int   @default(0) // majburiy logout uchun — bumping barcha eski tokenlarni bekor qiladi
-  telegramChatId   String?   @unique // bog'langan Telegram chat/user id (bitta akkaunt = bitta ota-ona)
+  telegramChatId   String?   // bog'langan Telegram chat/user id — bir chatga bir nechta ota-ona akkaunti (aka-uka) bog'lanishi mumkin (NON-unique)
   telegramUsername String?   // @username (ko'rsatish uchun, ixtiyoriy)
   telegramLinkedAt DateTime? // Telegram bog'langan vaqt
   tgLinkToken      String?   @unique // deep-link uchun bir martalik token (Telegram start param: <=64, [A-Za-z0-9_-])
@@ -42,6 +42,7 @@ model User {
   @@index([role, status])
   @@index([parentId])
   @@index([branchId])
+  @@index([telegramChatId])
 }
 
 model Group {

@@ -34,10 +34,14 @@ export interface ChildReport {
   recentPayments: Array<{ amount: number; month: string; method: string; createdAt: Date }>;
 }
 
-/** Ota-onaning barcha farzandlari (parentId bo'yicha) — to'liq boyitilgan hisobot. */
-export async function getChildrenReport(parentId: string): Promise<ChildReport[]> {
+/**
+ * Telegram chatga bog'langan BARCHA farzandlar — to'liq boyitilgan hisobot.
+ * Bitta chatga bir nechta ota-ona akkaunti bog'lanishi mumkin (aka-uka har biri
+ * alohida akkauntda), shuning uchun farzandlar chatId bo'yicha yig'iladi.
+ */
+export async function getChildrenReport(chatId: string): Promise<ChildReport[]> {
   const children = await prisma.user.findMany({
-    where: { parentId, role: 'student' },
+    where: { role: 'student', parent: { telegramChatId: chatId } },
     select: {
       id: true,
       name: true,
@@ -173,16 +177,16 @@ export async function getChildrenReport(parentId: string): Promise<ChildReport[]
 }
 
 /**
- * Bitta farzand hisoboti — EGALIK tekshiruvi bilan (child.parentId === parentId).
- * Bot callback'lari uchun: boshqa ota-ona childId yuborsa null qaytadi.
+ * Bitta farzand hisoboti — EGALIK tekshiruvi bilan (farzand ota-onasi shu chatga bog'langanmi).
+ * Bot callback'lari uchun: boshqa chatga tegishli childId yuborsa null qaytadi.
  */
-export async function getChildReport(parentId: string, childId: string): Promise<ChildReport | null> {
+export async function getChildReport(chatId: string, childId: string): Promise<ChildReport | null> {
   const child = await prisma.user.findUnique({
     where: { id: childId },
-    select: { parentId: true },
+    select: { parent: { select: { telegramChatId: true } } },
   });
-  if (!child || child.parentId !== parentId) return null;
-  const all = await getChildrenReport(parentId);
+  if (!child || child.parent?.telegramChatId !== chatId) return null;
+  const all = await getChildrenReport(chatId);
   return all.find(c => c.id === childId) || null;
 }
 
@@ -200,14 +204,14 @@ export interface LessonItem {
  * EGALIK tekshiruvi bilan. months — mavjud oylar (kamayish tartibida, filter chiplari uchun).
  */
 export async function getChildLessons(
-  parentId: string,
+  chatId: string,
   childId: string,
 ): Promise<{ months: string[]; lessons: LessonItem[] }> {
   const child = await prisma.user.findUnique({
     where: { id: childId },
-    select: { parentId: true, groupStudents: { select: { groupId: true } } },
+    select: { parent: { select: { telegramChatId: true } }, groupStudents: { select: { groupId: true } } },
   });
-  if (!child || child.parentId !== parentId) return { months: [], lessons: [] };
+  if (!child || child.parent?.telegramChatId !== chatId) return { months: [], lessons: [] };
 
   const groupIds = child.groupStudents.map(gs => gs.groupId);
   if (groupIds.length === 0) return { months: [], lessons: [] };

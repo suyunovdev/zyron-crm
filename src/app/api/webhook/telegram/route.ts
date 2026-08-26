@@ -65,12 +65,12 @@ async function handleStart(msg: TgMessage): Promise<void> {
   const token = (msg.text || '').split(/\s+/)[1];
   if (!token) {
     // Tokensiz /start: bog'langan bo'lsa menyu, aks holda tanishuv (intro) + platforma tugmasi
-    const linked = await prisma.user.findUnique({
+    const linked = await prisma.user.findFirst({
       where: { telegramChatId: chatId },
-      select: { id: true, name: true },
+      select: { name: true },
     });
     if (linked) {
-      await showChildrenMenu(chatId, linked.id, linked.name, true);
+      await showChildrenMenu(chatId, linked.name, true);
     } else {
       await sendMessage(chatId, introText(), introKeyboard(PLATFORM_URL));
     }
@@ -83,40 +83,30 @@ async function handleStart(msg: TgMessage): Promise<void> {
     return;
   }
 
-  // Bu chat allaqachon biror ota-onaga bog'langanmi?
-  const existing = await prisma.user.findUnique({
-    where: { telegramChatId: chatId },
-    select: { id: true },
-  });
-  if (existing && existing.id !== parentId) {
-    await sendMessage(chatId, "Bu Telegram akkaunt allaqachon boshqa foydalanuvchiga bog'langan.");
+  // Shu farzandning ota-ona akkauntini chatga bog'laymiz. Bir chatga bir nechta akkaunt
+  // bog'lanishi mumkin (aka-uka har biri alohida akkaunt) — shuning uchun rad etilmaydi,
+  // har bir farzand o'z portalidan ulaydi, bot esa hammasini birga ko'rsatadi.
+  try {
+    await prisma.user.update({
+      where: { id: parentId },
+      data: { telegramChatId: chatId, telegramUsername: from.username || null, telegramLinkedAt: new Date() },
+    });
+  } catch (e) {
+    logger.error('[telegram] bog\'lash xato', e, { parentId });
+    await sendMessage(chatId, "Bog'lashda xatolik. Iltimos, birozdan so'ng qayta urinib ko'ring.");
     return;
-  }
-
-  if (!existing) {
-    try {
-      await prisma.user.update({
-        where: { id: parentId },
-        data: { telegramChatId: chatId, telegramUsername: from.username || null, telegramLinkedAt: new Date() },
-      });
-    } catch (e) {
-      // @unique poyga holati (P2002) — bir vaqtda bog'lanish
-      logger.error('[telegram] bog\'lash xato', e, { parentId });
-      await sendMessage(chatId, "Bog'lashda xatolik. Iltimos, birozdan so'ng qayta urinib ko'ring.");
-      return;
-    }
   }
 
   // Bir martalik: token bog'langach bekor qilinadi
   await clearTgLinkToken(parentId);
 
   const parent = await prisma.user.findUnique({ where: { id: parentId }, select: { name: true } });
-  await showChildrenMenu(chatId, parentId, parent?.name || 'Foydalanuvchi', true);
+  await showChildrenMenu(chatId, parent?.name || 'Foydalanuvchi', true);
 }
 
 /** Farzand tanlash yoki (bitta bo'lsa) to'g'ridan-to'g'ri menyu ko'rsatadi. */
-async function showChildrenMenu(chatId: string, parentId: string, parentName: string, greet: boolean): Promise<void> {
-  const children = await getChildrenReport(parentId);
+async function showChildrenMenu(chatId: string, parentName: string, greet: boolean): Promise<void> {
+  const children = await getChildrenReport(chatId);
 
   if (children.length === 0) {
     await sendMessage(chatId, `Assalomu alaykum, ${parentName}!\n\nSizga hali farzand biriktirilmagan. Iltimos, o'quv markazi ma'muriyatiga murojaat qiling.`);
@@ -141,11 +131,11 @@ async function handleCallback(cq: TgCallback): Promise<void> {
   const messageId = cq.message?.message_id;
   const data = cq.data || '';
 
-  const parent = await prisma.user.findUnique({
+  const linked = await prisma.user.findFirst({
     where: { telegramChatId: chatId },
     select: { id: true },
   });
-  if (!parent) {
+  if (!linked) {
     await answerCallbackQuery(cq.id, 'Iltimos, /start bosing');
     return;
   }
@@ -156,7 +146,7 @@ async function handleCallback(cq: TgCallback): Promise<void> {
 
   // "Farzandlar" ro'yxatiga qaytish
   if (data === 'back') {
-    const children = await getChildrenReport(parent.id);
+    const children = await getChildrenReport(chatId);
     await editMessageText(chatId, messageId, chooseChildText(), childrenKeyboard(children));
     await answerCallbackQuery(cq.id);
     return;
@@ -168,14 +158,14 @@ async function handleCallback(cq: TgCallback): Promise<void> {
     return;
   }
 
-  const child = await getChildReport(parent.id, childId); // EGALIK tekshiruvi ichida
+  const child = await getChildReport(chatId, childId); // EGALIK tekshiruvi ichida
   if (!child) {
     await answerCallbackQuery(cq.id, 'Ma\'lumot topilmadi');
     return;
   }
 
   if (action === 'kid') {
-    const count = await prisma.user.count({ where: { parentId: parent.id, role: 'student' } });
+    const count = await prisma.user.count({ where: { role: 'student', parent: { telegramChatId: chatId } } });
     await editMessageText(chatId, messageId, childMenuText(child), metricsKeyboard(childId, count > 1));
   } else if (action === 'g') {
     await editMessageText(chatId, messageId, gradesText(child), backKeyboard(childId));
@@ -189,11 +179,11 @@ async function handleCallback(cq: TgCallback): Promise<void> {
     await editMessageText(chatId, messageId, groupsText(child), backKeyboard(childId));
   } else if (action === 't') {
     // O'tilgan mavzular — oy tanlash
-    const { months } = await getChildLessons(parent.id, childId);
+    const { months } = await getChildLessons(chatId, childId);
     await editMessageText(chatId, messageId, topicsMonthsText(child.name, months.length > 0), topicsMonthsKeyboard(childId, months));
   } else if (action === 'tm') {
     // Tanlangan oydagi barcha mavzular
-    const { lessons } = await getChildLessons(parent.id, childId);
+    const { lessons } = await getChildLessons(chatId, childId);
     const monthLessons = lessons.filter(l => l.month === extra);
     await editMessageText(chatId, messageId, monthTopicsText(child.name, extra || '', monthLessons), monthTopicsKeyboard(childId));
   }

@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { logger } from '@/lib/logger';
 import { verifyTgLinkToken, clearTgLinkToken } from '@/lib/tg-token';
 import { sendMessage, editMessageText, answerCallbackQuery } from '@/lib/telegram';
-import { getChildrenReport, getChildReport, getChildLessons } from '@/lib/parent-report';
+import { getChildrenReportByChat, getChildReportByChat, getChildLessonsByChat } from '@/lib/parent-report';
 import {
   childrenKeyboard, metricsKeyboard, backKeyboard, introKeyboard,
   welcomeText, chooseChildText, childMenuText, introText,
@@ -106,7 +106,7 @@ async function handleStart(msg: TgMessage): Promise<void> {
 
 /** Farzand tanlash yoki (bitta bo'lsa) to'g'ridan-to'g'ri menyu ko'rsatadi. */
 async function showChildrenMenu(chatId: string, parentName: string, greet: boolean): Promise<void> {
-  const children = await getChildrenReport(chatId);
+  const children = await getChildrenReportByChat(chatId);
 
   if (children.length === 0) {
     await sendMessage(chatId, `Assalomu alaykum, ${parentName}!\n\nSizga hali farzand biriktirilmagan. Iltimos, o'quv markazi ma'muriyatiga murojaat qiling.`);
@@ -146,7 +146,7 @@ async function handleCallback(cq: TgCallback): Promise<void> {
 
   // "Farzandlar" ro'yxatiga qaytish
   if (data === 'back') {
-    const children = await getChildrenReport(chatId);
+    const children = await getChildrenReportByChat(chatId);
     await editMessageText(chatId, messageId, chooseChildText(), childrenKeyboard(children));
     await answerCallbackQuery(cq.id);
     return;
@@ -158,7 +158,7 @@ async function handleCallback(cq: TgCallback): Promise<void> {
     return;
   }
 
-  const child = await getChildReport(chatId, childId); // EGALIK tekshiruvi ichida
+  const child = await getChildReportByChat(chatId, childId); // EGALIK tekshiruvi ichida
   if (!child) {
     await answerCallbackQuery(cq.id, 'Ma\'lumot topilmadi');
     return;
@@ -179,11 +179,11 @@ async function handleCallback(cq: TgCallback): Promise<void> {
     await editMessageText(chatId, messageId, groupsText(child), backKeyboard(childId));
   } else if (action === 't') {
     // O'tilgan mavzular — oy tanlash
-    const { months } = await getChildLessons(chatId, childId);
+    const { months } = await getChildLessonsByChat(chatId, childId);
     await editMessageText(chatId, messageId, topicsMonthsText(child.name, months.length > 0), topicsMonthsKeyboard(childId, months));
   } else if (action === 'tm') {
     // Tanlangan oydagi barcha mavzular
-    const { lessons } = await getChildLessons(chatId, childId);
+    const { lessons } = await getChildLessonsByChat(chatId, childId);
     const monthLessons = lessons.filter(l => l.month === extra);
     await editMessageText(chatId, messageId, monthTopicsText(child.name, extra || '', monthLessons), monthTopicsKeyboard(childId));
   }

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import type { Prisma } from '@prisma/client';
 import { computeStudentBalance } from '@/lib/billing';
 import { todayTz } from '@/lib/date';
 
@@ -34,14 +35,10 @@ export interface ChildReport {
   recentPayments: Array<{ amount: number; month: string; method: string; createdAt: Date }>;
 }
 
-/**
- * Telegram chatga bog'langan BARCHA farzandlar — to'liq boyitilgan hisobot.
- * Bitta chatga bir nechta ota-ona akkaunti bog'lanishi mumkin (aka-uka har biri
- * alohida akkauntda), shuning uchun farzandlar chatId bo'yicha yig'iladi.
- */
-export async function getChildrenReport(chatId: string): Promise<ChildReport[]> {
+/** Yadro — berilgan filtr bo'yicha farzandlar hisoboti (parentId YOKI chat orqali). */
+async function childrenReport(childWhere: Prisma.UserWhereInput): Promise<ChildReport[]> {
   const children = await prisma.user.findMany({
-    where: { role: 'student', parent: { telegramChatId: chatId } },
+    where: { role: 'student', ...childWhere },
     select: {
       id: true,
       name: true,
@@ -176,17 +173,32 @@ export async function getChildrenReport(chatId: string): Promise<ChildReport[]> 
   }));
 }
 
-/**
- * Bitta farzand hisoboti — EGALIK tekshiruvi bilan (farzand ota-onasi shu chatga bog'langanmi).
- * Bot callback'lari uchun: boshqa chatga tegishli childId yuborsa null qaytadi.
- */
-export async function getChildReport(chatId: string, childId: string): Promise<ChildReport | null> {
+/** Parent panel (GET /api/parent/children) — bitta ota-ona akkauntining farzand(lar)i (parentId). */
+export function getChildrenReport(parentId: string): Promise<ChildReport[]> {
+  return childrenReport({ parentId });
+}
+
+/** Telegram bot — chatga bog'langan BARCHA farzandlar (aka-uka; bir chatga bir nechta parent akkaunti). */
+export function getChildrenReportByChat(chatId: string): Promise<ChildReport[]> {
+  return childrenReport({ parent: { telegramChatId: chatId } });
+}
+
+/** Bitta farzand — EGALIK parentId bo'yicha (parent panel). */
+export async function getChildReport(parentId: string, childId: string): Promise<ChildReport | null> {
+  const child = await prisma.user.findUnique({ where: { id: childId }, select: { parentId: true } });
+  if (!child || child.parentId !== parentId) return null;
+  const all = await getChildrenReport(parentId);
+  return all.find(c => c.id === childId) || null;
+}
+
+/** Bitta farzand — EGALIK chat bo'yicha (bot callback'lari). */
+export async function getChildReportByChat(chatId: string, childId: string): Promise<ChildReport | null> {
   const child = await prisma.user.findUnique({
     where: { id: childId },
     select: { parent: { select: { telegramChatId: true } } },
   });
   if (!child || child.parent?.telegramChatId !== chatId) return null;
-  const all = await getChildrenReport(chatId);
+  const all = await getChildrenReportByChat(chatId);
   return all.find(c => c.id === childId) || null;
 }
 
@@ -203,15 +215,16 @@ export interface LessonItem {
  * Farzandning BARCHA o'tilgan darslari (mavzular) — oylik filter uchun.
  * EGALIK tekshiruvi bilan. months — mavjud oylar (kamayish tartibida, filter chiplari uchun).
  */
-export async function getChildLessons(
-  chatId: string,
+async function childLessons(
+  ownerWhere: Prisma.UserWhereInput,
   childId: string,
 ): Promise<{ months: string[]; lessons: LessonItem[] }> {
-  const child = await prisma.user.findUnique({
-    where: { id: childId },
-    select: { parent: { select: { telegramChatId: true } }, groupStudents: { select: { groupId: true } } },
+  // Egalik so'rov ichida: farzand id + ega (parentId yoki chat) mos kelishi shart.
+  const child = await prisma.user.findFirst({
+    where: { id: childId, ...ownerWhere },
+    select: { groupStudents: { select: { groupId: true } } },
   });
-  if (!child || child.parent?.telegramChatId !== chatId) return { months: [], lessons: [] };
+  if (!child) return { months: [], lessons: [] };
 
   const groupIds = child.groupStudents.map(gs => gs.groupId);
   if (groupIds.length === 0) return { months: [], lessons: [] };
@@ -238,4 +251,14 @@ export async function getChildLessons(
 
   const months = [...new Set(lessons.map(l => l.month))]; // allaqachon kamayish tartibida
   return { months, lessons };
+}
+
+/** Parent panel — farzand darslari, EGALIK parentId bo'yicha. */
+export function getChildLessons(parentId: string, childId: string) {
+  return childLessons({ parentId }, childId);
+}
+
+/** Telegram bot — farzand darslari, EGALIK chat bo'yicha. */
+export function getChildLessonsByChat(chatId: string, childId: string) {
+  return childLessons({ parent: { telegramChatId: chatId } }, childId);
 }

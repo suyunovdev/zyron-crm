@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Skeleton } from '@/components/skeleton';
 import {
   Users, Wallet, Clock, CalendarDays, MapPin, Medal, BookOpen,
@@ -55,18 +55,33 @@ export default function ParentDashboardPage() {
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [lessonsChildId, setLessonsChildId] = useState<string | null>(null);
 
+  // Farzand(lar) ma'lumotini yuklash — tanlangan farzandni saqlab (avto-yangilashda sakramaydi).
+  const loadChildren = useCallback(async () => {
+    const c = await fetch('/api/parent/children').then(r => r.ok ? r.json() : []).catch(() => []);
+    const arr: Child[] = Array.isArray(c) ? c : [];
+    setChildren(arr);
+    setSelectedChild(prev => (prev && arr.some(x => x.id === prev) ? prev : (arr[0]?.id ?? null)));
+  }, []);
+
   useEffect(() => {
     Promise.all([
-      fetch('/api/parent/children').then(r => r.ok ? r.json() : []),
-      fetch('/api/auth/me').then(r => r.ok ? r.json() : null),
-    ]).then(([c, me]) => {
-      const arr = Array.isArray(c) ? c : [];
-      setChildren(arr);
-      if (arr.length > 0) setSelectedChild(arr[0].id);
-      if (me?.user) setUser(me.user);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, []);
+      loadChildren(),
+      fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(me => { if (me?.user) setUser(me.user); }).catch(() => {}),
+    ]).finally(() => setLoading(false));
+  }, [loadChildren]);
+
+  // Avto-yangilash: har 30s + oynaga qaytganda (admin to'lov/davomat/baho qo'shsa darrov ko'rinadi).
+  useEffect(() => {
+    const iv = setInterval(loadChildren, 30_000);
+    const onVisible = () => { if (!document.hidden) loadChildren(); };
+    window.addEventListener('focus', loadChildren);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(iv);
+      window.removeEventListener('focus', loadChildren);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [loadChildren]);
 
   // Tanlangan farzand o'zgarganda barcha mavzularni yuklaymiz
   useEffect(() => {

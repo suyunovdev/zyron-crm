@@ -20,6 +20,13 @@ import {
   Building2,
 } from 'lucide-react';
 import Link from 'next/link';
+import { TodayLessonsCard, type TodayLesson } from '@/components/TodayLessonsCard';
+
+interface TodayLessonApi {
+  id: string; groupId: string; time: string; groupName: string; subject: string;
+  teacherName: string | null; room: string | null; branchName: string | null;
+  studentCount: number; marked: number; present: number;
+}
 
 function formatAmount(amount: number): string {
   return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -88,6 +95,7 @@ export default function AdminDashboardPage() {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [branches, setBranches] = useState<BranchStat[]>([]);
+  const [todayLessons, setTodayLessons] = useState<TodayLessonApi[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -97,14 +105,29 @@ export default function AdminDashboardPage() {
       fetch('/api/admin/groups').then(r => r.ok ? r.json() : []).catch(() => []),
       // Filiallar bo'limi — faqat superadmin uchun (aks holda 403 → bo'sh)
       fetch('/api/superadmin/branch-stats').then(r => r.ok ? r.json() : { branches: [] }).catch(() => ({ branches: [] })),
-    ]).then(([statsData, userData, groupsData, branchData]) => {
+      fetch('/api/admin/today-lessons').then(r => r.ok ? r.json() : { lessons: [] }).catch(() => ({ lessons: [] })),
+    ]).then(([statsData, userData, groupsData, branchData, todayData]) => {
       if (statsData && !statsData.error) setStats(statsData);
       if (userData?.user) setUser(userData.user);
       setGroups(Array.isArray(groupsData) ? groupsData : []);
       setBranches(Array.isArray(branchData?.branches) ? branchData.branches : []);
+      setTodayLessons(Array.isArray(todayData?.lessons) ? todayData.lessons : []);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
+
+  const todayLessonItems: TodayLesson[] = todayLessons.map(l => ({
+    id: l.id,
+    time: l.time,
+    groupName: l.groupName,
+    subject: l.subject,
+    meta: [l.teacherName, l.branchName].filter(Boolean).join(' · ') || undefined,
+    room: l.room || undefined,
+    href: `/dashboard/admin/groups/${l.groupId}`,
+    status: l.marked === 0
+      ? { label: 'Belgilanmagan', tone: 'warn' as const }
+      : { label: `${l.present}/${l.studentCount} keldi`, tone: 'ok' as const },
+  }));
 
   const now = new Date();
   const days = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
@@ -221,6 +244,9 @@ export default function AdminDashboardPage() {
               </div>
             </Link>
           </div>
+
+          {/* ── Bugungi darslar (bosilsa ochiladi) ── */}
+          <TodayLessonsCard lessons={todayLessonItems} />
 
           {/* ── Filiallar (superadmin) ── */}
           {branches.length > 0 && (

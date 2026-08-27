@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Skeleton, SkeletonStatCards, SkeletonTable } from '@/components/skeleton';
 import {
-  Users, BookOpen, CalendarDays, TrendingUp, ChevronRight, Clock,
-  UserCheck, UserX, Phone, Loader2,
+  Users, BookOpen, TrendingUp, UserCheck, Phone, Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
+import { TodayLessonsCard, type TodayLesson } from '@/components/TodayLessonsCard';
 
 interface SessionUser {
   id: string;
@@ -105,6 +105,23 @@ export default function TeacherDashboardPage() {
     });
   });
   todayLessons.sort((a, b) => a.lesson.scheduledTime.localeCompare(b.lesson.scheduledTime));
+
+  const todayLessonItems: TodayLesson[] = todayLessons.map(({ group, lesson }) => {
+    const present = lesson.attendances.filter(a => a.present).length;
+    const total = group._count.students;
+    return {
+      id: lesson.id,
+      time: lesson.scheduledTime,
+      groupName: group.name,
+      subject: group.subject,
+      meta: lesson.topic || 'Mavzu kiritilmagan',
+      room: group.room || undefined,
+      href: '/dashboard/teacher/groups',
+      status: lesson.attendances.length === 0
+        ? { label: 'Belgilanmagan', tone: 'warn' as const }
+        : { label: `${present}/${total} keldi`, tone: 'ok' as const },
+    };
+  });
 
   // Upcoming lessons (next 7 days, exclude today)
   const upcoming: { group: Group; lesson: Lesson }[] = [];
@@ -210,73 +227,8 @@ export default function TeacherDashboardPage() {
         </div>
       </div>
 
-      {/* Today's lessons */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <CalendarDays className="w-4.5 h-4.5 text-blue-500" />
-            Bugungi darslar
-          </h2>
-          <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
-            {todayLessons.length} ta
-          </span>
-        </div>
-        {todayLessons.length === 0 ? (
-          <div className="py-10 text-center">
-            <CalendarDays className="w-10 h-10 text-slate-200 mx-auto mb-2" />
-            <p className="text-sm text-slate-400">Bugun darslar yo&apos;q</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-100">
-            {todayLessons.map(({ group, lesson }) => {
-              const presentCount = lesson.attendances.filter(a => a.present).length;
-              const absentCount = lesson.attendances.filter(a => !a.present).length;
-              const totalStudentsInGroup = group._count.students;
-              const unmarked = totalStudentsInGroup - presentCount - absentCount;
-
-              return (
-                <Link
-                  key={lesson.id}
-                  href="/dashboard/teacher/groups"
-                  className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 transition-colors"
-                >
-                  <div className="w-12 h-12 bg-blue-500 rounded-xl flex flex-col items-center justify-center text-white flex-shrink-0">
-                    <Clock className="w-4 h-4" />
-                    <span className="text-[10px] font-bold mt-0.5">{lesson.scheduledTime}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-900">{group.name}</span>
-                      <span className="text-[10px] font-medium bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
-                        {lesson.order}-dars
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {lesson.topic || 'Mavzu kiritilmagan'} · {lesson.duration}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs flex-shrink-0">
-                    {presentCount > 0 && (
-                      <span className="flex items-center gap-1 text-emerald-600 font-medium">
-                        <UserCheck className="w-3.5 h-3.5" />{presentCount}
-                      </span>
-                    )}
-                    {absentCount > 0 && (
-                      <span className="flex items-center gap-1 text-red-500 font-medium">
-                        <UserX className="w-3.5 h-3.5" />{absentCount}
-                      </span>
-                    )}
-                    {unmarked > 0 && (
-                      <span className="text-slate-400 font-medium">{unmarked} belgilanmagan</span>
-                    )}
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0" />
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      {/* Bugungi darslar (bosilsa ochiladi) */}
+      <TodayLessonsCard lessons={todayLessonItems} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Groups overview */}

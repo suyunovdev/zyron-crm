@@ -592,6 +592,16 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
     return () => window.removeEventListener('avatar-updated', onAvatar);
   }, []);
 
+  // Ism o'zgarsa topbar nomini darhol yangilaymiz
+  useEffect(() => {
+    const onProfile = (e: Event) => {
+      const d = (e as CustomEvent).detail as { name?: string } | null;
+      if (d?.name) setUser(u => u ? { ...u, name: d.name as string } : u);
+    };
+    window.addEventListener('profile-updated', onProfile);
+    return () => window.removeEventListener('profile-updated', onProfile);
+  }, []);
+
   // Notifications polling
   const fetchNotifications = useCallback(async () => {
     try {

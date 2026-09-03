@@ -116,7 +116,7 @@ export default function TeacherDashboardPage() {
       subject: group.subject,
       meta: lesson.topic || 'Mavzu kiritilmagan',
       room: group.room || undefined,
-      href: '/dashboard/teacher/groups',
+      href: `/dashboard/teacher/groups?group=${group.id}`,
       status: lesson.attendances.length === 0
         ? { label: 'Belgilanmagan', tone: 'warn' as const }
         : { label: `${present}/${total} keldi`, tone: 'ok' as const },
@@ -245,7 +245,7 @@ export default function TeacherDashboardPage() {
                 return (
                   <Link
                     key={group.id}
-                    href="/dashboard/teacher/groups"
+                    href={`/dashboard/teacher/groups?group=${group.id}`}
                     className="flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors"
                   >
                     <div className="flex items-center gap-3">

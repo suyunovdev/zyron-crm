@@ -161,10 +161,13 @@ export default function TeacherGroupsPage() {
     fetch('/api/teacher/groups')
       .then(res => res.ok ? res.json() : [])
       .then(data => {
-        const arr = Array.isArray(data) ? data : [];
+        const arr: Group[] = Array.isArray(data) ? data : [];
         setGroups(arr);
         if (arr.length > 0 && !selectedGroupId) {
-          setSelectedGroupId(arr[0].id);
+          // URL'da ?group=<id> bo'lsa — o'sha guruh tanlanadi (dashboarddan davomatga to'g'ri kelish)
+          const wanted = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('group') : null;
+          const match = wanted && arr.some(g => g.id === wanted);
+          setSelectedGroupId(match ? wanted : arr[0].id);
         }
         setLoading(false);
       })

@@ -878,7 +878,7 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
                           {searchResults.students.map((s: any) => (
                             <Link
                               key={s.id}
-                              href="/dashboard/admin/students"
+                              href={`/dashboard/admin/students/${s.id}`}
                               onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
                               className="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors"
                             >
@@ -951,7 +951,7 @@ export default function DashboardLayout({ children, navItems, roleLabel, roleCol
                           {searchResults.teachers.map((t: any) => (
                             <Link
                               key={t.id}
-                              href="/dashboard/admin/teachers"
+                              href={`/dashboard/admin/teachers/${t.id}`}
                               onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
                               className="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition-colors"
                             >

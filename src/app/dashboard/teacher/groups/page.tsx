@@ -147,14 +147,15 @@ export default function TeacherGroupsPage() {
       .catch(() => {});
   }, []);
 
-  // Get teacher initials like "Ilyos.S"
+  // Get teacher initials like "Ilyos.S". Ismда ortiqcha/qo'sh probel bo'lsa ham to'g'ri
+  // ishlashi uchun bo'sh bo'laklar filtrlanadi (aks holda "Ism.undefined" chiqardi).
   const teacherInitials = useMemo(() => {
     if (!teacherName) return '';
-    const parts = teacherName.split(' ');
-    if (parts.length >= 2) {
+    const parts = teacherName.trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2 && parts[1]) {
       return `${parts[0]}.${parts[1][0]}`;
     }
-    return parts[0];
+    return parts[0] || '';
   }, [teacherName]);
 
   const fetchGroups = useCallback(() => {

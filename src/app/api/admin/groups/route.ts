@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { requireAuth } from '@/lib/api-utils';
+import { requireAuth, getTodayUz } from '@/lib/api-utils';
 import { parseBody } from '@/lib/validate';
 import { generateLessons } from '@/lib/generate-lessons';
 import { logger } from '@/lib/logger';
@@ -260,6 +260,15 @@ export async function PATCH(req: NextRequest) {
   // Davomiylik o'zgarsa — guruhning barcha darslariga qo'llaymiz (jadval/hisob izchil bo'lsin)
   if (v.duration !== undefined) {
     await prisma.lesson.updateMany({ where: { groupId: id }, data: { duration: v.duration } });
+  }
+  // Dars vaqti o'zgarsa — KELAJAKDAGI darslarga qo'llaymiz (o'tgan darslar tarixiy qoladi).
+  // Aks holda guruh vaqti o'zgargach eski darslar eski vaqtda qolib, ustozning timeri va
+  // davomat oynasi ishlamay qolardi (jadval mos kelmasligi).
+  if (v.time) {
+    await prisma.lesson.updateMany({
+      where: { groupId: id, scheduledDate: { gte: getTodayUz() } },
+      data: { scheduledTime: v.time },
+    });
   }
 
   return NextResponse.json(group);

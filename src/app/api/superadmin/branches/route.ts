@@ -23,12 +23,12 @@ export async function GET() {
 }
 
 const BranchSchema = z.object({
-  name: z.string().min(1).max(120),
+  name: z.string().trim().min(1).max(120).transform(s => s.replace(/\s+/g, ' ')),
   address: z.string().max(200).nullable().optional(),
   phone: z.string().max(32).nullable().optional(),
   // Filial bilan birga admin yaratish (ixtiyoriy) — bo'lsa atomik yaratiladi
   admin: z.object({
-    name: z.string().min(1).max(120),
+    name: z.string().trim().min(1).max(120).transform(s => s.replace(/\s+/g, ' ')),
     login: z.string().trim().min(1).max(64),
     phone: z.string().max(32).nullable().optional(),
     password: z.string().min(4).max(128),

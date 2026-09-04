@@ -84,17 +84,19 @@ function isLessonActive(date: string, time: string, duration: string): boolean {
   return now >= start && now <= end;
 }
 
-// Davomat belgilash oynasi: dars boshlanishidan 15 min oldin va tugashidan 15 min keyin
-function isAttendanceWindowOpen(date: string, time: string, duration: string): boolean {
+// Davomat belgilash oynasi — SERVER bilan bir xil (api-utils.attendanceWindow):
+//  - dars boshlanishidan 15 min oldin (oldindan belgilab bo'lmaydi);
+//  - dars KUNI oxirigacha (ertasi 00:00) — esdan chiqqan davomat uchun muhlat.
+// Avval frontend faqat "tugash + 15 min" gacha ruxsat berardi → ustoz darsdan sal
+// keyin belgilay olmay qolardi (server ruxsat bersa ham). Endi izchil.
+function isAttendanceWindowOpen(date: string, time: string): boolean {
   const now = tzNow();
   const [y, m, d] = date.split('-').map(Number);
   const [h, min] = time.split(':').map(Number);
   const start = new Date(y, m - 1, d, h, min);
-  const dur = parseFloat(duration.match(/[\d.]+/)?.[0] || '1.5');
-  const end = new Date(start.getTime() + dur * 3600000);
   const windowStart = new Date(start.getTime() - 15 * 60000);
-  const windowEnd = new Date(end.getTime() + 15 * 60000);
-  return now >= windowStart && now <= windowEnd;
+  const dayEnd = new Date(y, m - 1, d + 1, 0, 0, 0);
+  return now >= windowStart && now < dayEnd;
 }
 
 function isSameDay(dateStr: string): boolean {
@@ -339,7 +341,7 @@ export default function TeacherGroupsPage() {
 
   // Check if attendance window is open for this lesson
   const isLessonEditable = (lesson: Lesson): boolean => {
-    return isAttendanceWindowOpen(lesson.scheduledDate, lesson.scheduledTime, lesson.duration);
+    return isAttendanceWindowOpen(lesson.scheduledDate, lesson.scheduledTime);
   };
 
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;

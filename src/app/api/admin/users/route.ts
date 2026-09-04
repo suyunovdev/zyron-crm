@@ -15,7 +15,7 @@ const CreateUserSchema = z.object({
   // login/password ixtiyoriy — berilmasa avtomatik generatsiya qilinadi
   login: z.string().trim().min(1).max(64).optional(),
   password: z.string().min(4).max(128).optional(),
-  name: z.string().min(1).max(120),
+  name: z.string().trim().min(1).max(120).transform(s => s.replace(/\s+/g, ' ')),
   role: z.enum(['superadmin', 'admin', 'teacher', 'student', 'parent']),
   phone: z.string().max(32).optional().nullable(),
   subject: z.string().max(80).optional().nullable(),

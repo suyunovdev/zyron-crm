@@ -76,12 +76,15 @@ export async function POST(req: NextRequest) {
 
   // Filial cheklovi: o'qituvchi shu filialdan bo'lishi shart, guruh o'sha filialga
   const bId = await scopedBranchId(auth);
+  const teacher = await prisma.user.findUnique({ where: { id: teacherId }, select: { branchId: true } });
   if (bId) {
-    const t = await prisma.user.findUnique({ where: { id: teacherId }, select: { branchId: true } });
-    if (!t || t.branchId !== bId) {
+    if (!teacher || teacher.branchId !== bId) {
       return NextResponse.json({ error: 'O\'qituvchi boshqa filialga tegishli' }, { status: 403 });
     }
   }
+  // Guruh filiali: admin filiali (bo'lsa), aks holda o'qituvchi filialini meros qiladi.
+  // Aks holda filialsiz guruh qolib, filialga biriktirilgan adminlar uni ochа olmasdi (403).
+  const groupBranchId = bId || teacher?.branchId || null;
 
   const group = await prisma.group.create({
     data: {
@@ -99,7 +102,7 @@ export async function POST(req: NextRequest) {
       mode: mode || 'offline',
       price: price ?? 0,
       lessonsPerMonth: lessonsPerMonth ?? 12,
-      branchId: bId || null,
+      branchId: groupBranchId,
     },
     include: { teacher: { select: { name: true } } },
   });

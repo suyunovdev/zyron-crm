@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import QRCode from 'qrcode';
-import { computeBillable, groupCost } from '@/lib/billing-core';
+import { computeBillableRecords, billableCost, perLessonRate } from '@/lib/billing-core';
 
 // ─── Types ───
 interface Teacher { id: string; name: string }
@@ -31,7 +31,7 @@ interface Payment {
 }
 interface AttendanceRecord {
   id: string; present: boolean; markedAt: string;
-  lesson: { id: string; scheduledDate: string; scheduledTime: string; order: number; groupId: string };
+  lesson: { id: string; scheduledDate: string; scheduledTime: string; order: number; groupId: string; perLessonRate: number | null };
 }
 interface Note {
   id: string; type: string; text: string; createdAt: string;
@@ -161,21 +161,22 @@ export default function StudentProfilePage() {
     return Math.round(activeGroup.price / activeGroup.lessonsPerMonth);
   }, [activeGroup]);
 
-  // Deductions: hisoblanadigan (billable) darslar oy bo'yicha — grace qoidasi (billing-core)
+  // Deductions: hisoblanadigan (billable) darslar oy bo'yicha — grace qoidasi (billing-core).
+  // K-2: har dars o'z muzlatilgan narxidan hisoblanadi (snapshot yo'q → joriy narx zaxira).
   const deductionsByMonth = useMemo(() => {
     const map = new Map<string, { lessons: number; total: number }>();
     if (!student || !activeGroup || !activeGroup.price || !activeGroup.lessonsPerMonth) return map;
-    const cost = Math.round(activeGroup.price / activeGroup.lessonsPerMonth);
+    const fallbackRate = perLessonRate(activeGroup.price, activeGroup.lessonsPerMonth);
     const recs = student.attendances
       .filter(a => a.lesson.groupId === activeGroup.id)
       .sort((a, b) => a.lesson.scheduledDate.localeCompare(b.lesson.scheduledDate) || a.lesson.order - b.lesson.order)
-      .map(a => ({ scheduledDate: a.lesson.scheduledDate, present: a.present }));
-    const { billableDates } = computeBillable(recs);
-    billableDates.forEach(d => {
-      const monthKey = d.slice(0, 7); // "2026-07"
+      .map(a => ({ scheduledDate: a.lesson.scheduledDate, present: a.present, rate: a.lesson.perLessonRate ?? fallbackRate }));
+    const { billable } = computeBillableRecords(recs);
+    billable.forEach(r => {
+      const monthKey = r.scheduledDate.slice(0, 7); // "2026-07"
       const curr = map.get(monthKey) || { lessons: 0, total: 0 };
       curr.lessons += 1;
-      curr.total += cost;
+      curr.total += Math.round(r.rate);
       map.set(monthKey, curr);
     });
     return map;
@@ -192,12 +193,12 @@ export default function StudentProfilePage() {
     student.groupStudents.forEach(gs => {
       const g = gs.group;
       if (!g.price || !g.lessonsPerMonth) return;
+      const fallbackRate = perLessonRate(g.price, g.lessonsPerMonth);
       const recs = student.attendances
         .filter(a => a.lesson.groupId === g.id)
         .sort((a, b) => a.lesson.scheduledDate.localeCompare(b.lesson.scheduledDate) || a.lesson.order - b.lesson.order)
-        .map(a => ({ scheduledDate: a.lesson.scheduledDate, present: a.present }));
-      const { billableCount } = computeBillable(recs);
-      deducted += groupCost(billableCount, g.price, g.lessonsPerMonth);
+        .map(a => ({ scheduledDate: a.lesson.scheduledDate, present: a.present, rate: a.lesson.perLessonRate ?? fallbackRate }));
+      deducted += billableCost(recs);
     });
     return { thisMonth, total, deducted, balance: total - deducted };
   }, [student, currentMonth]);

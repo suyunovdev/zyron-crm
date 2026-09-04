@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { perLessonRate, computeBillable } from '@/lib/billing';
+import { perLessonRate, computeBillableRecords } from '@/lib/billing-core';
 import { getTodayUz } from '@/lib/api-utils';
 
 /** Ustoz oyligi = guruh tushumi × ulush%. Sof funksiya (test qilinadi). */
@@ -29,32 +29,39 @@ export async function computePayroll(defaultShare = 0, month?: string): Promise<
     where: { role: 'teacher' },
     select: {
       id: true, name: true, subject: true, level: true, salaryShare: true,
+      // K-4: arxivlangan guruhlar ham kiritiladi — o'tilgan darslar uchun ustozga to'lov
+      // saqlanishi shart (billing tomoni ham arxiv guruhdan o'quvchini hisoblaydi → simmetriya).
       teacherGroups: {
-        where: { status: 'active' },
         select: { id: true, name: true, price: true, lessonsPerMonth: true },
       },
     },
   });
 
   // Butun tarix davomatlari (grace streak butun tarixni talab qiladi), xronologik.
-  // Billable darslar keyin o'z oyiga yoziladi.
+  // Billable darslar keyin o'z oyiga yoziladi. Har yozuv o'z muzlatilgan narxini (K-2) oladi.
   const rows = await prisma.attendance.findMany({
-    select: { studentId: true, present: true, lesson: { select: { groupId: true, scheduledDate: true, order: true } } },
+    select: {
+      studentId: true, present: true,
+      lesson: { select: { groupId: true, scheduledDate: true, order: true, perLessonRate: true, group: { select: { price: true, lessonsPerMonth: true } } } },
+    },
     orderBy: [{ lesson: { scheduledDate: 'asc' } }, { lesson: { order: 'asc' } }],
   });
-  const recByKey = new Map<string, { groupId: string; recs: { scheduledDate: string; present: boolean }[] }>();
+  const recByKey = new Map<string, { groupId: string; recs: { scheduledDate: string; present: boolean; rate: number }[] }>();
   for (const r of rows) {
-    const key = `${r.studentId}:${r.lesson.groupId}`;
+    const gid = r.lesson.groupId;
+    const key = `${r.studentId}:${gid}`;
     let e = recByKey.get(key);
-    if (!e) { e = { groupId: r.lesson.groupId, recs: [] }; recByKey.set(key, e); }
-    e.recs.push({ scheduledDate: r.lesson.scheduledDate, present: r.present });
+    if (!e) { e = { groupId: gid, recs: [] }; recByKey.set(key, e); }
+    const rate = r.lesson.perLessonRate ?? perLessonRate(r.lesson.group.price, r.lesson.group.lessonsPerMonth);
+    e.recs.push({ scheduledDate: r.lesson.scheduledDate, present: r.present, rate });
   }
-  // Guruh bo'yicha, tanlangan oyga tushadigan billable darslar soni
-  const monthBillableByGroup = new Map<string, number>();
+  // Guruh bo'yicha, tanlangan oyga tushadigan billable darslar tushumi (snapshot narxidan)
+  const monthRevenueByGroup = new Map<string, number>();
   for (const { groupId, recs } of recByKey.values()) {
-    const { billableDates } = computeBillable(recs);
-    const inMonth = month ? billableDates.filter(d => d.startsWith(month)).length : billableDates.length;
-    if (inMonth) monthBillableByGroup.set(groupId, (monthBillableByGroup.get(groupId) || 0) + inMonth);
+    const { billable } = computeBillableRecords(recs);
+    const inMonth = billable.filter(r => (month ? r.scheduledDate.startsWith(month) : true));
+    const rev = inMonth.reduce((s, r) => s + r.rate, 0);
+    if (rev) monthRevenueByGroup.set(groupId, (monthRevenueByGroup.get(groupId) || 0) + rev);
   }
 
   const result: TeacherPayroll[] = [];
@@ -62,8 +69,7 @@ export async function computePayroll(defaultShare = 0, month?: string): Promise<
     const share = t.salaryShare ?? defaultShare;
     let revenue = 0;
     const groups = t.teacherGroups.map(g => {
-      const attended = monthBillableByGroup.get(g.id) || 0;
-      const gRev = Math.round(attended * perLessonRate(g.price, g.lessonsPerMonth));
+      const gRev = Math.round(monthRevenueByGroup.get(g.id) || 0);
       revenue += gRev;
       return { id: g.id, name: g.name, revenue: gRev };
     });
@@ -111,8 +117,8 @@ export async function computeTeacherSalary(
     where: { id: teacherId },
     select: {
       id: true, name: true, subject: true, level: true, salaryShare: true, role: true,
+      // K-4: arxiv guruhlar ham — o'tilgan darslar uchun to'lov saqlanadi (billing bilan simmetriya)
       teacherGroups: {
-        where: { status: 'active' },
         select: { id: true, name: true, price: true, lessonsPerMonth: true },
       },
     },
@@ -120,33 +126,38 @@ export async function computeTeacherSalary(
   if (!teacher || teacher.role !== 'teacher') return null;
 
   const share = teacher.salaryShare ?? defaultShare;
-  const rateByGroup = new Map(teacher.teacherGroups.map(g => [g.id, perLessonRate(g.price, g.lessonsPerMonth)]));
 
-  // Ustoz guruhlaridagi barcha davomat (butun tarix — streak uchun), xronologik
+  // Ustoz guruhlaridagi barcha davomat (butun tarix — streak uchun), xronologik.
+  // Har yozuv o'z muzlatilgan narxini (K-2) oladi; snapshot yo'q bo'lsa joriy narx zaxira.
   const rows = await prisma.attendance.findMany({
     where: { lesson: { group: { teacherId } } },
-    select: { studentId: true, present: true, lesson: { select: { groupId: true, scheduledDate: true, order: true } } },
+    select: {
+      studentId: true, present: true,
+      lesson: { select: { groupId: true, scheduledDate: true, order: true, perLessonRate: true, group: { select: { price: true, lessonsPerMonth: true } } } },
+    },
     orderBy: [{ lesson: { scheduledDate: 'asc' } }, { lesson: { order: 'asc' } }],
   });
-  const recByKey = new Map<string, { groupId: string; recs: { scheduledDate: string; present: boolean }[] }>();
+  const recByKey = new Map<string, { groupId: string; recs: { scheduledDate: string; present: boolean; rate: number }[] }>();
   for (const r of rows) {
-    const key = `${r.studentId}:${r.lesson.groupId}`;
+    const gid = r.lesson.groupId;
+    const key = `${r.studentId}:${gid}`;
     let e = recByKey.get(key);
-    if (!e) { e = { groupId: r.lesson.groupId, recs: [] }; recByKey.set(key, e); }
-    e.recs.push({ scheduledDate: r.lesson.scheduledDate, present: r.present });
+    if (!e) { e = { groupId: gid, recs: [] }; recByKey.set(key, e); }
+    const rate = r.lesson.perLessonRate ?? perLessonRate(r.lesson.group.price, r.lesson.group.lessonsPerMonth);
+    e.recs.push({ scheduledDate: r.lesson.scheduledDate, present: r.present, rate });
   }
 
   const dayRevenue = new Map<string, number>();
   const dayCount = new Map<string, number>();
   const groupRevenue = new Map<string, number>();
   for (const { groupId, recs } of recByKey.values()) {
-    const rate = rateByGroup.get(groupId) || 0;
-    const { billableDates } = computeBillable(recs);
-    for (const d of billableDates) {
+    const { billable } = computeBillableRecords(recs);
+    for (const r of billable) {
+      const d = r.scheduledDate;
       if (!d.startsWith(month)) continue; // faqat tanlangan oy kunlari
-      dayRevenue.set(d, (dayRevenue.get(d) || 0) + rate);
+      dayRevenue.set(d, (dayRevenue.get(d) || 0) + r.rate);
       dayCount.set(d, (dayCount.get(d) || 0) + 1);
-      groupRevenue.set(groupId, (groupRevenue.get(groupId) || 0) + rate);
+      groupRevenue.set(groupId, (groupRevenue.get(groupId) || 0) + r.rate);
     }
   }
 

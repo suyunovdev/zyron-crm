@@ -273,6 +273,17 @@ async function showSources(chatId: string, prefix = ''): Promise<void> {
 }
 
 async function createLeadAndProceed(chatId: string): Promise<void> {
+  // Idempotentlik / race himoyasi (K-6): sessiya step'ini ATOMIK ravishda band qilamiz.
+  // Faqat step='source' VA leadId yo'q bo'lgan holatdagina 'creating' ga o'tadi.
+  // Ikki parallel callback (foydalanuvchi ikki marta bosishi yoki Telegram retry) bo'lsa
+  // updateMany faqat bittasiga count=1 qaytaradi — qolganlari darhol chiqib ketadi,
+  // shu bilan bitta ariza uchun dublikat lid yaratilishi butunlay to'xtaydi.
+  const claim = await prisma.botSession.updateMany({
+    where: { chatId, step: 'source', leadId: null },
+    data: { step: 'creating' },
+  });
+  if (claim.count !== 1) return;
+
   const s = await getSession(chatId);
   const name = s.name || 'Noma’lum';
   const phone = s.phone || '';
@@ -287,16 +298,24 @@ async function createLeadAndProceed(chatId: string): Promise<void> {
     `Manba: ${SOURCE_LABELS[src] || src} (Telegram bot)`,
   ].filter(Boolean).join(' | ');
 
-  const lead = await prisma.lead.create({
-    data: {
-      leadId, name, phone, source: src, status: 'new',
-      branchId: s.branchId || null,
-      subject: s.subject || null,
-      preferredTeacher: teacher,
-      telegramChatId: chatId,
-      note,
-    },
-  });
+  let lead;
+  try {
+    lead = await prisma.lead.create({
+      data: {
+        leadId, name, phone, source: src, status: 'new',
+        branchId: s.branchId || null,
+        subject: s.subject || null,
+        preferredTeacher: teacher,
+        telegramChatId: chatId,
+        note,
+      },
+    });
+  } catch (e) {
+    // Lid yaratilmadi — step'ni qaytaramiz, foydalanuvchi qayta urinishi mumkin (band qolib ketmaydi).
+    await patch(chatId, { step: 'source' });
+    logger.error('[funnel] lead yaratishda xato', e);
+    return;
+  }
   await patch(chatId, { leadId: lead.id, step: 'fb_liked' });
 
   // In-app bildirishnoma (admin panel)

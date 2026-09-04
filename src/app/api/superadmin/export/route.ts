@@ -12,7 +12,17 @@ export async function GET() {
 
     const [users, groups, groupStudents, lessons, attendances, payments, notes, leads, branches, settings] =
       await Promise.all([
-        prisma.user.findMany(),
+        // Maxfiy sirlar (parol hash, ochiq parol, sessiya/link tokenlari) eksportga CHIQMAYDI.
+        // Aks holda bitta zaxira fayli butun tizim akkauntlarini kompromet qiladi.
+        prisma.user.findMany({
+          select: {
+            id: true, login: true, name: true, phone: true, role: true,
+            subject: true, status: true, level: true, avatar: true,
+            parentId: true, branchId: true, salaryShare: true,
+            telegramChatId: true, telegramUsername: true, telegramLinkedAt: true,
+            createdAt: true,
+          },
+        }),
         prisma.group.findMany(),
         prisma.groupStudent.findMany(),
         prisma.lesson.findMany(),

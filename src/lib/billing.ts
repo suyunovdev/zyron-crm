@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { computeBillable, groupCost } from '@/lib/billing-core';
+import { billableCost, computeBillableRecords, perLessonRate } from '@/lib/billing-core';
 
 /**
  * Yagona hisob-kitob (billing) manbasi.
@@ -50,14 +50,19 @@ export async function computeStudentBalance(studentId: string): Promise<StudentB
     // Xronologik davomat yozuvlari (present + yo'qlik) — grace qoidasi uchun
     const records = await prisma.attendance.findMany({
       where: { studentId, lesson: { groupId: group.id } },
-      select: { present: true, lesson: { select: { scheduledDate: true, order: true } } },
+      select: { present: true, lesson: { select: { scheduledDate: true, order: true, perLessonRate: true } } },
       orderBy: [{ lesson: { scheduledDate: 'asc' } }, { lesson: { order: 'asc' } }],
     });
-    const { billableCount } = computeBillable(
-      records.map(r => ({ scheduledDate: r.lesson.scheduledDate, present: r.present })),
-    );
+    // K-2: har dars o'z muzlatilgan narxidan hisoblanadi; snapshot yo'q (eski dars) bo'lsa joriy narx zaxira.
+    const fallbackRate = perLessonRate(group.price, group.lessonsPerMonth);
+    const recs = records.map(r => ({
+      scheduledDate: r.lesson.scheduledDate,
+      present: r.present,
+      rate: r.lesson.perLessonRate ?? fallbackRate,
+    }));
+    const billableCount = computeBillableRecords(recs).billable.length;
 
-    const cost = groupCost(billableCount, group.price, group.lessonsPerMonth);
+    const cost = billableCost(recs);
     totalCost += cost;
 
     groups.push({
@@ -106,24 +111,34 @@ export async function computeDebtSummary(branchId?: string | null): Promise<Debt
       group: { select: { id: true, price: true, lessonsPerMonth: true } },
     },
   });
+  // K-2 zaxira narxi: snapshot yo'q darslar uchun guruhning joriy dars narxi.
+  const fallbackRateByGroup = new Map<string, number>();
+  for (const m of memberships) {
+    fallbackRateByGroup.set(m.group.id, perLessonRate(m.group.price, m.group.lessonsPerMonth));
+  }
 
   // 2) Barcha davomat yozuvlari (present + yo'qlik), xronologik — grace qoidasi uchun
   const rows = await prisma.attendance.findMany({
     where: { student: studentWhere },
-    select: { studentId: true, present: true, lesson: { select: { groupId: true, scheduledDate: true, order: true } } },
+    select: { studentId: true, present: true, lesson: { select: { groupId: true, scheduledDate: true, order: true, perLessonRate: true } } },
     orderBy: [{ lesson: { scheduledDate: 'asc' } }, { lesson: { order: 'asc' } }],
   });
-  // (studentId, groupId) bo'yicha guruhlash — global tartib har subsekvensiyani xronologik saqlaydi
-  const recordsByKey = new Map<string, { scheduledDate: string; present: boolean }[]>();
+  // (studentId, groupId) bo'yicha guruhlash — global tartib har subsekvensiyani xronologik saqlaydi.
+  // Har yozuv o'z muzlatilgan narxini (rate) olib yuradi (K-2).
+  const recordsByKey = new Map<string, { scheduledDate: string; present: boolean; rate: number }[]>();
   for (const r of rows) {
-    const key = `${r.studentId}:${r.lesson.groupId}`;
+    const gid = r.lesson.groupId;
+    const key = `${r.studentId}:${gid}`;
     (recordsByKey.get(key) ?? recordsByKey.set(key, []).get(key)!).push({
-      scheduledDate: r.lesson.scheduledDate, present: r.present,
+      scheduledDate: r.lesson.scheduledDate,
+      present: r.present,
+      rate: r.lesson.perLessonRate ?? fallbackRateByGroup.get(gid) ?? 0,
     });
   }
-  const attendedByStudentGroup = new Map<string, number>();
+  // Har (o'quvchi, guruh) uchun snapshot narxidan cost
+  const costByKey = new Map<string, number>();
   for (const [key, recs] of recordsByKey) {
-    attendedByStudentGroup.set(key, computeBillable(recs).billableCount);
+    costByKey.set(key, billableCost(recs));
   }
 
   // 3) To'lovlar: studentId bo'yicha yig'indi (filial cheklovi bilan)
@@ -140,8 +155,7 @@ export async function computeDebtSummary(branchId?: string | null): Promise<Debt
   const studentIds = new Set<string>();
   for (const m of memberships) {
     studentIds.add(m.studentId);
-    const billable = attendedByStudentGroup.get(`${m.studentId}:${m.group.id}`) || 0;
-    const cost = groupCost(billable, m.group.price, m.group.lessonsPerMonth);
+    const cost = costByKey.get(`${m.studentId}:${m.group.id}`) || 0;
     costByStudent.set(m.studentId, (costByStudent.get(m.studentId) || 0) + cost);
   }
   // To'lov qilgan, lekin guruhsiz o'quvchilar ham hisobga olinsin (balans musbat bo'ladi)

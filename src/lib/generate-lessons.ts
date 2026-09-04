@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { perLessonRate } from '@/lib/billing-core';
 
 // Toq kunlar: Dushanba(1), Chorshanba(3), Juma(5)
 // Juft kunlar: Seshanba(2), Payshanba(4), Shanba(6)
@@ -48,6 +49,13 @@ export async function generateLessons(opts: GenerateOptions) {
   });
   const existingDates = new Set(existingLessons.map(l => l.scheduledDate));
 
+  // K-2: dars narxi snapshot'i — dars yaratilgan paytdagi joriy narxdan muzlatiladi.
+  const grp = await prisma.group.findUnique({
+    where: { id: groupId },
+    select: { price: true, lessonsPerMonth: true },
+  });
+  const rateSnapshot = grp ? perLessonRate(grp.price, grp.lessonsPerMonth) : 0;
+
   // Oxirgi dars tartib raqamini olish
   const lastLesson = await prisma.lesson.findFirst({
     where: { groupId },
@@ -63,6 +71,7 @@ export async function generateLessons(opts: GenerateOptions) {
     scheduledTime: string;
     duration: string;
     order: number;
+    perLessonRate: number;
   }[] = [];
 
   const current = new Date(start);
@@ -80,6 +89,7 @@ export async function generateLessons(opts: GenerateOptions) {
           scheduledTime: time || '14:00',
           duration,
           order,
+          perLessonRate: rateSnapshot,
         });
       }
     }

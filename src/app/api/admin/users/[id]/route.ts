@@ -66,6 +66,7 @@ export async function GET(
                 scheduledTime: true,
                 order: true,
                 groupId: true,
+                perLessonRate: true, // K-2: dars narxi snapshot'i (client billing izchilligi uchun)
               },
             },
           },

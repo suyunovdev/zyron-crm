@@ -6,7 +6,7 @@ import { requireAuth } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { parseBody } from '@/lib/validate';
 import { canManageRole } from '@/lib/roles';
-import { computeBillable, groupCost } from '@/lib/billing-core';
+import { billableCost, perLessonRate } from '@/lib/billing-core';
 import { loginBase, randomPassword, uniqueLogin, ensureUnique, parentNameFrom } from '@/lib/credentials';
 import { scopedBranchId } from '@/lib/branch-scope';
 import { logAudit } from '@/lib/audit';
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
         ...(isStudent ? {
           payments: { select: { amount: true, month: true } },
           attendances: {
-            select: { present: true, lesson: { select: { groupId: true, scheduledDate: true, order: true } } },
+            select: { present: true, lesson: { select: { groupId: true, scheduledDate: true, order: true, perLessonRate: true } } },
             orderBy: [{ lesson: { scheduledDate: 'asc' } }, { lesson: { order: 'asc' } }],
           },
         } : {}),
@@ -92,7 +92,7 @@ export async function GET(req: NextRequest) {
       const enriched = users.map(u => {
         const payments = (u as Record<string, unknown>).payments as { amount: number; month: string }[] || [];
         const attendances = (u as Record<string, unknown>).attendances as
-          { present: boolean; lesson: { groupId: string; scheduledDate: string } }[] || [];
+          { present: boolean; lesson: { groupId: string; scheduledDate: string; perLessonRate: number | null } }[] || [];
 
         const totalPaid = payments.reduce((s: number, p: { amount: number }) => s + p.amount, 0);
         const paidThisMonth = payments
@@ -104,11 +104,12 @@ export async function GET(req: NextRequest) {
         u.groupStudents.forEach((gs: { group: { id: string; price: number | null; lessonsPerMonth: number | null } }) => {
           const g = gs.group;
           if (!g.price || !g.lessonsPerMonth) return;
+          // K-2: har dars muzlatilgan narxidan; snapshot yo'q (eski dars) → joriy narx zaxira.
+          const fallbackRate = perLessonRate(g.price, g.lessonsPerMonth);
           const recs = attendances
             .filter(a => a.lesson.groupId === g.id)
-            .map(a => ({ scheduledDate: a.lesson.scheduledDate, present: a.present }));
-          const { billableCount } = computeBillable(recs);
-          totalDeducted += groupCost(billableCount, g.price, g.lessonsPerMonth);
+            .map(a => ({ scheduledDate: a.lesson.scheduledDate, present: a.present, rate: a.lesson.perLessonRate ?? fallbackRate }));
+          totalDeducted += billableCost(recs);
         });
 
         const balance = totalPaid - totalDeducted;

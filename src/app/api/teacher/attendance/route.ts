@@ -35,6 +35,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Bu dars sizga tegishli emas' }, { status: 403 });
   }
 
+  // IDOR himoyasi (K-5/K-7): o'quvchi AYNAN shu darsning guruhiga a'zo bo'lishi shart.
+  // Aks holda ustoz begona (hatto boshqa filial) o'quvchi uchun soxta davomat yozib
+  // o'z oyligini shishirishi va begona ota-onaga soxta "darsga kelmadi" xabari yuborishi mumkin.
+  const isMember = await prisma.groupStudent.findFirst({
+    where: { groupId: lesson.groupId, studentId },
+    select: { studentId: true },
+  });
+  if (!isMember) {
+    return NextResponse.json({ error: 'O\'quvchi bu guruh a\'zosi emas' }, { status: 403 });
+  }
+
   // Davomat belgilash oynasi (sof mantiq api-utils'da — test qilinadi):
   //  - dars boshlanishidan 15 min oldindan (kelajakni oldindan belgilab bo'lmaydi);
   //  - dars kuni oxirigacha (ertasi 00:00) — esdan chiqqan davomat uchun muhlat.

@@ -24,6 +24,27 @@ const CreateGroupSchema = z.object({
   mode: z.enum(['offline', 'online']).optional(),
 });
 
+// Guruh ma'lumotini yangilash (PATCH info) uchun sxema — POST bilan bir xil qat'iylik.
+// Avval PATCH `req.json()` dan xom o'qib `parseInt` qilardi: manfiy narx yoki
+// lessonsPerMonth=0 o'tib ketardi va butun guruh qarzdorligini buzardi (K-3).
+const UpdateGroupInfoSchema = z.object({
+  name: z.string().min(1, 'nomi kerak').max(120).optional(),
+  subject: z.string().min(1, 'fani kerak').max(80).optional(),
+  schedule: z.string().max(200).optional(),
+  meetLink: z.string().max(300).optional(),
+  status: z.enum(['active', 'archived']).optional(),
+  maxStudents: z.coerce.number().int().min(1).max(100).optional(),
+  startDate: z.string().max(20).nullable().optional(),
+  room: z.string().max(40).nullable().optional(),
+  dayType: z.enum(['toq', 'juft', 'boshqa']).optional(),
+  time: z.string().max(10).nullable().optional(),
+  duration: z.string().max(20).optional(),
+  price: z.coerce.number().int().min(0).optional(),
+  lessonsPerMonth: z.coerce.number().int().min(1).max(60).optional(),
+  mode: z.enum(['offline', 'online']).optional(),
+  teacherId: z.string().min(1).optional(),
+});
+
 // Get all groups
 export async function GET() {
   const auth = await requireAuth('admin');
@@ -172,29 +193,43 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ ok: true, message: "O'quvchi chiqarildi" });
   }
 
-  // Update group info
+  // Update group info — POST bilan bir xil qat'iy validatsiya (manfiy narx / lessonsPerMonth=0 bloklandi)
+  const infoParsed = UpdateGroupInfoSchema.safeParse({
+    name, subject, schedule, meetLink, status, maxStudents, startDate,
+    room, dayType, time, duration, price, lessonsPerMonth, mode, teacherId,
+  });
+  if (!infoParsed.success) {
+    const first = infoParsed.error.issues[0];
+    const field = first?.path.join('.') || 'input';
+    return NextResponse.json(
+      { error: `Noto'g'ri ma'lumot: ${field} — ${first?.message || 'validatsiya xatosi'}` },
+      { status: 400 },
+    );
+  }
+  const v = infoParsed.data;
+
   const data: Record<string, unknown> = {};
-  if (name !== undefined) data.name = name;
-  if (subject !== undefined) data.subject = subject;
-  if (schedule !== undefined) data.schedule = schedule;
-  if (meetLink !== undefined) data.meetLink = meetLink;
-  if (status !== undefined) data.status = status;
-  if (maxStudents !== undefined) data.maxStudents = parseInt(maxStudents);
-  if (startDate !== undefined) data.startDate = startDate;
-  if (room !== undefined) data.room = room;
-  if (dayType !== undefined) data.dayType = dayType;
-  if (time !== undefined) data.time = time;
-  if (duration !== undefined) data.duration = duration;
-  if (price !== undefined) data.price = parseInt(price);
-  if (lessonsPerMonth !== undefined) data.lessonsPerMonth = parseInt(lessonsPerMonth);
-  if (mode !== undefined) data.mode = mode;
-  if (teacherId !== undefined && teacherId) data.teacherId = teacherId;
+  if (v.name !== undefined) data.name = v.name;
+  if (v.subject !== undefined) data.subject = v.subject;
+  if (v.schedule !== undefined) data.schedule = v.schedule;
+  if (v.meetLink !== undefined) data.meetLink = v.meetLink;
+  if (v.status !== undefined) data.status = v.status;
+  if (v.maxStudents !== undefined) data.maxStudents = v.maxStudents;
+  if (v.startDate !== undefined) data.startDate = v.startDate;
+  if (v.room !== undefined) data.room = v.room;
+  if (v.dayType !== undefined) data.dayType = v.dayType;
+  if (v.time !== undefined) data.time = v.time;
+  if (v.duration !== undefined) data.duration = v.duration;
+  if (v.price !== undefined) data.price = v.price;
+  if (v.lessonsPerMonth !== undefined) data.lessonsPerMonth = v.lessonsPerMonth;
+  if (v.mode !== undefined) data.mode = v.mode;
+  if (v.teacherId) data.teacherId = v.teacherId;
 
   const group = await prisma.group.update({ where: { id }, data });
 
   // Davomiylik o'zgarsa — guruhning barcha darslariga qo'llaymiz (jadval/hisob izchil bo'lsin)
-  if (duration !== undefined) {
-    await prisma.lesson.updateMany({ where: { groupId: id }, data: { duration } });
+  if (v.duration !== undefined) {
+    await prisma.lesson.updateMany({ where: { groupId: id }, data: { duration: v.duration } });
   }
 
   return NextResponse.json(group);

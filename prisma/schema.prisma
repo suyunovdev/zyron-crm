@@ -97,6 +97,10 @@ model Lesson {
   scheduledTime String
   duration      String   @default("1.5 soat")
   order         Int
+  // K-2: dars yaratilgan paytdagi bir dars narxi (price ÷ lessonsPerMonth) snapshot'i.
+  // Billing/oylik shu muzlatilgan qiymatdan hisoblaydi — guruh narxi keyin o'zgarsa
+  // o'tgan darslar QAYTA hisoblanmaydi. null (eski darslar) → joriy narxdan zaxira hisob.
+  perLessonRate Float?
   createdAt     DateTime @default(now())
 
   attendances Attendance[]

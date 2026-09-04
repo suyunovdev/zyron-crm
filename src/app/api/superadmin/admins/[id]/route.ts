@@ -15,7 +15,7 @@ async function activeSuperadminCount(): Promise<number> {
 
 const UpdateAdminSchema = z.object({
   name: z.string().min(1).max(120).optional(),
-  login: z.string().min(1).max(64).optional(),
+  login: z.string().trim().min(1).max(64).optional(),
   phone: z.string().max(32).nullable().optional(),
   status: z.enum(['active', 'frozen', 'archived']).optional(),
   password: z.string().min(4).max(128).optional(),

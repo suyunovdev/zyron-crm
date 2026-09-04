@@ -29,7 +29,7 @@ const BranchSchema = z.object({
   // Filial bilan birga admin yaratish (ixtiyoriy) — bo'lsa atomik yaratiladi
   admin: z.object({
     name: z.string().min(1).max(120),
-    login: z.string().min(1).max(64),
+    login: z.string().trim().min(1).max(64),
     phone: z.string().max(32).nullable().optional(),
     password: z.string().min(4).max(128),
   }).optional(),

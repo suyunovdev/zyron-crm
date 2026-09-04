@@ -35,7 +35,7 @@ export async function GET() {
 }
 
 const CreateAdminSchema = z.object({
-  login: z.string().min(1).max(64),
+  login: z.string().trim().min(1).max(64),
   password: z.string().min(4).max(128),
   name: z.string().min(1).max(120),
   phone: z.string().max(32).optional().nullable(),

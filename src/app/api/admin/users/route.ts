@@ -13,7 +13,7 @@ import { logAudit } from '@/lib/audit';
 
 const CreateUserSchema = z.object({
   // login/password ixtiyoriy — berilmasa avtomatik generatsiya qilinadi
-  login: z.string().min(1).max(64).optional(),
+  login: z.string().trim().min(1).max(64).optional(),
   password: z.string().min(4).max(128).optional(),
   name: z.string().min(1).max(120),
   role: z.enum(['superadmin', 'admin', 'teacher', 'student', 'parent']),

@@ -7,7 +7,7 @@ import { parseBody } from '@/lib/validate';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 const LoginSchema = z.object({
-  login: z.string().min(1, 'kiritilishi shart').max(64),
+  login: z.string().trim().min(1, 'kiritilishi shart').max(64),
   password: z.string().min(1, 'kiritilishi shart').max(128),
 });
 

@@ -135,6 +135,10 @@ model Payment {
   method    String   @default("cash") // cash, card, transfer
   type      String   @default("payment") // payment, refund, discount
   note      String?
+  // F2-3: idempotentlik kaliti — (studentId:amount:month:type:15s-buket).
+  // DB-darajasida unique → ikki marta bosish/tarmoq qayta urinishida takror to'lov
+  // ATOMIK rad etiladi (findFirst→create TOCTOU oynasi yopiladi). null (eski) — ruxsat.
+  dedupeKey String?  @unique
   createdAt DateTime @default(now())
 
   @@index([studentId])
@@ -258,6 +262,9 @@ model SmsCampaign {
   channel        String   @default("sms") // sms, telegram
   recipientCount Int      @default(0)
   status         String   @default("queued") // queued, sent, failed
+  // F2-3: idempotentlik kaliti — (audience:channel:message:30s-buket). DB unique →
+  // ikki marta bosishda takroriy SMS jo'natilmaydi (ikki karra xarajat oldi olinadi).
+  dedupeKey      String?  @unique
   createdAt      DateTime @default(now())
 }
 

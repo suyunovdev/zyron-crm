@@ -74,14 +74,32 @@ export async function POST(req: NextRequest) {
     const parsed = await parseBody(req, Schema);
     if (parsed instanceof NextResponse) return parsed;
 
+    // Idempotentlik (F2-3): jo'natishdan OLDIN kampaniyani DB'da "band qilamiz".
+    // Bir xil (xabar, auditoriya, kanal) 30s ichida takror bosilsa — unique buzilib,
+    // real SMS QAYTA jo'natilmaydi (ikki karra xarajatning oldini oladi).
+    const bucket = Math.floor(Date.now() / 30_000);
+    const dedupeKey = `${parsed.audience}:${parsed.channel}:${bucket}:${parsed.message}`;
+    let campaign;
+    try {
+      campaign = await prisma.smsCampaign.create({
+        data: {
+          message: parsed.message, audience: parsed.audience, channel: parsed.channel,
+          recipientCount: 0, status: 'queued', dedupeKey,
+        },
+      });
+    } catch (e) {
+      if (e && typeof e === 'object' && (e as { code?: string }).code === 'P2002') {
+        return NextResponse.json({ error: 'Bu tarqatma allaqachon jo\'natildi (takror)' }, { status: 409 });
+      }
+      throw e;
+    }
+
     const recipients = await resolveRecipients(parsed.audience);
     const status = await dispatch(recipients, parsed.message, parsed.channel);
 
-    const campaign = await prisma.smsCampaign.create({
-      data: {
-        message: parsed.message, audience: parsed.audience, channel: parsed.channel,
-        recipientCount: recipients.length, status,
-      },
+    await prisma.smsCampaign.update({
+      where: { id: campaign.id },
+      data: { recipientCount: recipients.length, status },
     });
     await logAudit(auth, 'broadcast', 'system', campaign.id,
       `${parsed.channel} tarqatma → ${parsed.audience} (${recipients.length} ta, ${status})`);

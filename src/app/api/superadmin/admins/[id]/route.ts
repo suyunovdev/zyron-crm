@@ -68,6 +68,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       data.password = bcrypt.hashSync(password, 10);
       data.rawPass = password;
     }
+    // Sessiya intizomi (F2-1): rol yoki parol o'zgarsa foydalanuvchining barcha
+    // eski tokenlari bekor qilinsin (majburiy logout) — pasaytirilgan admin eski
+    // JWT bilan admin huquqini saqlab qolmasin.
+    if (role !== undefined || password) {
+      data.tokenVersion = { increment: 1 };
+    }
 
     const user = await prisma.user.update({
       where: { id },

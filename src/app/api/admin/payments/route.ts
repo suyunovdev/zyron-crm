@@ -103,25 +103,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Bu to\'lov allaqachon kiritildi (takror)' }, { status: 409 });
   }
 
-  const payment = await prisma.payment.create({
-    data: {
-      studentId,
-      amount: signedAmount,
-      month,
-      method: method || "cash",
-      type: payType,
-      note: note || null,
-    },
-    include: {
-      student: {
-        select: {
-          id: true,
-          name: true,
-          login: true,
+  // DB-darajali idempotentlik (findFirst→create TOCTOU'ni yopadi): 15s buketli unique kalit.
+  const bucket = Math.floor(Date.now() / 15_000);
+  const dedupeKey = `${studentId}:${signedAmount}:${month}:${payType}:${bucket}`;
+
+  let payment;
+  try {
+    payment = await prisma.payment.create({
+      data: {
+        studentId,
+        amount: signedAmount,
+        month,
+        method: method || "cash",
+        type: payType,
+        note: note || null,
+        dedupeKey,
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            login: true,
+          },
         },
       },
-    },
-  });
+    });
+  } catch (e) {
+    // Unique buzilishi (P2002) = parallel takror so'rov — atomik rad
+    if (e && typeof e === 'object' && (e as { code?: string }).code === 'P2002') {
+      return NextResponse.json({ error: 'Bu to\'lov allaqachon kiritildi (takror)' }, { status: 409 });
+    }
+    logger.error('[POST /api/admin/payments]', e);
+    return NextResponse.json({ error: 'Server xatosi' }, { status: 500 });
+  }
 
   const methodLabel = method === 'card' ? 'Karta' : method === 'transfer' ? "O'tkazma" : 'Naqd';
   const typeLabel = payType === 'refund' ? 'Qaytarish' : payType === 'discount' ? 'Chegirma' : 'To\'lov';

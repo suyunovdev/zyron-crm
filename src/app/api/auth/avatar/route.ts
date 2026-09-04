@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { requireAuth } from '@/lib/api-utils';
 import { prisma } from '@/lib/db';
 import { logger } from '@/lib/logger';
 
@@ -9,8 +9,8 @@ const MAX_LEN = 500_000; // ~375KB — mustahkam chegara
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession();
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const session = await requireAuth();
+    if (session instanceof NextResponse) return session;
 
     const { avatar } = await req.json();
 

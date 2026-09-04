@@ -38,7 +38,8 @@ export async function GET(req: NextRequest) {
     include: {
       group: {
         include: {
-          students: { select: { studentId: true } },
+          // F2-5: o'quvchi holati (frozen/archived absent olmasin) va qo'shilgan sanasi kerak
+          students: { select: { studentId: true, joinedAt: true, student: { select: { status: true } } } },
         },
       },
       attendances: { select: { studentId: true } },
@@ -54,20 +55,30 @@ export async function GET(req: NextRequest) {
     // Muhlat hali tugamagan bo'lsa — o'tkazib yuboramiz
     if (now < dayEnd) continue;
 
-    // Find students without attendance records
+    // Belgilanmagan o'quvchilar, biznes-qoidalar bilan (F2-5):
+    //  - faqat FAOL o'quvchi (frozen/archived muzlatilgan — absent yozilmaydi);
+    //  - faqat o'quvchi guruhga QO'SHILGANIDAN keyingi darslar (joinedAt dan oldingisiga emas).
     const markedIds = new Set(lesson.attendances.map(a => a.studentId));
-    const unmarked = lesson.group.students.filter(gs => !markedIds.has(gs.studentId));
+    const toMark = lesson.group.students.filter(gs => {
+      if (markedIds.has(gs.studentId)) return false;
+      if (gs.student.status !== 'active') return false;
+      const joinedStr = fmt(new Date(gs.joinedAt.toLocaleString('en-US', { timeZone: 'Asia/Tashkent' })));
+      if (lesson.scheduledDate < joinedStr) return false;
+      return true;
+    });
 
-    // Mark all unmarked students as absent
-    for (const gs of unmarked) {
-      await prisma.attendance.create({
-        data: {
-          lessonId: lesson.id,
-          studentId: gs.studentId,
-          present: false,
-        },
-      });
-      totalMarked++;
+    // Absent yozish. Bitta P2002 (poyga — teacher/admin bir vaqtda belgilagan) butun
+    // cronni to'xtatmasin — har o'quvchi alohida try/catch bilan (SQLite skipDuplicates yo'q).
+    for (const gs of toMark) {
+      try {
+        await prisma.attendance.create({
+          data: { lessonId: lesson.id, studentId: gs.studentId, present: false },
+        });
+        totalMarked++;
+      } catch (e) {
+        if (!(e && typeof e === 'object' && (e as { code?: string }).code === 'P2002')) throw e;
+        // P2002: allaqachon belgilangan (poyga) — o'tkazib yuboramiz
+      }
     }
   }
 

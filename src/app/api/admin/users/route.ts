@@ -228,6 +228,8 @@ export async function PATCH(req: NextRequest) {
   if (password) {
     data.password = bcrypt.hashSync(password, 10);
     data.rawPass = password;
+    // Sessiya intizomi (F2-1): parol o'zgarsa eski tokenlar bekor qilinsin (reset-password bilan bir xil).
+    data.tokenVersion = { increment: 1 };
   }
 
   const user = await prisma.user.update({

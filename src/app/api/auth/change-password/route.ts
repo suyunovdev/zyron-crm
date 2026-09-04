@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/db';
-import { getSession, createToken, type SessionUser } from '@/lib/auth';
+import { createToken, type SessionUser } from '@/lib/auth';
+import { requireAuth } from '@/lib/api-utils';
 import { parseBody } from '@/lib/validate';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
@@ -12,10 +13,8 @@ const Schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const session = await requireAuth();
+  if (session instanceof NextResponse) return session;
 
   // Parol taxminlashga qarshi: foydalanuvchi bo'yicha 1 daqiqada 5 urinish
   const rl = rateLimit(`chpw:${session.id}:${getClientIp(req)}`, 5, 60_000);

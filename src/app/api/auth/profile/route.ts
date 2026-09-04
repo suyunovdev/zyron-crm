@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { getSession, createToken, type SessionUser } from '@/lib/auth';
+import { createToken, type SessionUser } from '@/lib/auth';
+import { requireAuth } from '@/lib/api-utils';
 import { parseBody } from '@/lib/validate';
 
 // O'z profilini tahrirlash (ism, telefon) — faqat admin/superadmin.
@@ -15,8 +16,8 @@ const Schema = z.object({
 const ALLOWED = ['admin', 'superadmin'];
 
 export async function PATCH(req: NextRequest) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const session = await requireAuth();
+  if (session instanceof NextResponse) return session;
   if (!ALLOWED.includes(session.role)) {
     return NextResponse.json({ error: 'Ruxsat yo\'q' }, { status: 403 });
   }

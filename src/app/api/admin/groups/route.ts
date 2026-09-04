@@ -162,26 +162,56 @@ export async function PATCH(req: NextRequest) {
 
   // Move student from this group to another
   if (moveStudentId && toGroupId) {
-    await prisma.groupStudent.deleteMany({
-      where: { groupId: id, studentId: moveStudentId },
-    });
-    await prisma.groupStudent.create({
-      data: { groupId: toGroupId, studentId: moveStudentId },
-    });
+    // F2-4: biznes-qoidalar serverda — rol, arxiv guruh, sig'im, atomiklik.
+    const [stu, dest, already] = await Promise.all([
+      prisma.user.findUnique({ where: { id: moveStudentId }, select: { role: true } }),
+      prisma.group.findUnique({ where: { id: toGroupId }, select: { status: true, maxStudents: true, branchId: true } }),
+      prisma.groupStudent.findUnique({ where: { groupId_studentId: { groupId: toGroupId, studentId: moveStudentId } }, select: { id: true } }),
+    ]);
+    if (!stu || stu.role !== 'student') return NextResponse.json({ error: 'Faqat o\'quvchini ko\'chirish mumkin' }, { status: 400 });
+    if (!dest) return NextResponse.json({ error: 'Nishon guruh topilmadi' }, { status: 404 });
+    if (dest.status === 'archived') return NextResponse.json({ error: 'Arxivlangan guruhga ko\'chirib bo\'lmaydi' }, { status: 400 });
+    if (!already) {
+      const cnt = await prisma.groupStudent.count({ where: { groupId: toGroupId } });
+      if (cnt >= dest.maxStudents) return NextResponse.json({ error: 'Nishon guruh to\'lgan (sig\'im chegarasi)' }, { status: 400 });
+    }
+    // Atomik: manbadan o'chirish + nishonga qo'shish bitta tranzaksiyada (a'zolik yo'qolib qolmasin)
+    await prisma.$transaction([
+      prisma.groupStudent.deleteMany({ where: { groupId: id, studentId: moveStudentId } }),
+      prisma.groupStudent.upsert({
+        where: { groupId_studentId: { groupId: toGroupId, studentId: moveStudentId } },
+        update: {},
+        create: { groupId: toGroupId, studentId: moveStudentId },
+      }),
+    ]);
     // O'quvchi nishon guruh filialiga o'tadi (moslik)
-    const tb = await groupBranch(toGroupId);
-    if (tb) await prisma.user.update({ where: { id: moveStudentId }, data: { branchId: tb } });
+    if (dest.branchId) await prisma.user.update({ where: { id: moveStudentId }, data: { branchId: dest.branchId } });
     return NextResponse.json({ ok: true, message: "O'quvchi ko'chirildi" });
   }
 
   // Add student to group
   if (addStudentId) {
-    await prisma.groupStudent.create({
-      data: { groupId: id, studentId: addStudentId },
-    });
+    // F2-4: biznes-qoidalar serverda — rol/status, arxiv guruh, sig'im, dublikat.
+    const [stu, grp, cnt] = await Promise.all([
+      prisma.user.findUnique({ where: { id: addStudentId }, select: { role: true, status: true } }),
+      prisma.group.findUnique({ where: { id }, select: { status: true, maxStudents: true, branchId: true } }),
+      prisma.groupStudent.count({ where: { groupId: id } }),
+    ]);
+    if (!stu || stu.role !== 'student') return NextResponse.json({ error: 'Faqat o\'quvchini qo\'shish mumkin' }, { status: 400 });
+    if (stu.status === 'archived') return NextResponse.json({ error: 'Arxivlangan o\'quvchini qo\'shib bo\'lmaydi' }, { status: 400 });
+    if (!grp) return NextResponse.json({ error: 'Guruh topilmadi' }, { status: 404 });
+    if (grp.status === 'archived') return NextResponse.json({ error: 'Arxivlangan guruhga qo\'shib bo\'lmaydi' }, { status: 400 });
+    if (cnt >= grp.maxStudents) return NextResponse.json({ error: 'Guruh to\'lgan (sig\'im chegarasi)' }, { status: 400 });
+    try {
+      await prisma.groupStudent.create({ data: { groupId: id, studentId: addStudentId } });
+    } catch (e) {
+      if (e && typeof e === 'object' && (e as { code?: string }).code === 'P2002') {
+        return NextResponse.json({ error: 'O\'quvchi allaqachon bu guruhda' }, { status: 409 });
+      }
+      throw e;
+    }
     // O'quvchi guruhning filialini meros qiladi (student va guruh doim bir filialda)
-    const gb = await groupBranch(id);
-    if (gb) await prisma.user.update({ where: { id: addStudentId }, data: { branchId: gb } });
+    if (grp.branchId) await prisma.user.update({ where: { id: addStudentId }, data: { branchId: grp.branchId } });
     return NextResponse.json({ ok: true, message: "O'quvchi qo'shildi" });
   }
 

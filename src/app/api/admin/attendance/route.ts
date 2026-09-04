@@ -44,6 +44,18 @@ export async function PATCH(req: NextRequest) {
       const s = await prisma.user.findUnique({ where: { id: studentId }, select: { branchId: true } });
       if (!s || s.branchId !== bId) return NextResponse.json({ error: 'O\'quvchi boshqa filialga tegishli' }, { status: 403 });
     }
+    // F2-2: guruh/dars ham admin filialida bo'lishi shart — aks holda filial admini boshqa
+    // filial guruhida soxta dars/davomat yaratib, o'sha guruh ustozi oyligini buzishi mumkin.
+    if (bId) {
+      if (lessonId) {
+        const l = await prisma.lesson.findUnique({ where: { id: lessonId }, select: { group: { select: { branchId: true } } } });
+        if (!l || l.group.branchId !== bId) return NextResponse.json({ error: 'Dars boshqa filialga tegishli' }, { status: 403 });
+      }
+      if (groupId) {
+        const g = await prisma.group.findUnique({ where: { id: groupId }, select: { branchId: true } });
+        if (!g || g.branchId !== bId) return NextResponse.json({ error: 'Guruh boshqa filialga tegishli' }, { status: 403 });
+      }
+    }
 
     // 0-5 oralig'iga cheklangan ballar (berilganlarigina)
     const clamp = (v: number) => Math.min(5, Math.max(0, Number(v)));
@@ -125,11 +137,13 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'lessonId va studentId kerak' }, { status: 400 });
     }
 
-    // Filial cheklovi: boshqa filial o'quvchisi davomatini o'chirib bo'lmaydi
+    // Filial cheklovi: boshqa filial o'quvchisi/darsi davomatini o'chirib bo'lmaydi
     const bId = await scopedBranchId(auth);
     if (bId) {
       const s = await prisma.user.findUnique({ where: { id: studentId }, select: { branchId: true } });
       if (!s || s.branchId !== bId) return NextResponse.json({ error: 'O\'quvchi boshqa filialga tegishli' }, { status: 403 });
+      const l = await prisma.lesson.findUnique({ where: { id: lessonId }, select: { group: { select: { branchId: true } } } });
+      if (!l || l.group.branchId !== bId) return NextResponse.json({ error: 'Dars boshqa filialga tegishli' }, { status: 403 });
     }
 
     await prisma.attendance.delete({

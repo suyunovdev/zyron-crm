@@ -65,14 +65,22 @@ export async function POST(req: NextRequest) {
   if (scoreHomework !== undefined) scores.scoreHomework = Math.min(5, Math.max(0, Number(scoreHomework)));
   if (scoreActivity !== undefined) scores.scoreActivity = Math.min(5, Math.max(0, Number(scoreActivity)));
 
+  // Push idempotentligi (F2-3): oldingi holatni bilib olamiz — faqat "kelmadi"ga O'TISHDA
+  // xabar yuboramiz. Aks holda ustoz baho/qayta belgilaganda ota-onaga dublikat xabar ketardi.
+  const prev = await prisma.attendance.findUnique({
+    where: { lessonId_studentId: { lessonId, studentId } },
+    select: { present: true },
+  });
+  const becameAbsent = !present && (prev === null || prev.present === true);
+
   const attendance = await prisma.attendance.upsert({
     where: { lessonId_studentId: { lessonId, studentId } },
     update: { present, ...scores, markedAt: new Date() },
     create: { lessonId, studentId, present, ...scores },
   });
 
-  // Avto-push: farzand kelmagan bo'lsa ota-onaga Telegram xabar (fire-and-forget)
-  if (!present) {
+  // Avto-push: farzand kelmagan bo'lsa ota-onaga Telegram xabar (fire-and-forget) — faqat yangi "kelmadi"da
+  if (becameAbsent) {
     void (async () => {
       const student = await prisma.user.findUnique({ where: { id: studentId }, select: { name: true } });
       const name = escapeHtml(student?.name || 'Farzandingiz');

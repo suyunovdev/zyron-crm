@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { requireAuth, getTodayUz } from '@/lib/api-utils';
-import { parseBody } from '@/lib/validate';
+import { requireAuth } from '@/lib/api-utils';
+import { parseBody, zTrim } from '@/lib/validate';
 import { generateLessons } from '@/lib/generate-lessons';
+import { reconcileFutureLessons, type GroupConfigChange } from '@/lib/reconcile-lessons';
 import { logger } from '@/lib/logger';
 import { scopedBranchId } from '@/lib/branch-scope';
 
 const CreateGroupSchema = z.object({
-  name: z.string().min(1, 'nomi kerak').max(120),
-  subject: z.string().min(1, 'fani kerak').max(80),
+  name: zTrim(120, 1),
+  subject: zTrim(80, 1),
   teacherId: z.string().min(1, 'o\'qituvchi kerak'),
   schedule: z.string().max(200).optional(),
   meetLink: z.string().max(300).optional(),
@@ -28,8 +29,8 @@ const CreateGroupSchema = z.object({
 // Avval PATCH `req.json()` dan xom o'qib `parseInt` qilardi: manfiy narx yoki
 // lessonsPerMonth=0 o'tib ketardi va butun guruh qarzdorligini buzardi (K-3).
 const UpdateGroupInfoSchema = z.object({
-  name: z.string().min(1, 'nomi kerak').max(120).optional(),
-  subject: z.string().min(1, 'fani kerak').max(80).optional(),
+  name: zTrim(120, 1).optional(),
+  subject: zTrim(80, 1).optional(),
   schedule: z.string().max(200).optional(),
   meetLink: z.string().max(300).optional(),
   status: z.enum(['active', 'archived']).optional(),
@@ -43,6 +44,7 @@ const UpdateGroupInfoSchema = z.object({
   lessonsPerMonth: z.coerce.number().int().min(1).max(60).optional(),
   mode: z.enum(['offline', 'online']).optional(),
   teacherId: z.string().min(1).optional(),
+  branchId: z.string().nullable().optional(), // filial biriktirish/o'zgartirish (faqat superadmin)
 });
 
 // Get all groups
@@ -107,22 +109,19 @@ export async function POST(req: NextRequest) {
     include: { teacher: { select: { name: true } } },
   });
 
-  // Darslarni avtomatik generatsiya qilish (12 oy)
+  // Darslarni avtomatik generatsiya qilish (12 oy). Dars maydonlari (vaqt/davomiylik/narx)
+  // generateLessons ichida guruhdan (lessonDefaultsFromGroup) olinadi — yagona manba.
+  // Faqat toq/juft uchun; "boshqa" (maxsus jadval) da avtomatik generatsiya qilinmaydi.
   {
     const dt = dayType || 'toq';
-    const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tashkent' }));
-    const sd = startDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    try {
-      await generateLessons({
-        groupId: group.id,
-        startDate: sd,
-        months: 12,
-        dayType: dt,
-        time: time || '14:00',
-        duration: duration || '2.5 soat',
-      });
-    } catch (e) {
-      logger.error('[Auto-generate lessons]', e);
+    if (dt === 'toq' || dt === 'juft') {
+      const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tashkent' }));
+      const sd = startDate || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      try {
+        await generateLessons({ groupId: group.id, startDate: sd, months: 12, dayType: dt });
+      } catch (e) {
+        logger.error('[Auto-generate lessons]', e);
+      }
     }
   }
 
@@ -241,6 +240,13 @@ export async function PATCH(req: NextRequest) {
   }
   const v = infoParsed.data;
 
+  // Eski qiymatlar — o'zgarishni aniqlash (reconciler) va branch auto-heal uchun
+  const before = await prisma.group.findUnique({
+    where: { id },
+    select: { dayType: true, time: true, duration: true, price: true, lessonsPerMonth: true, startDate: true, branchId: true, teacherId: true },
+  });
+  if (!before) return NextResponse.json({ error: 'Guruh topilmadi' }, { status: 404 });
+
   const data: Record<string, unknown> = {};
   if (v.name !== undefined) data.name = v.name;
   if (v.subject !== undefined) data.subject = v.subject;
@@ -258,42 +264,41 @@ export async function PATCH(req: NextRequest) {
   if (v.mode !== undefined) data.mode = v.mode;
   if (v.teacherId) data.teacherId = v.teacherId;
 
-  // Jadval o'zgarishini aniqlash uchun eski qiymatlar
-  const before = await prisma.group.findUnique({ where: { id }, select: { dayType: true } });
+  // branchId: faqat filialsiz (superadmin/global) admin ixtiyoriy o'zgartira oladi.
+  // Filialga biriktirilgan admin guruhni boshqa filialga ko'chira olmaydi.
+  if (v.branchId !== undefined) {
+    if (bId) {
+      if (v.branchId !== bId) return NextResponse.json({ error: 'Guruh filialini o\'zgartirishga ruxsat yo\'q' }, { status: 403 });
+    } else {
+      data.branchId = v.branchId;
+    }
+  }
+  // Auto-heal: guruh filialsiz (null) qolgan bo'lsa — o'qituvchi filialini meros qiladi.
+  // Aks holda filialsiz guruh filial adminига "Guruh topilmadi" bo'lib ko'rinadi.
+  const willBranch = (data.branchId as string | null | undefined) ?? before.branchId;
+  if (willBranch == null) {
+    const tId = (data.teacherId as string) || before.teacherId;
+    const t = tId ? await prisma.user.findUnique({ where: { id: tId }, select: { branchId: true } }) : null;
+    if (t?.branchId) data.branchId = t.branchId;
+  }
 
   const group = await prisma.group.update({ where: { id }, data });
 
-  // Davomiylik o'zgarsa — guruhning barcha darslariga qo'llaymiz (jadval/hisob izchil bo'lsin)
-  if (v.duration !== undefined) {
-    await prisma.lesson.updateMany({ where: { groupId: id }, data: { duration: v.duration } });
-  }
-
-  // Dars KUNLARI (dayType) o'zgarsa — kelajakdagi (davomatsiz) darslarni yangi kunlarga
-  // QAYTA yaratamiz. Aks holda jadval o'zgarsa ham darslar eski kunlarda qolib, ustoz
-  // yangi kunlarda davomat qila olmasdi. Faqat toq/juft uchun (boshqa — qo'lda jadval).
-  const dayTypeChanged = v.dayType && before && v.dayType !== before.dayType && (v.dayType === 'toq' || v.dayType === 'juft');
-  if (dayTypeChanged) {
-    const today = getTodayUz();
-    await prisma.lesson.deleteMany({ where: { groupId: id, scheduledDate: { gte: today }, attendances: { none: {} } } });
+  // Jadval/narx o'zgarishlarini darslarga YAGONA reconciler orqali tarqatamiz
+  // (vaqt, davomiylik, dars kunlari regeneratsiyasi, kelajak narx snapshot).
+  const change: GroupConfigChange = {};
+  if (v.dayType !== undefined && v.dayType !== before.dayType) change.dayType = v.dayType;
+  if (v.time !== undefined && v.time !== before.time) change.time = v.time;
+  if (v.duration !== undefined && v.duration !== before.duration) change.duration = v.duration;
+  if (v.price !== undefined && v.price !== before.price) change.price = v.price;
+  if (v.lessonsPerMonth !== undefined && v.lessonsPerMonth !== before.lessonsPerMonth) change.lessonsPerMonth = v.lessonsPerMonth;
+  if (v.startDate !== undefined && v.startDate !== before.startDate) change.startDate = v.startDate;
+  if (Object.keys(change).length > 0) {
     try {
-      await generateLessons({
-        groupId: id,
-        startDate: today,
-        months: 12,
-        dayType: v.dayType!,
-        time: group.time || '14:00',
-        duration: group.duration,
-      });
+      await reconcileFutureLessons(id, change);
     } catch (e) {
-      logger.error('[groups PATCH — jadval qayta yaratish]', e);
+      logger.error('[groups PATCH — reconcile]', e);
     }
-  } else if (v.time) {
-    // Dars vaqti o'zgarsa (kun o'zgarmagan holatда) — KELAJAKDAGI darslarga qo'llaymiz.
-    // (dayType o'zgargan bo'lsa darslar allaqachon yangi vaqt bilan qayta yaratildi.)
-    await prisma.lesson.updateMany({
-      where: { groupId: id, scheduledDate: { gte: getTodayUz() } },
-      data: { scheduledTime: v.time },
-    });
   }
 
   return NextResponse.json(group);

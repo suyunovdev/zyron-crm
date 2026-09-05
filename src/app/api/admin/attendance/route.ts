@@ -6,6 +6,7 @@ import { parseBody } from '@/lib/validate';
 import { logger } from '@/lib/logger';
 import { scopedBranchId } from '@/lib/branch-scope';
 import { isLessonDay } from '@/lib/schedule';
+import { lessonDefaultsFromGroup } from '@/lib/lesson-fields';
 import { logAudit } from '@/lib/audit';
 import type { SessionUser } from '@/lib/auth';
 
@@ -85,21 +86,24 @@ export async function PATCH(req: NextRequest) {
         // Yangi dars yaratishdan oldin: sana guruh jadvaliga (dayType) mos dars kunimi?
         const group = await prisma.group.findUnique({
           where: { id: groupId },
-          select: { time: true, dayType: true },
+          select: { time: true, dayType: true, duration: true, price: true, lessonsPerMonth: true },
         });
-        if (!isLessonDay(group?.dayType, date)) {
+        if (!group || !isLessonDay(group.dayType, date)) {
           return NextResponse.json(
             { error: 'Bu kun guruh jadvaliga to\'g\'ri kelmaydi — dars kuni emas. Davomat faqat dars kunlariga belgilanadi.' },
             { status: 400 },
           );
         }
         const lessonCount = await prisma.lesson.count({ where: { groupId } });
+        // Dars maydonlari yagona manbadan (vaqt/davomiylik/narx snapshot izchil bo'lsin)
+        const fields = lessonDefaultsFromGroup(group);
         try {
           lesson = await prisma.lesson.create({
             data: {
               groupId,
               scheduledDate: date,
-              scheduledTime: time || group?.time || '00:00',
+              ...fields,
+              ...(time ? { scheduledTime: time } : {}), // admin bergan vaqt ustuvor
               order: lessonCount + 1,
             },
           });

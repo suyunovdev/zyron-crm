@@ -3,12 +3,12 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { createNotification } from '@/lib/notify';
 import { logger } from '@/lib/logger';
-import { parseBody } from '@/lib/validate';
+import { parseBody, zTrim } from '@/lib/validate';
 import { notifyStaff } from '@/lib/telegram-funnel';
 import { staffLeadText } from '@/lib/funnel-messages';
 
 const LeadSchema = z.object({
-  name: z.string().min(1).max(120),
+  name: zTrim(120, 1),
   phone: z.string().min(3).max(32),
   subject: z.string().max(40).optional(),
   message: z.string().max(2000).optional(),

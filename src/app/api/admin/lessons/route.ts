@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { parseBody } from '@/lib/validate';
 import { scopedBranchId } from '@/lib/branch-scope';
+import { lessonDefaultsFromGroup } from '@/lib/lesson-fields';
 import { logAudit } from '@/lib/audit';
 import { logger } from '@/lib/logger';
 import type { SessionUser } from '@/lib/auth';
@@ -38,17 +39,23 @@ export async function POST(req: NextRequest) {
     const guard = await checkBranch(auth, groupId);
     if (guard) return guard;
 
-    const group = await prisma.group.findUnique({ where: { id: groupId }, select: { time: true } });
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      select: { time: true, duration: true, price: true, lessonsPerMonth: true },
+    });
     if (!group) return NextResponse.json({ error: 'Guruh topilmadi' }, { status: 404 });
 
     const dup = await prisma.lesson.findFirst({ where: { groupId, scheduledDate } });
     if (dup) return NextResponse.json({ error: 'Bu sanada dars allaqachon mavjud' }, { status: 409 });
 
     const last = await prisma.lesson.findFirst({ where: { groupId }, orderBy: { order: 'desc' }, select: { order: true } });
+    // Dars maydonlari yagona manbadan (vaqt/davomiylik/narx snapshot izchil)
+    const fields = lessonDefaultsFromGroup(group);
     const lesson = await prisma.lesson.create({
       data: {
         groupId, scheduledDate,
-        scheduledTime: scheduledTime || group.time || '14:00',
+        ...fields,
+        ...(scheduledTime ? { scheduledTime } : {}), // admin bergan vaqt ustuvor
         order: (last?.order ?? 0) + 1,
         topic: topic || null,
       },

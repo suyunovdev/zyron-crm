@@ -33,3 +33,51 @@ export function isLessonDay(dayType: string | null | undefined, dateStr: string)
   const dow = new Date(y, m - 1, d).getDay(); // 0=Yak ... 6=Shan
   return allowed.includes(dow);
 }
+
+/** Sana → "YYYY-MM-DD" (mahalliy komponentlar bo'yicha — isLessonDay bilan izchil). */
+export function fmtLessonDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Guruh jadvali bo'yicha dars sanalarini hisoblaydi (SOF funksiya — DB'siz, test qilinadi).
+ * dayType (toq/juft) hafta kunlariga aylanadi; startDate'dan `months` oy (yoki `endDate`
+ * gacha, inklyuziv) oralig'idagi mos kunlar qaytariladi. Sanalar mahalliy komponentlar
+ * bilan quriladi (isLessonDay bilan bir xil — UTC/mahalliy drift bo'lmaydi).
+ * toq/juft'dan boshqa dayType (masalan "boshqa") → xato: avtomatik generatsiya qilinmaydi.
+ */
+export function computeLessonDates(opts: {
+  startDate: string;
+  dayType: string;
+  months?: number;
+  endDate?: string;
+}): string[] {
+  const { startDate, dayType, months = 12, endDate } = opts;
+  const allowed = DAY_MAP[dayType];
+  if (!allowed) {
+    throw new Error(`Noto'g'ri dayType: ${dayType}. "toq" yoki "juft" bo'lishi kerak.`);
+  }
+
+  const [sy, sm, sd] = startDate.split('-').map(Number);
+  const start = new Date(sy, sm - 1, sd);
+  let end: Date;
+  if (endDate) {
+    const [ey, em, ed] = endDate.split('-').map(Number);
+    end = new Date(ey, em - 1, ed);
+    end.setDate(end.getDate() + 1); // endDate ni ham qamrashi uchun (inklyuziv)
+  } else {
+    end = new Date(sy, sm - 1, sd);
+    end.setMonth(end.getMonth() + months);
+  }
+
+  const dates: string[] = [];
+  const cur = new Date(start);
+  while (cur < end) {
+    if (allowed.includes(cur.getDay())) dates.push(fmtLessonDate(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dates;
+}

@@ -1,12 +1,6 @@
 import { prisma } from '@/lib/db';
-import { perLessonRate } from '@/lib/billing-core';
-
-// Toq kunlar: Dushanba(1), Chorshanba(3), Juma(5)
-// Juft kunlar: Seshanba(2), Payshanba(4), Shanba(6)
-const DAY_MAP: Record<string, number[]> = {
-  toq: [1, 3, 5],   // Mon, Wed, Fri
-  juft: [2, 4, 6],  // Tue, Thu, Sat
-};
+import { computeLessonDates } from '@/lib/schedule';
+import { lessonDefaultsFromGroup } from '@/lib/lesson-fields';
 
 interface GenerateOptions {
   groupId: string;
@@ -14,101 +8,48 @@ interface GenerateOptions {
   months?: number;    // necha oy uchun (endDate berilmasa; default: 12)
   endDate?: string;   // "2026-12-31" — shu sanagacha (berilsa months o'rniga ishlatiladi)
   dayType: string;    // "toq" | "juft"
-  time: string;       // "14:00"
-  duration?: string;  // "1.5 soat"
 }
 
 /**
  * Berilgan guruh uchun darslarni avtomatik generatsiya qiladi.
- * dayType bo'yicha kalendar kunlarini hisoblab, Lesson yaratadi.
- * Mavjud darslar bilan duplikat bo'lmasligi uchun tekshiradi.
+ * Sanalar sof `computeLessonDates` (schedule.ts) bilan hisoblanadi; dars maydonlari
+ * (vaqt/davomiylik/narx snapshot) esa `lessonDefaultsFromGroup` (yagona manba) dan olinadi —
+ * shu bilan har joyda bir xil default. Mavjud sanalar bilan duplikat bo'lmaydi.
  */
 export async function generateLessons(opts: GenerateOptions) {
-  const { groupId, startDate, months = 12, endDate, dayType, time, duration = '1.5 soat' } = opts;
+  const { groupId, startDate, months = 12, endDate, dayType } = opts;
 
-  const allowedDays = DAY_MAP[dayType];
-  if (!allowedDays) {
-    throw new Error(`Noto'g'ri dayType: ${dayType}. "toq" yoki "juft" bo'lishi kerak.`);
-  }
-
-  // Oxirini aniqlash: endDate berilsa shu sanagacha (inklyuziv), aks holda months oy
-  const start = new Date(startDate);
-  let end: Date;
-  if (endDate) {
-    end = new Date(endDate);
-    end.setDate(end.getDate() + 1); // shu kunni ham qamrashi uchun
-  } else {
-    end = new Date(start);
-    end.setMonth(end.getMonth() + months);
-  }
-
-  // Mavjud darslarning sanalarini olish (duplikat oldini olish)
-  const existingLessons = await prisma.lesson.findMany({
-    where: { groupId },
-    select: { scheduledDate: true },
-  });
-  const existingDates = new Set(existingLessons.map(l => l.scheduledDate));
-
-  // K-2: dars narxi snapshot'i — dars yaratilgan paytdagi joriy narxdan muzlatiladi.
+  // Guruh sozlamasi — dars maydonlari uchun yagona manba
   const grp = await prisma.group.findUnique({
     where: { id: groupId },
-    select: { price: true, lessonsPerMonth: true },
+    select: { price: true, lessonsPerMonth: true, time: true, duration: true },
   });
-  const rateSnapshot = grp ? perLessonRate(grp.price, grp.lessonsPerMonth) : 0;
+  if (!grp) throw new Error('Guruh topilmadi');
+  const fields = lessonDefaultsFromGroup(grp); // { scheduledTime, duration, perLessonRate }
 
-  // Oxirgi dars tartib raqamini olish
-  const lastLesson = await prisma.lesson.findFirst({
-    where: { groupId },
-    orderBy: { order: 'desc' },
-    select: { order: true },
-  });
-  let order = (lastLesson?.order ?? 0);
+  // Sof kalendar hisobi (toq/juft dan boshqa dayType → throw)
+  const dates = computeLessonDates({ startDate, dayType, months, endDate });
 
-  // Sanalarni generatsiya qilish
-  const lessonsToCreate: {
-    groupId: string;
-    scheduledDate: string;
-    scheduledTime: string;
-    duration: string;
-    order: number;
-    perLessonRate: number;
-  }[] = [];
+  // Mavjud darslar sanalari (duplikat oldini olish)
+  const existingLessons = await prisma.lesson.findMany({ where: { groupId }, select: { scheduledDate: true } });
+  const existingDates = new Set(existingLessons.map(l => l.scheduledDate));
 
-  const current = new Date(start);
-  while (current < end) {
-    const dayOfWeek = current.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+  // Oxirgi tartib raqami
+  const lastLesson = await prisma.lesson.findFirst({ where: { groupId }, orderBy: { order: 'desc' }, select: { order: true } });
+  let order = lastLesson?.order ?? 0;
 
-    if (allowedDays.includes(dayOfWeek)) {
-      const dateStr = formatDate(current);
-
-      if (!existingDates.has(dateStr)) {
-        order++;
-        lessonsToCreate.push({
-          groupId,
-          scheduledDate: dateStr,
-          scheduledTime: time || '14:00',
-          duration,
-          order,
-          perLessonRate: rateSnapshot,
-        });
-      }
-    }
-
-    current.setDate(current.getDate() + 1);
-  }
+  const lessonsToCreate = dates
+    .filter(d => !existingDates.has(d))
+    .map(scheduledDate => ({ groupId, scheduledDate, ...fields, order: ++order }));
 
   if (lessonsToCreate.length === 0) {
     return { created: 0, message: 'Yangi darslar topilmadi (barcha sanalar allaqachon mavjud)' };
   }
 
-  // Batch yaratish
-  const result = await prisma.lesson.createMany({
-    data: lessonsToCreate,
-  });
-
+  const result = await prisma.lesson.createMany({ data: lessonsToCreate });
   return {
     created: result.count,
-    message: `${result.count} ta dars yaratildi (${formatDate(start)} dan ${formatDate(end)} gacha)`,
+    message: `${result.count} ta dars yaratildi (${startDate} dan ${endDate || `${months} oy`} gacha)`,
   };
 }
 
@@ -123,26 +64,15 @@ export async function generateLessonsForMonth(
 ) {
   const group = await prisma.group.findUnique({
     where: { id: groupId },
-    select: { dayType: true, time: true, duration: true, startDate: true },
+    select: { dayType: true },
   });
-
   if (!group) throw new Error('Guruh topilmadi');
 
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-
   return generateLessons({
     groupId,
     startDate,
     months: 1,
     dayType: group.dayType || 'toq',
-    time: group.time || '14:00',
-    duration: group.duration || '2.5 soat',
   });
-}
-
-function formatDate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
 }

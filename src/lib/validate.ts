@@ -2,6 +2,19 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 /**
+ * Foydalanuvchi kiritadigan matn maydonlari uchun yagona normalizatsiya:
+ * chetki probellarni olib tashlaydi va ichki ketma-ket probellarni bittaga siqadi,
+ * keyin uzunlikni tekshiradi. Bu "Ism  Familiya" (qo'sh probel) yoki "login " (chetki
+ * probel) sinfidagi ma'lumot xatolarini manbada oldini oladi.
+ *   name: zTrim(120, 1)   // 1..120, normalizatsiyalangan
+ */
+export const zTrim = (max: number, min = 0) =>
+  z.string().trim().transform((s) => s.replace(/\s+/g, ' ')).pipe(z.string().min(min).max(max));
+
+/** zTrim ning ixtiyoriy (optional) varianti. */
+export const zTrimOptional = (max: number, min = 0) => zTrim(max, min).optional();
+
+/**
  * So'rov body'sini zod sxema bo'yicha tekshiradi.
  * Muvaffaqiyatsiz bo'lsa 400 (NextResponse) qaytaradi, aks holda tipli data.
  *

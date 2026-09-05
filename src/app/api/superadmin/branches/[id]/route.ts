@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
-import { parseBody } from '@/lib/validate';
+import { parseBody, zTrim } from '@/lib/validate';
 import { logAudit } from '@/lib/audit';
 import { logger } from '@/lib/logger';
 import { computeDebtSummary } from '@/lib/billing';
@@ -79,7 +79,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 const UpdateSchema = z.object({
-  name: z.string().min(1).max(120).optional(),
+  name: zTrim(120, 1).optional(),
   address: z.string().max(200).nullable().optional(),
   phone: z.string().max(32).nullable().optional(),
 });

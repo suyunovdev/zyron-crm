@@ -20,6 +20,7 @@ import {
   Send,
   Loader2,
   X,
+  AlertCircle,
 } from 'lucide-react';
 
 interface Student {
@@ -74,29 +75,55 @@ function tzNow(): Date {
   return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tashkent' }));
 }
 
-function isLessonActive(date: string, time: string, duration: string): boolean {
-  const now = tzNow();
+// Dars tugagach davomat uchun qo'shimcha muhlat (server: ATTENDANCE_GRACE_MS bilan bir xil): 2 soat.
+const ATTENDANCE_GRACE_MS = 2 * 60 * 60 * 1000;
+const durHours = (duration?: string | null) => parseFloat(duration?.match(/[\d.]+/)?.[0] || '1.5');
+
+// Dars boshlanish/tugash va davomat oynasi chegaralari (mahalliy Date'lar).
+function lessonBounds(date: string, time: string, duration?: string | null) {
   const [y, m, d] = date.split('-').map(Number);
   const [h, min] = time.split(':').map(Number);
   const start = new Date(y, m - 1, d, h, min);
-  const dur = parseFloat(duration.match(/[\d.]+/)?.[0] || '1.5');
-  const end = new Date(start.getTime() + dur * 3600000);
-  return now >= start && now <= end;
+  const lessonEnd = new Date(start.getTime() + durHours(duration) * 3600000);
+  const windowStart = new Date(start.getTime() - 15 * 60000);
+  const windowEnd = new Date(lessonEnd.getTime() + ATTENDANCE_GRACE_MS);
+  return { start, lessonEnd, windowStart, windowEnd };
+}
+
+function isLessonActive(date: string, time: string, duration: string): boolean {
+  const now = tzNow();
+  const { start, lessonEnd } = lessonBounds(date, time, duration);
+  return now >= start && now <= lessonEnd;
 }
 
 // Davomat belgilash oynasi — SERVER bilan bir xil (api-utils.attendanceWindow):
 //  - dars boshlanishidan 15 min oldin (oldindan belgilab bo'lmaydi);
-//  - dars KUNI oxirigacha (ertasi 00:00) — esdan chiqqan davomat uchun muhlat.
-// Avval frontend faqat "tugash + 15 min" gacha ruxsat berardi → ustoz darsdan sal
-// keyin belgilay olmay qolardi (server ruxsat bersa ham). Endi izchil.
-function isAttendanceWindowOpen(date: string, time: string): boolean {
+//  - dars tugagach 2 soat grace — esdan chiqqan davomat uchun muhlat. Keyin faqat admin.
+function isAttendanceWindowOpen(date: string, time: string, duration?: string | null): boolean {
   const now = tzNow();
-  const [y, m, d] = date.split('-').map(Number);
-  const [h, min] = time.split(':').map(Number);
-  const start = new Date(y, m - 1, d, h, min);
-  const windowStart = new Date(start.getTime() - 15 * 60000);
-  const dayEnd = new Date(y, m - 1, d + 1, 0, 0, 0);
-  return now >= windowStart && now < dayEnd;
+  const { windowStart, windowEnd } = lessonBounds(date, time, duration);
+  return now >= windowStart && now <= windowEnd;
+}
+
+// Bugungi dars davomat holati (header badge): yashil (dars ketmoqda) → sariq (grace) → qizil (tugadi).
+type AttState = 'none' | 'pending' | 'active' | 'grace' | 'closed';
+function attendanceStatus(
+  lesson: { scheduledDate: string; scheduledTime: string; duration: string } | null,
+  now: Date,
+): { state: AttState; msLeft: number } {
+  if (!lesson) return { state: 'none', msLeft: 0 };
+  const { start, lessonEnd, windowStart, windowEnd } = lessonBounds(lesson.scheduledDate, lesson.scheduledTime, lesson.duration);
+  const t = now.getTime();
+  if (t < windowStart.getTime()) return { state: 'pending', msLeft: start.getTime() - t };
+  if (t < lessonEnd.getTime()) return { state: 'active', msLeft: lessonEnd.getTime() - t }; // dars tugashiga qolgan
+  if (t <= windowEnd.getTime()) return { state: 'grace', msLeft: windowEnd.getTime() - t }; // davomat yopilishiga qolgan
+  return { state: 'closed', msLeft: 0 };
+}
+
+function fmtHMS(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const hh = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60;
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
 }
 
 function isSameDay(dateStr: string): boolean {
@@ -129,7 +156,6 @@ export default function TeacherGroupsPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [now, setNow] = useState(tzNow());
   const [teacherName, setTeacherName] = useState('');
-  const [timerStr, setTimerStr] = useState('00:00:00');
   const [msgFor, setMsgFor] = useState<{ id: string; name: string } | null>(null);
   const monthScrollRef = useRef<HTMLDivElement>(null);
 
@@ -219,28 +245,11 @@ export default function TeacherGroupsPage() {
     }).sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate) || a.order - b.order);
   }, [selectedGroup, selectedMonth]);
 
-  // Live timer for active lesson
-  const activeLessonToday = useMemo(() => {
-    if (!selectedGroup) return null;
-    return selectedGroup.lessons.find(l =>
-      isSameDay(l.scheduledDate) && isLessonActive(l.scheduledDate, l.scheduledTime, l.duration)
-    ) || null;
+  // Bugungi darsning davomat holati + teskari sanoq (header badge). Har soniya yangilanadi (now).
+  const todayAtt = useMemo(() => {
+    const lesson = selectedGroup?.lessons.find(l => isSameDay(l.scheduledDate)) || null;
+    return { lesson, ...attendanceStatus(lesson, now) };
   }, [selectedGroup, now]);
-
-  useEffect(() => {
-    if (!activeLessonToday) {
-      setTimerStr('00:00:00');
-      return;
-    }
-    const [y, mo, d] = activeLessonToday.scheduledDate.split('-').map(Number);
-    const [h, min] = activeLessonToday.scheduledTime.split(':').map(Number);
-    const start = new Date(y, mo - 1, d, h, min);
-    const elapsed = Math.max(0, Math.floor((now.getTime() - start.getTime()) / 1000));
-    const hrs = Math.floor(elapsed / 3600);
-    const mins = Math.floor((elapsed % 3600) / 60);
-    const secs = elapsed % 60;
-    setTimerStr(`${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
-  }, [activeLessonToday, now]);
 
   // Get first lesson time for display
   const lessonTime = useMemo(() => {
@@ -341,7 +350,7 @@ export default function TeacherGroupsPage() {
 
   // Check if attendance window is open for this lesson
   const isLessonEditable = (lesson: Lesson): boolean => {
-    return isAttendanceWindowOpen(lesson.scheduledDate, lesson.scheduledTime);
+    return isAttendanceWindowOpen(lesson.scheduledDate, lesson.scheduledTime, lesson.duration);
   };
 
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -450,17 +459,39 @@ export default function TeacherGroupsPage() {
             <div className="flex items-start justify-between gap-4 mb-3">
               <div className="flex items-center gap-3">
                 <h1 className="text-xl font-bold text-slate-900">{selectedGroup.name}</h1>
-                {activeLessonToday && (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-lg">
+                {/* Davomat holati badge: yashil (dars ketmoqda, teskari sanoq) →
+                    sariq (grace, davomat yopilishiga qolgan) → qizil (davomat vaqti tugadi) */}
+                {todayAtt.state === 'active' && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-lg" title="Dars tugashiga qolgan vaqt">
                     <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
                     <Timer className="w-3.5 h-3.5 text-emerald-600" />
-                    <span className="text-sm font-mono font-bold text-emerald-700">{timerStr}</span>
+                    <span className="text-sm font-mono font-bold text-emerald-700">{fmtHMS(todayAtt.msLeft)}</span>
                   </div>
                 )}
-                {!activeLessonToday && (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg">
+                {todayAtt.state === 'grace' && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-lg" title="Davomat yopilishiga qolgan vaqt (dars tugagach 2 soat)">
+                    <Timer className="w-3.5 h-3.5 text-amber-600" />
+                    <span className="text-sm font-mono font-bold text-amber-700">{fmtHMS(todayAtt.msLeft)}</span>
+                    <span className="text-xs font-semibold text-amber-700">davomat ochiq</span>
+                  </div>
+                )}
+                {todayAtt.state === 'closed' && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-50 border border-red-200 rounded-lg">
+                    <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+                    <span className="text-xs font-bold text-red-700">Davomat vaqti tugadi</span>
+                  </div>
+                )}
+                {todayAtt.state === 'pending' && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-lg" title="Dars boshlanishiga qolgan vaqt">
+                    <Timer className="w-3.5 h-3.5 text-blue-500" />
+                    <span className="text-sm font-mono font-semibold text-blue-600">{fmtHMS(todayAtt.msLeft)}</span>
+                    <span className="text-xs font-semibold text-blue-600">boshlanishiga</span>
+                  </div>
+                )}
+                {todayAtt.state === 'none' && (
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg" title="Bugun dars yo'q">
                     <Timer className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="text-sm font-mono text-slate-400">00:00:00</span>
+                    <span className="text-xs font-medium text-slate-400">Bugun dars yo&apos;q</span>
                   </div>
                 )}
               </div>
@@ -728,7 +759,21 @@ export default function TeacherGroupsPage() {
                                         </div>
                                       )
                                     ) : (
-                                      <div className="w-7 h-7 border border-dashed border-slate-200 rounded mx-auto" />
+                                      // Oyna yopiq (dars tugagach 2 soatdan o'tgan): belgilangan davomat
+                                      // read-only ko'rinadi (o'zgartirib bo'lmaydi); belgilanmagani — punktir.
+                                      record ? (
+                                        record.present ? (
+                                          <div className="w-7 h-7 bg-emerald-500/50 rounded flex items-center justify-center mx-auto" title="Davomat vaqti tugagan (o'zgartirish uchun admin)">
+                                            <Check className="w-4 h-4 text-white stroke-[3]" />
+                                          </div>
+                                        ) : (
+                                          <div className="w-7 h-7 bg-red-500/50 rounded flex items-center justify-center mx-auto" title="Davomat vaqti tugagan (o'zgartirish uchun admin)">
+                                            <span className="text-white text-xs font-bold">Y</span>
+                                          </div>
+                                        )
+                                      ) : (
+                                        <div className="w-7 h-7 border border-dashed border-slate-200 rounded mx-auto" title="Davomat vaqti tugagan — belgilanmagan" />
+                                      )
                                     )}
                                   </td>
                                 );

@@ -60,22 +60,33 @@ export function getTodayUz(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
+/** Dars tugagach davomat belgilash uchun qo'shimcha muhlat (grace): 2 soat. */
+export const ATTENDANCE_GRACE_MS = 2 * 60 * 60 * 1000;
+
+/** Duration matnidan soatni ajratadi ("3 soat" → 3, "1.5 soat" → 1.5; default 1.5). */
+export function parseDurationHours(duration?: string | null): number {
+  const m = (duration || '').match(/[\d.]+/);
+  return m ? parseFloat(m[0]) : 1.5;
+}
+
 /**
  * Teacher davomat belgilash oynasi (sof funksiya — test qilinadigan).
  *  - windowStart: dars boshlanishidan 15 min oldin (bundan oldin belgilab bo'lmaydi)
- *  - dayEnd:      dars kuni oxiri = ertasi kun 00:00 (bundan keyin faqat admin)
+ *  - lessonEnd:   dars tugashi (start + duration)
+ *  - windowEnd:   dars tugashi + 2 soat grace (bundan keyin faqat admin tuzatadi)
  */
-export function attendanceWindow(scheduledDate: string, scheduledTime: string) {
+export function attendanceWindow(scheduledDate: string, scheduledTime: string, duration?: string | null) {
   const [y, m, d] = scheduledDate.split('-').map(Number);
   const [h, min] = scheduledTime.split(':').map(Number);
   const start = new Date(y, m - 1, d, h, min);
+  const lessonEnd = new Date(start.getTime() + parseDurationHours(duration) * 3600000);
   const windowStart = new Date(start.getTime() - 15 * 60000);
-  const dayEnd = new Date(y, m - 1, d + 1, 0, 0, 0);
-  return { windowStart, dayEnd };
+  const windowEnd = new Date(lessonEnd.getTime() + ATTENDANCE_GRACE_MS);
+  return { windowStart, lessonEnd, windowEnd };
 }
 
 /** Berilgan vaqtda teacher davomatni belgilay oladimi? */
-export function canTeacherMark(scheduledDate: string, scheduledTime: string, now: Date): boolean {
-  const { windowStart, dayEnd } = attendanceWindow(scheduledDate, scheduledTime);
-  return now >= windowStart && now < dayEnd;
+export function canTeacherMark(scheduledDate: string, scheduledTime: string, duration: string | null | undefined, now: Date): boolean {
+  const { windowStart, windowEnd } = attendanceWindow(scheduledDate, scheduledTime, duration);
+  return now >= windowStart && now <= windowEnd;
 }

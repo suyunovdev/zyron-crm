@@ -48,16 +48,16 @@ export async function POST(req: NextRequest) {
 
   // Davomat belgilash oynasi (sof mantiq api-utils'da — test qilinadi):
   //  - dars boshlanishidan 15 min oldindan (kelajakni oldindan belgilab bo'lmaydi);
-  //  - dars kuni oxirigacha (ertasi 00:00) — esdan chiqqan davomat uchun muhlat.
+  //  - dars tugagach 2 soat grace — esdan chiqqan davomat uchun muhlat.
   //    Muhlatdan keyin faqat admin tuzata oladi.
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tashkent' }));
-  const { windowStart, dayEnd } = attendanceWindow(lesson.scheduledDate, lesson.scheduledTime);
+  const { windowStart, windowEnd } = attendanceWindow(lesson.scheduledDate, lesson.scheduledTime, lesson.duration);
 
   if (now < windowStart) {
     return NextResponse.json({ error: 'Dars hali boshlanmagan — davomatni oldindan belgilab bo\'lmaydi' }, { status: 400 });
   }
-  if (now >= dayEnd) {
-    return NextResponse.json({ error: 'Davomat muhlati tugagan (dars kuni oxirigacha). Tuzatish uchun admin bilan bog\'laning' }, { status: 400 });
+  if (now > windowEnd) {
+    return NextResponse.json({ error: 'Davomat vaqti tugadi (dars tugagach 2 soat). Tuzatish uchun admin bilan bog\'laning' }, { status: 400 });
   }
 
   const scores: Record<string, number> = {};

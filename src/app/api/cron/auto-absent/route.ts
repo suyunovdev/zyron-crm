@@ -49,11 +49,11 @@ export async function GET(req: NextRequest) {
   let totalMarked = 0;
 
   for (const lesson of lessons) {
-    // Muhlat: dars kuni oxiri (ertasi kun 00:00). Shu vaqtgacha teacher o'zi belgilaydi.
-    const { dayEnd } = attendanceWindow(lesson.scheduledDate, lesson.scheduledTime);
+    // Muhlat: dars tugagach 2 soat (attendanceWindow). Shu vaqtgacha teacher o'zi belgilaydi.
+    const { windowEnd } = attendanceWindow(lesson.scheduledDate, lesson.scheduledTime, lesson.duration);
 
     // Muhlat hali tugamagan bo'lsa — o'tkazib yuboramiz
-    if (now < dayEnd) continue;
+    if (now <= windowEnd) continue;
 
     // Belgilanmagan o'quvchilar, biznes-qoidalar bilan (F2-5):
     //  - faqat FAOL o'quvchi (frozen/archived muzlatilgan — absent yozilmaydi);

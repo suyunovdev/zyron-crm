@@ -56,7 +56,8 @@ export async function checkIntegrity(prisma: PrismaClient, today: string): Promi
       if (l.scheduledTime !== fields.scheduledTime) timeMismatch++;
       if (!isLessonDay(g.dayType, l.scheduledDate)) wrongDayLessons++;
       if (l.duration !== g.duration) durationMismatch++;
-      if (l._count.attendances === 0 && l.perLessonRate != null && l.perLessonRate !== currentRate) rateDrift++;
+      // Narx drifti: 1 so'mdan katta farq (float shovqinini emas — billing baribir yaxlitlaydi)
+      if (l._count.attendances === 0 && l.perLessonRate != null && Math.abs(l.perLessonRate - currentRate) > 1) rateDrift++;
     }
 
     // Yetishmayotgan jadval-kun darslari (keyingi 1 oy) — faqat toq/juft

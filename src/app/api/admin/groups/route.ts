@@ -258,16 +258,38 @@ export async function PATCH(req: NextRequest) {
   if (v.mode !== undefined) data.mode = v.mode;
   if (v.teacherId) data.teacherId = v.teacherId;
 
+  // Jadval o'zgarishini aniqlash uchun eski qiymatlar
+  const before = await prisma.group.findUnique({ where: { id }, select: { dayType: true } });
+
   const group = await prisma.group.update({ where: { id }, data });
 
   // Davomiylik o'zgarsa — guruhning barcha darslariga qo'llaymiz (jadval/hisob izchil bo'lsin)
   if (v.duration !== undefined) {
     await prisma.lesson.updateMany({ where: { groupId: id }, data: { duration: v.duration } });
   }
-  // Dars vaqti o'zgarsa — KELAJAKDAGI darslarga qo'llaymiz (o'tgan darslar tarixiy qoladi).
-  // Aks holda guruh vaqti o'zgargach eski darslar eski vaqtda qolib, ustozning timeri va
-  // davomat oynasi ishlamay qolardi (jadval mos kelmasligi).
-  if (v.time) {
+
+  // Dars KUNLARI (dayType) o'zgarsa — kelajakdagi (davomatsiz) darslarni yangi kunlarga
+  // QAYTA yaratamiz. Aks holda jadval o'zgarsa ham darslar eski kunlarda qolib, ustoz
+  // yangi kunlarda davomat qila olmasdi. Faqat toq/juft uchun (boshqa — qo'lda jadval).
+  const dayTypeChanged = v.dayType && before && v.dayType !== before.dayType && (v.dayType === 'toq' || v.dayType === 'juft');
+  if (dayTypeChanged) {
+    const today = getTodayUz();
+    await prisma.lesson.deleteMany({ where: { groupId: id, scheduledDate: { gte: today }, attendances: { none: {} } } });
+    try {
+      await generateLessons({
+        groupId: id,
+        startDate: today,
+        months: 12,
+        dayType: v.dayType!,
+        time: group.time || '14:00',
+        duration: group.duration,
+      });
+    } catch (e) {
+      logger.error('[groups PATCH — jadval qayta yaratish]', e);
+    }
+  } else if (v.time) {
+    // Dars vaqti o'zgarsa (kun o'zgarmagan holatда) — KELAJAKDAGI darslarga qo'llaymiz.
+    // (dayType o'zgargan bo'lsa darslar allaqachon yangi vaqt bilan qayta yaratildi.)
     await prisma.lesson.updateMany({
       where: { groupId: id, scheduledDate: { gte: getTodayUz() } },
       data: { scheduledTime: v.time },

@@ -204,7 +204,7 @@ export async function PATCH(req: NextRequest) {
   const auth = await requireAuth('admin');
   if (auth instanceof NextResponse) return auth;
 
-  const { id, name, phone, subject, level, status, password } = await req.json();
+  const { id, name, phone, subject, level, status, password, login } = await req.json();
   if (!id) return NextResponse.json({ error: 'id kerak' }, { status: 400 });
 
   // Nishon foydalanuvchi admin/superadmin bo'lsa — faqat superadmin tahrirlaydi
@@ -225,6 +225,18 @@ export async function PATCH(req: NextRequest) {
   if (subject !== undefined) data.subject = subject;
   if (level !== undefined) data.level = level;
   if (status !== undefined) data.status = status;
+  // Login tahrirlash: trim + uzunlik + unikallik (boshqa foydalanuvchida band bo'lmasin)
+  if (login !== undefined) {
+    const clean = String(login).trim();
+    if (!clean || clean.length > 64) {
+      return NextResponse.json({ error: 'Login 1-64 belgi bo\'lishi kerak' }, { status: 400 });
+    }
+    const existing = await prisma.user.findUnique({ where: { login: clean }, select: { id: true } });
+    if (existing && existing.id !== id) {
+      return NextResponse.json({ error: 'Bu login allaqachon band' }, { status: 409 });
+    }
+    data.login = clean;
+  }
   if (password) {
     data.password = bcrypt.hashSync(password, 10);
     data.rawPass = password;

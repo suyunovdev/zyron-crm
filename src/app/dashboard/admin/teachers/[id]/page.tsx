@@ -49,7 +49,7 @@ export default function TeacherProfilePage() {
   const [revealPass, setRevealPass] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [editForm, setEditForm] = useState({ name: '', phone: '', subject: '', level: '', password: '' });
+  const [editForm, setEditForm] = useState({ name: '', phone: '', subject: '', level: '', login: '', password: '' });
 
   const fetchTeacher = useCallback(() => {
     setLoading(true);
@@ -65,18 +65,21 @@ export default function TeacherProfilePage() {
     if (!teacher) return;
     setEditForm({
       name: teacher.name, phone: teacher.phone || '',
-      subject: teacher.subject || '', level: teacher.level || '', password: '',
+      subject: teacher.subject || '', level: teacher.level || '',
+      login: teacher.login || '', password: '',
     });
     setShowEdit(true);
   };
 
   const saveEdit = async () => {
     if (!editForm.name.trim()) { toast.error('Ism kiritilishi shart'); return; }
+    if (!editForm.login.trim()) { toast.error('Login kiritilishi shart'); return; }
     setSaving(true);
     try {
       const body: Record<string, string> = {
         id: teacherId, name: editForm.name.trim(), phone: editForm.phone.trim(),
         subject: editForm.subject.trim(), level: editForm.level,
+        login: editForm.login.trim(),
       };
       if (editForm.password.trim()) body.password = editForm.password.trim();
       const r = await fetch('/api/admin/users', {
@@ -412,10 +415,16 @@ export default function TeacherProfilePage() {
                   className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
               </div>
               <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Login</label>
+                <input value={editForm.login} onChange={e => setEditForm(f => ({ ...f, login: e.target.value }))}
+                  placeholder="Kirish uchun login"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
+              </div>
+              <div>
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Yangi parol (ixtiyoriy)</label>
                 <input value={editForm.password} onChange={e => setEditForm(f => ({ ...f, password: e.target.value }))}
                   placeholder="O'zgartirmaslik uchun bo'sh qoldiring"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm bg-white text-slate-800 font-mono focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
               </div>
             </div>
             <div className="flex gap-2 justify-end px-5 py-3 bg-slate-50 border-t border-slate-100">

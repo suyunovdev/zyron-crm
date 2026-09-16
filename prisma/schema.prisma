@@ -83,6 +83,10 @@ model GroupStudent {
   studentId String
   student   User     @relation(fields: [studentId], references: [id])
   joinedAt  DateTime @default(now())
+  // A'zolikka xos holat (User.status'dan ALOHIDA): shu guruhda muzlatish uchun.
+  // active = faol; frozen = shu guruhda muzlatilgan (auto-absent/billing shu guruhda to'xtaydi,
+  // boshqa guruhlar va global User.status'ga ta'sir qilmaydi).
+  status    String   @default("active") // active, frozen
 
   @@unique([groupId, studentId])
   @@index([studentId])

@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     }
   }
   // Guruh filiali: admin filiali (bo'lsa), aks holda o'qituvchi filialini meros qiladi.
-  // Aks holda filialsiz guruh qolib, filialga biriktirilgan adminlar uni ochа olmasdi (403).
+  // Aks holda filialsiz guruh qolib, filialga biriktirilgan adminlar uni ocha olmasdi (403).
   const groupBranchId = bId || teacher?.branchId || null;
 
   const group = await prisma.group.create({
@@ -133,7 +133,7 @@ export async function PATCH(req: NextRequest) {
   const auth = await requireAuth('admin');
   if (auth instanceof NextResponse) return auth;
 
-  const { id, name, subject, schedule, meetLink, status, maxStudents, startDate, room, dayType, time, duration, price, lessonsPerMonth, mode, teacherId, addStudentId, removeStudentId, moveStudentId, toGroupId } = await req.json();
+  const { id, name, subject, schedule, meetLink, status, maxStudents, startDate, room, dayType, time, duration, price, lessonsPerMonth, mode, teacherId, addStudentId, removeStudentId, moveStudentId, toGroupId, freezeStudentId, membershipStatus } = await req.json();
   if (!id) return NextResponse.json({ error: 'id kerak' }, { status: 400 });
 
   // Filial cheklovi
@@ -152,7 +152,7 @@ export async function PATCH(req: NextRequest) {
       // Guruh tahriri / o'chirish / ko'chirish: guruh aynan admin filialida bo'lishi shart
       if (gBranch !== bId) return NextResponse.json({ error: 'Guruh boshqa filialga tegishli' }, { status: 403 });
       if (toGroupId && (await groupBranch(toGroupId)) !== bId) return NextResponse.json({ error: 'Nishon guruh boshqa filialga tegishli' }, { status: 403 });
-      for (const sid of [removeStudentId, moveStudentId].filter(Boolean)) {
+      for (const sid of [removeStudentId, moveStudentId, freezeStudentId].filter(Boolean)) {
         if ((await studentBranch(sid)) !== bId) return NextResponse.json({ error: 'O\'quvchi boshqa filialga tegishli' }, { status: 403 });
       }
       // Yangi mentor (o'qituvchi) ham shu filialdan bo'lishi shart
@@ -189,6 +189,24 @@ export async function PATCH(req: NextRequest) {
     // O'quvchi nishon guruh filialiga o'tadi (moslik)
     if (dest.branchId) await prisma.user.update({ where: { id: moveStudentId }, data: { branchId: dest.branchId } });
     return NextResponse.json({ ok: true, message: "O'quvchi ko'chirildi" });
+  }
+
+  // Guruhga xos muzlatish/faollashtirish (per-a'zolik) — global User.status'ga tegmaydi.
+  // Faqat shu guruhdagi a'zolik holatini o'zgartiradi: frozen bo'lsa auto-absent/billing shu
+  // guruhda to'xtaydi, o'quvchi boshqa guruhlarda faol qoladi.
+  if (freezeStudentId && membershipStatus !== undefined) {
+    if (membershipStatus !== 'active' && membershipStatus !== 'frozen') {
+      return NextResponse.json({ error: "Noto'g'ri holat (active yoki frozen)" }, { status: 400 });
+    }
+    const res = await prisma.groupStudent.updateMany({
+      where: { groupId: id, studentId: freezeStudentId },
+      data: { status: membershipStatus },
+    });
+    if (res.count === 0) return NextResponse.json({ error: "O'quvchi bu guruhda emas" }, { status: 404 });
+    return NextResponse.json({
+      ok: true,
+      message: membershipStatus === 'frozen' ? "O'quvchi bu guruhda muzlatildi" : "O'quvchi bu guruhda faollashtirildi",
+    });
   }
 
   // Add student to group
@@ -274,7 +292,7 @@ export async function PATCH(req: NextRequest) {
     }
   }
   // Auto-heal: guruh filialsiz (null) qolgan bo'lsa — o'qituvchi filialini meros qiladi.
-  // Aks holda filialsiz guruh filial adminига "Guruh topilmadi" bo'lib ko'rinadi.
+  // Aks holda filialsiz guruh filial adminiga "Guruh topilmadi" bo'lib ko'rinadi.
   const willBranch = (data.branchId as string | null | undefined) ?? before.branchId;
   if (willBranch == null) {
     const tId = (data.teacherId as string) || before.teacherId;

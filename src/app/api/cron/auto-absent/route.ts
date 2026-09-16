@@ -38,8 +38,9 @@ export async function GET(req: NextRequest) {
     include: {
       group: {
         include: {
-          // F2-5: o'quvchi holati (frozen/archived absent olmasin) va qo'shilgan sanasi kerak
-          students: { select: { studentId: true, joinedAt: true, student: { select: { status: true } } } },
+          // F2-5: o'quvchi holati (frozen/archived absent olmasin) va qo'shilgan sanasi kerak.
+          // status (a'zolik) — shu guruhda muzlatilgan bo'lsa ham absent yozilmaydi.
+          students: { select: { studentId: true, joinedAt: true, status: true, student: { select: { status: true } } } },
         },
       },
       attendances: { select: { studentId: true } },
@@ -57,11 +58,13 @@ export async function GET(req: NextRequest) {
 
     // Belgilanmagan o'quvchilar, biznes-qoidalar bilan (F2-5):
     //  - faqat FAOL o'quvchi (frozen/archived muzlatilgan — absent yozilmaydi);
+    //  - shu guruhda muzlatilgan a'zolik (gs.status='frozen') ham absent olmaydi;
     //  - faqat o'quvchi guruhga QO'SHILGANIDAN keyingi darslar (joinedAt dan oldingisiga emas).
     const markedIds = new Set(lesson.attendances.map(a => a.studentId));
     const toMark = lesson.group.students.filter(gs => {
       if (markedIds.has(gs.studentId)) return false;
       if (gs.student.status !== 'active') return false;
+      if (gs.status !== 'active') return false;
       const joinedStr = fmt(new Date(gs.joinedAt.toLocaleString('en-US', { timeZone: 'Asia/Tashkent' })));
       if (lesson.scheduledDate < joinedStr) return false;
       return true;

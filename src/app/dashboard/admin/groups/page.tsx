@@ -6,6 +6,7 @@ import { SkeletonTable } from '@/components/skeleton';
 import {
   Plus, X, Search, Video, ChevronUp, ChevronDown, Archive,
   UserPlus, UserMinus, QrCode, Trash2, RotateCcw, CalendarPlus, Loader2, Download,
+  Snowflake, Play,
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { jsPDF } from 'jspdf';
@@ -13,7 +14,7 @@ import Link from 'next/link';
 
 interface Teacher { id: string; name: string; subject?: string }
 interface StudentUser { id: string; name: string; login: string; rawPass?: string; status: string }
-interface GroupStudent { student: StudentUser }
+interface GroupStudent { status: string; student: StudentUser } // status = a'zolik holati (active/frozen)
 interface Group {
   id: string; name: string; subject: string; schedule: string;
   meetLink?: string; mode?: string; status: string; maxStudents: number;
@@ -672,12 +673,26 @@ export default function GroupsPage() {
                                                   {gs.student.status === 'frozen' ? 'Muzlatilgan' : 'Arxiv'}
                                                 </span>
                                               )}
+                                              {/* Shu guruhga xos muzlatish (global muzlagan bo'lmasa) */}
+                                              {gs.status === 'frozen' && gs.student.status !== 'frozen' && (
+                                                <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-500"
+                                                  title="Faqat shu guruhda muzlatilgan">
+                                                  <Snowflake className="w-2.5 h-2.5" /> Bu guruhda
+                                                </span>
+                                              )}
                                             </div>
                                             {group.status !== 'archived' && (
-                                              <button onClick={() => handlePatch({ id: group.id, removeStudentId: gs.student.id })}
-                                                className="p-1 text-slate-300 hover:text-red-500 transition-colors">
-                                                <UserMinus className="w-3.5 h-3.5" />
-                                              </button>
+                                              <div className="flex items-center gap-0.5">
+                                                <button onClick={() => handlePatch({ id: group.id, freezeStudentId: gs.student.id, membershipStatus: gs.status === 'frozen' ? 'active' : 'frozen' })}
+                                                  className={`p-1 transition-colors ${gs.status === 'frozen' ? 'text-emerald-500 hover:text-emerald-600' : 'text-slate-300 hover:text-blue-500'}`}
+                                                  title={gs.status === 'frozen' ? 'Shu guruhda faollashtirish' : 'Shu guruhda muzlatish'}>
+                                                  {gs.status === 'frozen' ? <Play className="w-3.5 h-3.5" /> : <Snowflake className="w-3.5 h-3.5" />}
+                                                </button>
+                                                <button onClick={() => handlePatch({ id: group.id, removeStudentId: gs.student.id })}
+                                                  className="p-1 text-slate-300 hover:text-red-500 transition-colors">
+                                                  <UserMinus className="w-3.5 h-3.5" />
+                                                </button>
+                                              </div>
                                             )}
                                           </div>
                                         ))}

@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Users, BookOpen, CalendarDays, Clock,
   UserCheck, UserX, Check, Video, Loader2, MapPin, X, CalendarPlus, Search, Plus, GraduationCap,
-  Pencil, Trash2,
+  Pencil, Trash2, Snowflake, Play,
 } from 'lucide-react';
 import { toast } from '@/components/toast';
 import { confirmDialog } from '@/components/confirm-dialog';
@@ -52,7 +52,7 @@ interface GroupDetail {
   price: number;
   lessonsPerMonth: number;
   teacher: { id: string; name: string } | null;
-  students: { student: Student }[];
+  students: { status: string; student: Student }[]; // status = a'zolik holati (active/frozen), User.status'dan alohida
   lessons: Lesson[];
   _count: { students: number; lessons: number };
 }
@@ -228,6 +228,25 @@ export default function AdminGroupDetailPage() {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: groupId, removeStudentId: sid }),
       });
+      await reload();
+    } finally { setBusy(false); }
+  };
+  // O'quvchini shu guruhda muzlatish / faollashtirish (global holatga tegmaydi)
+  const toggleFreezeMembership = async (sid: string, current: string) => {
+    const next = current === 'frozen' ? 'active' : 'frozen';
+    if (next === 'frozen' && !(await confirmDialog(
+      "O'quvchini shu guruhda muzlatasizmi? U boshqa guruhlarda faol qoladi, faqat shu guruhda davomat/hisob to'xtaydi.",
+      { confirmText: 'Muzlatish' },
+    ))) return;
+    setBusy(true);
+    try {
+      const r = await fetch('/api/admin/groups', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: groupId, freezeStudentId: sid, membershipStatus: next }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { toast.error(d.error || 'Xatolik'); return; }
+      toast.success(d.message || 'Saqlandi');
       await reload();
     } finally { setBusy(false); }
   };
@@ -640,7 +659,7 @@ export default function AdminGroupDetailPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {group.students.map(({ student }, idx) => {
+                    {group.students.map(({ student, status: memberStatus }, idx) => {
                       let totalPresent = 0;
                       let totalMarked = 0;
                       filteredLessons.forEach(l => {
@@ -676,6 +695,9 @@ export default function AdminGroupDetailPage() {
                                 }`}>
                                   {student.status === 'active' ? 'Aktiv' : student.status === 'frozen' ? 'Muzlatilgan' : 'Arxiv'}
                                 </span>
+                                {memberStatus === 'frozen' && student.status !== 'frozen' && (
+                                  <Snowflake className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" aria-label="Bu guruhda muzlatilgan" />
+                                )}
                                 <span
                                   title={student.paidThisMonth ? "To'langan" : "To'lanmagan"}
                                   className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ring-2 ring-white shadow-sm ${student.paidThisMonth ? 'bg-emerald-500' : 'bg-red-500'}`}
@@ -941,20 +963,35 @@ export default function AdminGroupDetailPage() {
               {group.students.length === 0 ? (
                 <p className="p-8 text-center text-sm text-slate-400">Guruhda o&apos;quvchi yo&apos;q</p>
               ) : (
-                group.students.map(({ student }, i) => (
-                  <div key={student.id} className="flex items-center justify-between px-4 py-2.5">
+                group.students.map(({ student, status: memberStatus }, i) => (
+                  <div key={student.id} className={`flex items-center justify-between px-4 py-2.5 ${memberStatus === 'frozen' ? 'bg-blue-50/40' : ''}`}>
                     <div className="flex items-center gap-3 min-w-0">
                       <span className="text-xs text-slate-400 w-5">{i + 1}.</span>
                       <span className="text-sm font-medium text-slate-800 truncate cursor-pointer hover:text-[var(--brand-primary)]"
                         onClick={() => router.push(`/dashboard/admin/students/${student.id}`)}>{student.name}</span>
+                      {/* Global holat (butun tizim bo'yicha) */}
                       <span className={`text-[10px] font-semibold px-2 py-0.5 rounded flex-shrink-0 ${
                         student.status === 'active' ? 'bg-emerald-100 text-emerald-700' : student.status === 'frozen' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'
                       }`}>{student.status === 'active' ? 'Aktiv' : student.status === 'frozen' ? 'Muzlatilgan' : 'Arxiv'}</span>
+                      {/* Shu guruhga xos muzlatish belgisi (global muzlagan bo'lmasa ko'rsatiladi) */}
+                      {memberStatus === 'frozen' && student.status !== 'frozen' && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded flex-shrink-0 bg-blue-100 text-blue-600"
+                          title="Faqat shu guruhda muzlatilgan">
+                          <Snowflake className="w-3 h-3" /> Bu guruhda muzlatilgan
+                        </span>
+                      )}
                     </div>
-                    <button onClick={() => removeStudent(student.id)} disabled={busy}
-                      className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-60" title="Guruhdan chiqarish">
-                      <X className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button onClick={() => toggleFreezeMembership(student.id, memberStatus)} disabled={busy}
+                        className={`p-1.5 rounded-lg disabled:opacity-60 ${memberStatus === 'frozen' ? 'text-emerald-600 hover:bg-emerald-50' : 'text-blue-500 hover:bg-blue-50'}`}
+                        title={memberStatus === 'frozen' ? 'Shu guruhda faollashtirish' : 'Shu guruhda muzlatish'}>
+                        {memberStatus === 'frozen' ? <Play className="w-4 h-4" /> : <Snowflake className="w-4 h-4" />}
+                      </button>
+                      <button onClick={() => removeStudent(student.id)} disabled={busy}
+                        className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-60" title="Guruhdan chiqarish">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 ))
               )}

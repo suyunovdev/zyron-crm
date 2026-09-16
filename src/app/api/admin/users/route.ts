@@ -6,7 +6,7 @@ import { requireAuth } from '@/lib/api-utils';
 import { logger } from '@/lib/logger';
 import { parseBody } from '@/lib/validate';
 import { canManageRole } from '@/lib/roles';
-import { billableCost, perLessonRate } from '@/lib/billing-core';
+import { billableCost, perLessonRate, discountedRate } from '@/lib/billing-core';
 import { loginBase, randomPassword, uniqueLogin, ensureUnique, parentNameFrom } from '@/lib/credentials';
 import { scopedBranchId } from '@/lib/branch-scope';
 import { logAudit } from '@/lib/audit';
@@ -102,14 +102,20 @@ export async function GET(req: NextRequest) {
 
         // Guruh bo'yicha billable (grace qoidasi — billing.ts bilan bir xil), attendances xronologik
         let totalDeducted = 0;
-        u.groupStudents.forEach((gs: { group: { id: string; price: number | null; lessonsPerMonth: number | null } }) => {
+        u.groupStudents.forEach((gs: { discountPercent: number; discountAmount: number; group: { id: string; price: number | null; lessonsPerMonth: number | null } }) => {
           const g = gs.group;
           if (!g.price || !g.lessonsPerMonth) return;
           // K-2: har dars muzlatilgan narxidan; snapshot yo'q (eski dars) → joriy narx zaxira.
           const fallbackRate = perLessonRate(g.price, g.lessonsPerMonth);
           const recs = attendances
             .filter(a => a.lesson.groupId === g.id)
-            .map(a => ({ scheduledDate: a.lesson.scheduledDate, present: a.present, rate: a.lesson.perLessonRate ?? fallbackRate }));
+            // Doimiy chegirma dars narxiga jonli qo'llanadi (per-guruh a'zolik chegirmasi)
+            .map(a => ({
+              scheduledDate: a.lesson.scheduledDate, present: a.present,
+              rate: discountedRate(a.lesson.perLessonRate ?? fallbackRate, {
+                percent: gs.discountPercent, amount: gs.discountAmount, lessonsPerMonth: g.lessonsPerMonth!,
+              }),
+            }));
           totalDeducted += billableCost(recs);
         });
 

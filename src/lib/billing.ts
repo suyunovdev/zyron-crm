@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { billableCost, computeBillableRecords, perLessonRate } from '@/lib/billing-core';
+import { billableCost, computeBillableRecords, perLessonRate, discountedRate } from '@/lib/billing-core';
 
 /**
  * Yagona hisob-kitob (billing) manbasi.
@@ -58,7 +58,10 @@ export async function computeStudentBalance(studentId: string): Promise<StudentB
     const recs = records.map(r => ({
       scheduledDate: r.lesson.scheduledDate,
       present: r.present,
-      rate: r.lesson.perLessonRate ?? fallbackRate,
+      // Doimiy chegirma dars narxiga jonli qo'llanadi (per-guruh a'zolik chegirmasi)
+      rate: discountedRate(r.lesson.perLessonRate ?? fallbackRate, {
+        percent: gs.discountPercent, amount: gs.discountAmount, lessonsPerMonth: group.lessonsPerMonth,
+      }),
     }));
     const billableCount = computeBillableRecords(recs).billable.length;
 
@@ -108,13 +111,20 @@ export async function computeDebtSummary(branchId?: string | null): Promise<Debt
     where: { student: studentWhere },
     select: {
       studentId: true,
+      discountPercent: true,
+      discountAmount: true,
       group: { select: { id: true, price: true, lessonsPerMonth: true } },
     },
   });
   // K-2 zaxira narxi: snapshot yo'q darslar uchun guruhning joriy dars narxi.
   const fallbackRateByGroup = new Map<string, number>();
+  // Per-a'zolik doimiy chegirma (studentId:groupId bo'yicha) — rate qurishda qo'llanadi.
+  const discountByKey = new Map<string, { percent: number; amount: number; lessonsPerMonth: number }>();
   for (const m of memberships) {
     fallbackRateByGroup.set(m.group.id, perLessonRate(m.group.price, m.group.lessonsPerMonth));
+    discountByKey.set(`${m.studentId}:${m.group.id}`, {
+      percent: m.discountPercent, amount: m.discountAmount, lessonsPerMonth: m.group.lessonsPerMonth,
+    });
   }
 
   // 2) Barcha davomat yozuvlari (present + yo'qlik), xronologik — grace qoidasi uchun
@@ -132,7 +142,11 @@ export async function computeDebtSummary(branchId?: string | null): Promise<Debt
     (recordsByKey.get(key) ?? recordsByKey.set(key, []).get(key)!).push({
       scheduledDate: r.lesson.scheduledDate,
       present: r.present,
-      rate: r.lesson.perLessonRate ?? fallbackRateByGroup.get(gid) ?? 0,
+      // Doimiy chegirmani jonli qo'llaymiz (a'zolik topilmasa — chegirmasiz)
+      rate: discountedRate(
+        r.lesson.perLessonRate ?? fallbackRateByGroup.get(gid) ?? 0,
+        discountByKey.get(key) ?? { lessonsPerMonth: 0 },
+      ),
     });
   }
   // Har (o'quvchi, guruh) uchun snapshot narxidan cost

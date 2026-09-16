@@ -8,11 +8,11 @@ import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Phone, Loader2, Snowflake, Archive, RotateCcw,
   X, Pencil, Send, GraduationCap, CheckCircle, XCircle,
-  ChevronDown, ChevronRight, Printer, KeyRound, Eye, EyeOff, Copy,
+  ChevronDown, ChevronRight, Printer, KeyRound, Eye, EyeOff, Copy, BadgePercent,
 } from 'lucide-react';
 import Link from 'next/link';
 import QRCode from 'qrcode';
-import { computeBillableRecords, billableCost, perLessonRate } from '@/lib/billing-core';
+import { computeBillableRecords, billableCost, perLessonRate, discountedRate } from '@/lib/billing-core';
 
 // ─── Types ───
 interface Teacher { id: string; name: string }
@@ -24,7 +24,7 @@ interface Group {
   teacher: Teacher | null;
   _count: { students: number; lessons: number };
 }
-interface GroupStudent { group: Group }
+interface GroupStudent { discountPercent: number; discountAmount: number; group: Group }
 interface Payment {
   id: string; amount: number; month: string;
   method: string; note: string | null; createdAt: string;
@@ -88,6 +88,11 @@ export default function StudentProfilePage() {
   const [payForm, setPayForm] = useState({ amount: '', month: '', method: 'cash', note: '' });
   const [paySubmitting, setPaySubmitting] = useState(false);
 
+  // Doimiy chegirma (per-guruh a'zolik)
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [discountForm, setDiscountForm] = useState<{ mode: 'percent' | 'amount'; value: string }>({ mode: 'percent', value: '' });
+  const [discountSubmitting, setDiscountSubmitting] = useState(false);
+
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', phone: '' });
   const [editSubmitting, setEditSubmitting] = useState(false);
@@ -140,7 +145,10 @@ export default function StudentProfilePage() {
     ]).then(([sq, pq]) => { setStudentQR(sq); setParentQR(pq); }).catch(() => {});
   }, [student]);
 
-  const activeGroup = student?.groupStudents?.[activeGroupIdx]?.group || null;
+  const activeMembership = student?.groupStudents?.[activeGroupIdx] || null;
+  const activeGroup = activeMembership?.group || null;
+  const activeDiscount = { percent: activeMembership?.discountPercent || 0, amount: activeMembership?.discountAmount || 0 };
+  const hasDiscount = activeDiscount.percent > 0 || activeDiscount.amount > 0;
 
   // ─── Computed stats ───
   const attendanceStats = useMemo(() => {
@@ -170,7 +178,13 @@ export default function StudentProfilePage() {
     const recs = student.attendances
       .filter(a => a.lesson.groupId === activeGroup.id)
       .sort((a, b) => a.lesson.scheduledDate.localeCompare(b.lesson.scheduledDate) || a.lesson.order - b.lesson.order)
-      .map(a => ({ scheduledDate: a.lesson.scheduledDate, present: a.present, rate: a.lesson.perLessonRate ?? fallbackRate }));
+      .map(a => ({
+        scheduledDate: a.lesson.scheduledDate, present: a.present,
+        // Doimiy chegirma dars narxiga jonli qo'llanadi
+        rate: discountedRate(a.lesson.perLessonRate ?? fallbackRate, {
+          percent: activeMembership?.discountPercent, amount: activeMembership?.discountAmount, lessonsPerMonth: activeGroup.lessonsPerMonth,
+        }),
+      }));
     const { billable } = computeBillableRecords(recs);
     billable.forEach(r => {
       const monthKey = r.scheduledDate.slice(0, 7); // "2026-07"
@@ -180,7 +194,7 @@ export default function StudentProfilePage() {
       map.set(monthKey, curr);
     });
     return map;
-  }, [student, activeGroup]);
+  }, [student, activeGroup, activeMembership]);
 
   const paymentStats = useMemo(() => {
     if (!student) return { thisMonth: 0, total: 0, deducted: 0, balance: 0 };
@@ -197,7 +211,13 @@ export default function StudentProfilePage() {
       const recs = student.attendances
         .filter(a => a.lesson.groupId === g.id)
         .sort((a, b) => a.lesson.scheduledDate.localeCompare(b.lesson.scheduledDate) || a.lesson.order - b.lesson.order)
-        .map(a => ({ scheduledDate: a.lesson.scheduledDate, present: a.present, rate: a.lesson.perLessonRate ?? fallbackRate }));
+        .map(a => ({
+          scheduledDate: a.lesson.scheduledDate, present: a.present,
+          // Doimiy chegirma dars narxiga jonli qo'llanadi (per-guruh a'zolik chegirmasi)
+          rate: discountedRate(a.lesson.perLessonRate ?? fallbackRate, {
+            percent: gs.discountPercent, amount: gs.discountAmount, lessonsPerMonth: g.lessonsPerMonth,
+          }),
+        }));
       deducted += billableCost(recs);
     });
     return { thisMonth, total, deducted, balance: total - deducted };
@@ -303,6 +323,39 @@ export default function StudentProfilePage() {
     setPayForm({ amount: '', month: '', method: 'cash', note: '' });
     setPaySubmitting(false);
     fetchStudent();
+  };
+
+  const openDiscountModal = () => {
+    if (!activeMembership) return;
+    if (activeMembership.discountAmount > 0) {
+      setDiscountForm({ mode: 'amount', value: String(activeMembership.discountAmount) });
+    } else {
+      setDiscountForm({ mode: 'percent', value: activeMembership.discountPercent ? String(activeMembership.discountPercent) : '' });
+    }
+    setShowDiscountModal(true);
+  };
+
+  const saveDiscount = async (percent: number, amount: number) => {
+    if (!activeGroup || !student) return;
+    setDiscountSubmitting(true);
+    try {
+      const r = await fetch('/api/admin/groups', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: activeGroup.id, discountStudentId: student.id, discountPercent: percent, discountAmount: amount }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { toast.error(d.error || 'Xatolik'); return; }
+      toast.success(d.message || 'Saqlandi');
+      setShowDiscountModal(false);
+      fetchStudent();
+    } finally { setDiscountSubmitting(false); }
+  };
+
+  const handleSaveDiscount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const val = Math.max(0, Number(discountForm.value) || 0);
+    if (discountForm.mode === 'percent' && val > 100) { toast.error("Foiz 0–100 oralig'ida bo'lsin"); return; }
+    await saveDiscount(discountForm.mode === 'percent' ? val : 0, discountForm.mode === 'amount' ? val : 0);
   };
 
   const handleDeletePayment = async (paymentId: string) => {
@@ -791,6 +844,30 @@ export default function StudentProfilePage() {
                   </div>
                 </div>
               )}
+              {/* ── Doimiy chegirma (shu guruhga xos) ── */}
+              <div className="border-t border-slate-100 p-4 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <BadgePercent className="w-3 h-3" /> Doimiy chegirma
+                  </p>
+                  {hasDiscount ? (
+                    <p className="text-sm font-bold text-emerald-600">
+                      {activeDiscount.percent > 0 ? `−${activeDiscount.percent}%` : `−${formatAmount(activeDiscount.amount)} so'm/oy`}
+                      {activeGroup.price > 0 && activeGroup.lessonsPerMonth > 0 && (
+                        <span className="text-xs font-normal text-slate-400 ml-2">
+                          → {formatAmount(Math.round(discountedRate(perLessonRate(activeGroup.price, activeGroup.lessonsPerMonth), { percent: activeDiscount.percent, amount: activeDiscount.amount, lessonsPerMonth: activeGroup.lessonsPerMonth }) * activeGroup.lessonsPerMonth))} so&apos;m/oy
+                        </span>
+                      )}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-slate-400">Yo&apos;q</p>
+                  )}
+                </div>
+                <button onClick={openDiscountModal}
+                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+                  <BadgePercent className="w-3.5 h-3.5" /> {hasDiscount ? 'Tahrirlash' : 'Chegirma berish'}
+                </button>
+              </div>
             </div>
           ) : (
             <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
@@ -1175,6 +1252,64 @@ export default function StudentProfilePage() {
                 <button type="submit" disabled={paySubmitting}
                   className="flex-1 bg-emerald-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60">
                   {paySubmitting ? 'Saqlanmoqda...' : "To'lov qo'shish"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Discount Modal (doimiy chegirma, per-guruh) ═══ */}
+      {showDiscountModal && activeGroup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowDiscountModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-lg font-bold text-slate-900">Doimiy chegirma</h2>
+              <button onClick={() => setShowDiscountModal(false)} className="p-2 hover:bg-slate-100 rounded-xl">
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+            <p className="text-sm text-slate-500 mb-4">{student.name} · <span className="font-medium">{activeGroup.name}</span> guruhi</p>
+            <form onSubmit={handleSaveDiscount} className="space-y-4">
+              {/* Tur tanlash */}
+              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                <button type="button" onClick={() => setDiscountForm(f => ({ ...f, mode: 'percent' }))}
+                  className={`py-2 rounded-lg text-sm font-semibold transition-colors ${discountForm.mode === 'percent' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
+                  Foiz (%)
+                </button>
+                <button type="button" onClick={() => setDiscountForm(f => ({ ...f, mode: 'amount' }))}
+                  className={`py-2 rounded-lg text-sm font-semibold transition-colors ${discountForm.mode === 'amount' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>
+                  Summa (so&apos;m)
+                </button>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  {discountForm.mode === 'percent' ? 'Chegirma foizi (0–100)' : "Oylik chegirma summasi (so'm)"}
+                </label>
+                <input type="number" min="0" max={discountForm.mode === 'percent' ? '100' : undefined} step={discountForm.mode === 'percent' ? '1' : '1000'}
+                  value={discountForm.value}
+                  onChange={e => setDiscountForm(f => ({ ...f, value: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  placeholder={discountForm.mode === 'percent' ? '20' : '100000'} autoFocus />
+                <p className="text-xs text-slate-400 mt-1.5">
+                  Har oy dars narxidan avtomatik chegiriladi. Ustoz oyligiga ta&apos;sir qilmaydi.
+                </p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                {hasDiscount && (
+                  <button type="button" onClick={() => saveDiscount(0, 0)} disabled={discountSubmitting}
+                    className="px-4 py-2.5 border border-red-200 rounded-lg text-sm font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60">
+                    O&apos;chirish
+                  </button>
+                )}
+                <button type="button" onClick={() => setShowDiscountModal(false)}
+                  className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  Bekor qilish
+                </button>
+                <button type="submit" disabled={discountSubmitting}
+                  className="flex-1 bg-emerald-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60">
+                  {discountSubmitting ? 'Saqlanmoqda...' : 'Saqlash'}
                 </button>
               </div>
             </form>

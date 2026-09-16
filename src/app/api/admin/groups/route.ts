@@ -134,7 +134,7 @@ export async function PATCH(req: NextRequest) {
   const auth = await requireAuth('admin');
   if (auth instanceof NextResponse) return auth;
 
-  const { id, name, subject, schedule, meetLink, status, maxStudents, startDate, room, dayType, time, duration, price, lessonsPerMonth, mode, teacherId, addStudentId, removeStudentId, moveStudentId, toGroupId, freezeStudentId, membershipStatus } = await req.json();
+  const { id, name, subject, schedule, meetLink, status, maxStudents, startDate, room, dayType, time, duration, price, lessonsPerMonth, mode, teacherId, addStudentId, removeStudentId, moveStudentId, toGroupId, freezeStudentId, membershipStatus, discountStudentId, discountPercent, discountAmount } = await req.json();
   if (!id) return NextResponse.json({ error: 'id kerak' }, { status: 400 });
 
   // Filial cheklovi
@@ -153,7 +153,7 @@ export async function PATCH(req: NextRequest) {
       // Guruh tahriri / o'chirish / ko'chirish: guruh aynan admin filialida bo'lishi shart
       if (gBranch !== bId) return NextResponse.json({ error: 'Guruh boshqa filialga tegishli' }, { status: 403 });
       if (toGroupId && (await groupBranch(toGroupId)) !== bId) return NextResponse.json({ error: 'Nishon guruh boshqa filialga tegishli' }, { status: 403 });
-      for (const sid of [removeStudentId, moveStudentId, freezeStudentId].filter(Boolean)) {
+      for (const sid of [removeStudentId, moveStudentId, freezeStudentId, discountStudentId].filter(Boolean)) {
         if ((await studentBranch(sid)) !== bId) return NextResponse.json({ error: 'O\'quvchi boshqa filialga tegishli' }, { status: 403 });
       }
       // Yangi mentor (o'qituvchi) ham shu filialdan bo'lishi shart
@@ -207,6 +207,24 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       message: membershipStatus === 'frozen' ? "O'quvchi bu guruhda muzlatildi" : "O'quvchi bu guruhda faollashtirildi",
+    });
+  }
+
+  // Guruhga xos DOIMIY chegirma (per-a'zolik): foiz yoki oylik summa. Cost hisobida
+  // dars narxiga jonli qo'llanadi (discountedRate); ustoz oyligiga (payroll) TA'SIR QILMAYDI.
+  if (discountStudentId && (discountPercent !== undefined || discountAmount !== undefined)) {
+    const pct = Number(discountPercent) || 0;
+    const amt = Number(discountAmount) || 0;
+    if (pct < 0 || pct > 100) return NextResponse.json({ error: "Chegirma foizi 0–100 oralig'ida bo'lishi kerak" }, { status: 400 });
+    if (amt < 0) return NextResponse.json({ error: "Chegirma summasi manfiy bo'lmasin" }, { status: 400 });
+    const res = await prisma.groupStudent.updateMany({
+      where: { groupId: id, studentId: discountStudentId },
+      data: { discountPercent: pct, discountAmount: Math.round(amt) },
+    });
+    if (res.count === 0) return NextResponse.json({ error: "O'quvchi bu guruhda emas" }, { status: 404 });
+    return NextResponse.json({
+      ok: true,
+      message: pct === 0 && amt === 0 ? "Chegirma o'chirildi" : 'Chegirma saqlandi',
     });
   }
 

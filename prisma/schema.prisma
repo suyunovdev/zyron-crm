@@ -92,6 +92,13 @@ model GroupStudent {
   // active = faol; frozen = shu guruhda muzlatilgan (auto-absent/billing shu guruhda to'xtaydi,
   // boshqa guruhlar va global User.status'ga ta'sir qilmaydi).
   status    String   @default("active") // active, frozen
+  // Shu guruhga xos DOIMIY chegirma (har oy avtomatik). Faqat bittasi to'ldiriladi:
+  //  - discountPercent: 0..100 (dars narxidan foiz)
+  //  - discountAmount: oylik so'm (guruh oylik narxidan ayiriladi)
+  // Billing cost hisobida discountedRate() orqali dars narxiga jonli qo'llanadi.
+  // Ustoz oyligiga (payroll) TA'SIR QILMAYDI — chegirma akademiya hisobidan.
+  discountPercent Float @default(0)
+  discountAmount  Int   @default(0)
 
   @@unique([groupId, studentId])
   @@index([studentId])

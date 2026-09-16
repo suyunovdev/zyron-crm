@@ -9,6 +9,23 @@ export function perLessonRate(price: number, lessonsPerMonth: number): number {
   return lessonsPerMonth > 0 ? price / lessonsPerMonth : 0;
 }
 
+/**
+ * Doimiy chegirmani BITTA dars narxiga qo'llaydi (per-guruh a'zolik chegirmasi).
+ * Avval foiz (discountPercent), keyin oylik fiksatsiyalangan summadan bir dars ulushi
+ * (discountAmount / lessonsPerMonth) ayiriladi. Natija manfiy bo'lmaydi.
+ * Odatda ikkovidan faqat bittasi non-zero bo'ladi. Chegirma cost hisobida jonli qo'llanadi
+ * (dars snapshot narxini o'zgartirmaydi), payrollga esa umuman tegmaydi.
+ */
+export function discountedRate(
+  rate: number,
+  d: { percent?: number; amount?: number; lessonsPerMonth: number },
+): number {
+  let r = rate;
+  if (d.percent) r = r * (1 - d.percent / 100);
+  if (d.amount && d.lessonsPerMonth > 0) r = r - d.amount / d.lessonsPerMonth;
+  return Math.max(0, r);
+}
+
 /** Sababsiz ketma-ket yo'qlik uchun "grace" chegarasi (shu songacha hisoblanadi). */
 export const ABSENCE_GRACE = 3;
 
@@ -62,7 +79,7 @@ export function groupCost(billableCount: number, price: number, lessonsPerMonth:
 }
 
 /**
- * K-2: narx snapshot'iga asoslangan cost. Har bir yozuv o'zining `rate` (dars yaratilganда
+ * K-2: narx snapshot'iga asoslangan cost. Har bir yozuv o'zining `rate` (dars yaratilganda
  * muzlatilgan dars narxi) qiymatini olib yuradi; faqat billable yozuvlar yig'iladi.
  * Narx keyin o'zgarsa o'tgan davrlar O'ZGARMAYDI (retroaktiv qayta hisob yo'q).
  * Doimiy rate holatida natija groupCost bilan bir xil (round(sum) == round(count×rate)).

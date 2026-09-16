@@ -51,6 +51,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       totalIncome,
       todayIncome,
+      paidThisMonth: paidActive,   // shu oy to'lov qilgan aktiv o'quvchilar soni
       unpaidThisMonth,
       debtorCount: debt.debtorCount,
       activeStudents,

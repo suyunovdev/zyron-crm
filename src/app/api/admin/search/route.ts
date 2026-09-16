@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/api-utils";
 import { prisma } from "@/lib/db";
 import { logger } from '@/lib/logger';
 import { scopedBranchId } from '@/lib/branch-scope';
+import { normalizeSearch } from '@/lib/search';
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,13 +24,17 @@ export async function GET(req: NextRequest) {
     const bId = await scopedBranchId(auth);
     const bWhere = bId ? { branchId: bId } : {};
 
+    // Ism bo'yicha qidiruv normallashtirilgan ustunga (searchName) tushadi — o'zbekcha
+    // tutuq belgisi (ʻ) muammosini yechadi. Login/telefon ASCII, xom `q` bilan qoladi.
+    const nq = normalizeSearch(q);
+
     const [students, parents, teachers, groups] = await Promise.all([
       prisma.user.findMany({
         where: {
           role: "student",
           ...bWhere,
           OR: [
-            { name: { contains: q } },
+            { searchName: { contains: nq } },
             { login: { contains: q } },
             { phone: { contains: q } },
           ],
@@ -49,11 +54,11 @@ export async function GET(req: NextRequest) {
           role: "parent",
           ...bWhere,
           OR: [
-            { name: { contains: q } },
+            { searchName: { contains: nq } },
             { login: { contains: q } },
             { phone: { contains: q } },
-            // Farzand ismi bo'yicha ham topilsin (o'quvchi ismini yozganда ota-ona chiqadi)
-            { children: { some: { name: { contains: q } } } },
+            // Farzand ismi bo'yicha ham topilsin (o'quvchi ismini yozganda ota-ona chiqadi)
+            { children: { some: { searchName: { contains: nq } } } },
           ],
         },
         select: {
@@ -72,7 +77,7 @@ export async function GET(req: NextRequest) {
           role: "teacher",
           ...bWhere,
           OR: [
-            { name: { contains: q } },
+            { searchName: { contains: nq } },
             { login: { contains: q } },
             { phone: { contains: q } },
           ],

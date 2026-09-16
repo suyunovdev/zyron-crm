@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { requireAuth } from '@/lib/api-utils';
 import { parseBody, zTrim } from '@/lib/validate';
@@ -300,7 +301,7 @@ export async function PATCH(req: NextRequest) {
     if (t?.branchId) data.branchId = t.branchId;
   }
 
-  const group = await prisma.group.update({ where: { id }, data });
+  const group = await prisma.group.update({ where: { id }, data: data as Prisma.GroupUpdateInput });
 
   // Jadval/narx o'zgarishlarini darslarga YAGONA reconciler orqali tarqatamiz
   // (vaqt, davomiylik, dars kunlari regeneratsiyasi, kelajak narx snapshot).

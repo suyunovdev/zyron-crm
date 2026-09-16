@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Search, Plus, X, ChevronUp, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { SkeletonTable } from '@/components/skeleton';
+import { normalizeSearch } from '@/lib/search';
 
 const VALID_STATUS = ['active', 'frozen', 'archived', 'all'];
 
@@ -136,11 +137,13 @@ export default function StudentsPage() {
     const list = students.filter(s => {
       if (filterStatus !== 'all' && s.status !== filterStatus) return false;
       if (search) {
-        const q = search.toLowerCase();
-        return s.name.toLowerCase().includes(q) ||
-          s.phone?.toLowerCase().includes(q) ||
-          getGroupName(s).toLowerCase().includes(q) ||
-          getMentor(s).toLowerCase().includes(q);
+        // normalizeSearch: o'zbekcha tutuq belgisi (ʻ) va apostrof variantlarini olib tashlaydi,
+        // shuning uchun "toʻlqin" ni "tolqin" deb yozganda ham topiladi (header bilan bir xil qoida).
+        const q = normalizeSearch(search);
+        return normalizeSearch(s.name).includes(q) ||
+          normalizeSearch(s.phone).includes(q) ||
+          normalizeSearch(getGroupName(s)).includes(q) ||
+          normalizeSearch(getMentor(s)).includes(q);
       }
       return true;
     });

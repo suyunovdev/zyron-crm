@@ -9,6 +9,11 @@ const prisma = new PrismaClient();
 const hash = (pw) => bcrypt.hashSync(pw, 10);
 const PW = 'demo2024';
 
+// Qidiruv normalizatsiyasi (src/lib/search.ts bilan bir xil) — raw client extension'siz,
+// shuning uchun demo yaratilgach searchName'ni qo'lda to'ldiramiz (pastda).
+const normalizeSearch = (s) =>
+  (s || '').toLowerCase().replace(/[ʻʼ‘’'`´′]/g, '').replace(/\s+/g, ' ').trim();
+
 // ── Sana yordamchilari (demo har doim "joriy" ko'rinishi uchun nisbiy) ──
 const DAY_MAP = { toq: [1, 3, 5], juft: [2, 4, 6] }; // Dush/Chor/Jum · Sesh/Pay/Shan
 const iso = (d) => d.toISOString().slice(0, 10);
@@ -186,6 +191,12 @@ async function main() {
         phone: '+998 9' + Math.floor(10000000 + Math.random() * 89999999),
         status, source, branchId: b1.id, note: 'Demo lid' },
     });
+  }
+
+  // Qidiruv uchun searchName'ni to'ldirish (raw client extension'ni qo'llamaydi)
+  const allUsers = await prisma.user.findMany({ select: { id: true, name: true } });
+  for (const u of allUsers) {
+    await prisma.user.update({ where: { id: u.id }, data: { searchName: normalizeSearch(u.name) } });
   }
 
   const counts = {

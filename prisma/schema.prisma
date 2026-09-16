@@ -13,6 +13,10 @@ model User {
   password  String
   rawPass   String?
   name      String
+  // Qidiruv uchun normallashtirilgan ism: kichik harf, tutuq belgisi/apostrof variantlari
+  // olib tashlangan ("toʻlqin"/"to'lqin"/"tolqin" -> "tolqin"). db.ts extension avtomatik
+  // to'ldiradi. Eski ma'lumot uchun: scripts/backfill-search-name.mjs.
+  searchName String  @default("")
   phone     String?
   role      String   @default("student") // superadmin, admin, teacher, student, parent
   subject   String?  // faqat teacher uchun (fan nomi)
@@ -42,6 +46,7 @@ model User {
   @@index([role, status])
   @@index([parentId])
   @@index([branchId])
+  @@index([searchName])
   @@index([telegramChatId])
 }
 

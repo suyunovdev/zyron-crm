@@ -3,7 +3,7 @@
 // DIQQAT: bu modul auth/db import QILMAYDI (CLI JWT_SECRET'siz ishlashi uchun) —
 // faqat sof helperlar: computeLessonDates, isLessonDay, perLessonRate, lessonDefaultsFromGroup.
 
-import type { PrismaClient } from '@prisma/client';
+import type { ExtendedPrisma } from '@/lib/db'; // faqat tip (runtime import yo'q — CLI JWT'siz ishlaydi)
 import { computeLessonDates, isLessonDay } from '@/lib/schedule';
 import { perLessonRate } from '@/lib/billing-core';
 import { lessonDefaultsFromGroup } from '@/lib/lesson-fields';
@@ -31,7 +31,7 @@ export interface IntegrityReport {
 
 const norm = (s: string) => s.trim().replace(/\s+/g, ' ');
 
-export async function checkIntegrity(prisma: PrismaClient, today: string): Promise<IntegrityReport> {
+export async function checkIntegrity(prisma: ExtendedPrisma, today: string): Promise<IntegrityReport> {
   const groups = await prisma.group.findMany({
     where: { status: 'active' },
     select: {

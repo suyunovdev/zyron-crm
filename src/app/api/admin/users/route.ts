@@ -10,6 +10,7 @@ import { billableCost, perLessonRate } from '@/lib/billing-core';
 import { loginBase, randomPassword, uniqueLogin, ensureUnique, parentNameFrom } from '@/lib/credentials';
 import { scopedBranchId } from '@/lib/branch-scope';
 import { logAudit } from '@/lib/audit';
+import { normalizeSearch } from '@/lib/search';
 
 const CreateUserSchema = z.object({
   // login/password ixtiyoriy — berilmasa avtomatik generatsiya qilinadi
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
     if (status) where.status = status;
     if (search) {
       where.OR = [
-        { name: { contains: search } },
+        { searchName: { contains: normalizeSearch(search) } },
         { login: { contains: search } },
         { phone: { contains: search } },
       ];

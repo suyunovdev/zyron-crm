@@ -1,12 +1,60 @@
 import { PrismaClient } from '@prisma/client';
 import { logger } from './logger';
+import { normalizeSearch } from './search';
+
+// User.name yozilgan har qanday joyda `searchName` ni avtomatik to'ldiradi
+// (qidiruv normalizatsiyasi). Bitta markazda — hech qaysi create/update yo'lida
+// unutilmaydi. Eslatma: name'ni `{ set: ... }` ko'rinishida yozadigan yo'l bu
+// kod bazasida yo'q (hamma joyda `name: qiymat`), shuning uchun oddiy string
+// tekshiruvi yetarli.
+function withSearchName<T extends { name?: unknown }>(data: T): T {
+  if (data && typeof data.name === 'string') {
+    (data as { searchName?: string }).searchName = normalizeSearch(data.name);
+  }
+  return data;
+}
+
+function createPrismaClient() {
+  return new PrismaClient().$extends({
+    query: {
+      user: {
+        create({ args, query }) {
+          withSearchName(args.data);
+          return query(args);
+        },
+        update({ args, query }) {
+          withSearchName(args.data);
+          return query(args);
+        },
+        updateMany({ args, query }) {
+          if (args.data && !Array.isArray(args.data)) withSearchName(args.data);
+          return query(args);
+        },
+        upsert({ args, query }) {
+          withSearchName(args.create);
+          withSearchName(args.update);
+          return query(args);
+        },
+        createMany({ args, query }) {
+          if (Array.isArray(args.data)) args.data.forEach(withSearchName);
+          else if (args.data) withSearchName(args.data);
+          return query(args);
+        },
+      },
+    },
+  });
+}
+
+// Kengaytirilgan (extension'li) klient tipi. Boshqa modullar `prisma`ni parametr sifatida
+// qabul qilganda shu tipdan foydalanadi (oddiy PrismaClient endi mos kelmaydi).
+export type ExtendedPrisma = ReturnType<typeof createPrismaClient>;
 
 const globalForPrisma = globalThis as unknown as {
-  prisma?: PrismaClient;
+  prisma?: ExtendedPrisma;
   prismaPragmasSet?: boolean;
 };
 
-export const prisma = globalForPrisma.prisma || new PrismaClient();
+export const prisma: ExtendedPrisma = globalForPrisma.prisma || createPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 

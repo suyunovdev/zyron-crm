@@ -48,6 +48,7 @@ interface StudentDetail {
 }
 
 // ─── Constants ───
+const PRESET_PERCENTS = [10, 20, 30, 50, 100]; // chegirma modali uchun tayyor foizlar
 const DAY_LABELS: Record<string, string> = { toq: 'Toq', juft: 'Juft', boshqa: 'Boshqa' };
 const METHOD_LABELS: Record<string, { label: string; cls: string }> = {
   cash: { label: 'NAQD', cls: 'bg-emerald-100 text-emerald-700' },
@@ -222,6 +223,17 @@ export default function StudentProfilePage() {
     });
     return { thisMonth, total, deducted, balance: total - deducted };
   }, [student, currentMonth]);
+
+  // Chegirma modali uchun jonli hisob-kitob (oylik narxdan; foiz proporsional — billing bilan mos)
+  const discountPreview = useMemo(() => {
+    const price = activeGroup?.price || 0;
+    if (!price) return null;
+    const val = Math.max(0, Number(discountForm.value) || 0);
+    const off = discountForm.mode === 'percent'
+      ? Math.round(price * Math.min(val, 100) / 100)
+      : Math.min(Math.round(val), price);
+    return { price, off, final: Math.max(0, price - off) };
+  }, [activeGroup, discountForm]);
 
   const paymentsByMonth = useMemo(() => {
     if (!student) return [];
@@ -1287,6 +1299,21 @@ export default function StudentProfilePage() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   {discountForm.mode === 'percent' ? 'Chegirma foizi (0–100)' : "Oylik chegirma summasi (so'm)"}
                 </label>
+                {/* Tayyor foiz tugmalari */}
+                {discountForm.mode === 'percent' && (
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {PRESET_PERCENTS.map(p => (
+                      <button type="button" key={p} onClick={() => setDiscountForm(f => ({ ...f, value: String(p) }))}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors ${
+                          Number(discountForm.value) === p
+                            ? 'bg-emerald-600 text-white border-emerald-600'
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        }`}>
+                        {p === 100 ? '100% (bepul)' : `${p}%`}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <input type="number" min="0" max={discountForm.mode === 'percent' ? '100' : undefined} step={discountForm.mode === 'percent' ? '1' : '1000'}
                   value={discountForm.value}
                   onChange={e => setDiscountForm(f => ({ ...f, value: e.target.value }))}
@@ -1296,6 +1323,25 @@ export default function StudentProfilePage() {
                   Har oy dars narxidan avtomatik chegiriladi. Ustoz oyligiga ta&apos;sir qilmaydi.
                 </p>
               </div>
+              {/* Jonli hisob-kitob */}
+              {discountPreview && (Number(discountForm.value) || 0) > 0 && (
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">Kurs narxi (oylik)</span>
+                    <span className="font-semibold text-slate-700">{formatAmount(discountPreview.price)} so&apos;m</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">
+                      Chegirma{discountForm.mode === 'percent' ? ` (${Math.min(Number(discountForm.value) || 0, 100)}%)` : ''}
+                    </span>
+                    <span className="font-semibold text-red-500">− {formatAmount(discountPreview.off)} so&apos;m</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-emerald-100">
+                    <span className="text-sm font-medium text-slate-600">O&apos;quvchi to&apos;laydi</span>
+                    <span className="text-lg font-bold text-emerald-600">{formatAmount(discountPreview.final)} so&apos;m</span>
+                  </div>
+                </div>
+              )}
               <div className="flex gap-3 pt-2">
                 {hasDiscount && (
                   <button type="button" onClick={() => saveDiscount(0, 0)} disabled={discountSubmitting}

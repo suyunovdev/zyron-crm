@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Search, Plus, X, ChevronUp, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { SkeletonTable } from '@/components/skeleton';
-import { normalizeSearch } from '@/lib/search';
 
 const VALID_STATUS = ['active', 'frozen', 'archived', 'all'];
 
@@ -78,19 +77,44 @@ export default function StudentsPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 20;
+  const [pagination, setPagination] = useState<{ total: number; totalPages: number }>({ total: 0, totalPages: 1 });
+  const [summary, setSummary] = useState<{ total: number; paid: number; debtor: number; new: number } | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  const fetchStudents = () => {
+  // Qidiruv debounce (server-side qidiruv uchun)
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Server-side sahifalash: faqat joriy bet yuklanadi (limit=500 truncate emas)
+  const fetchStudents = useCallback(() => {
     setLoading(true);
-    fetch('/api/admin/users?role=student&limit=500')
-      .then(res => res.ok ? res.json() : { data: [] })
+    const params = new URLSearchParams({ role: 'student', page: String(currentPage), limit: String(PAGE_SIZE), sort: 'name' });
+    params.set('dir', sortKey === 'name' ? sortDir : 'asc');
+    if (filterStatus !== 'all') params.set('status', filterStatus);
+    if (debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
+    fetch(`/api/admin/users?${params.toString()}`)
+      .then(res => res.ok ? res.json() : { data: [], pagination: { total: 0, totalPages: 1 } })
       .then(resp => {
         setStudents(Array.isArray(resp) ? resp : (resp.data || []));
+        const pg = resp.pagination || {};
+        setPagination({ total: pg.total ?? 0, totalPages: pg.totalPages ?? 1 });
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  };
+  }, [currentPage, filterStatus, debouncedSearch, sortKey, sortDir]);
 
-  useEffect(() => { fetchStudents(); }, []);
+  useEffect(() => { fetchStudents(); }, [fetchStudents]);
+
+  // Footer statistikasi — BUTUN filial bo'yicha (server hisoblaydi, aniq)
+  const fetchSummary = useCallback(() => {
+    fetch('/api/admin/students/summary')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setSummary(d); })
+      .catch(() => {});
+  }, []);
+  useEffect(() => { fetchSummary(); }, [fetchSummary]);
 
   const handleAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,6 +135,7 @@ export default function StudentsPage() {
         setFormData({ name: '', login: '', password: '', phone: '' });
         setCreatedCreds(d); // generatsiya qilingan login/parollarni ko'rsatamiz
         fetchStudents();
+        fetchSummary();
       }
     } catch {
       setError("Server bilan bog'lanishda xatolik");
@@ -126,6 +151,7 @@ export default function StudentsPage() {
       body: JSON.stringify({ id, status }),
     });
     fetchStudents();
+    fetchSummary();
   };
 
   const getFirstGroup = (s: Student) => s.groupStudents?.[0]?.group || null;
@@ -133,21 +159,10 @@ export default function StudentsPage() {
   const getGroupName = (s: Student) => getFirstGroup(s)?.name || '';
   const getSubject = (s: Student) => getFirstGroup(s)?.subject || '';
 
-  const filtered = useMemo(() => {
-    const list = students.filter(s => {
-      if (filterStatus !== 'all' && s.status !== filterStatus) return false;
-      if (search) {
-        // normalizeSearch: o'zbekcha tutuq belgisi (ʻ) va apostrof variantlarini olib tashlaydi,
-        // shuning uchun "toʻlqin" ni "tolqin" deb yozganda ham topiladi (header bilan bir xil qoida).
-        const q = normalizeSearch(search);
-        return normalizeSearch(s.name).includes(q) ||
-          normalizeSearch(s.phone).includes(q) ||
-          normalizeSearch(getGroupName(s)).includes(q) ||
-          normalizeSearch(getMentor(s)).includes(q);
-      }
-      return true;
-    });
-
+  // Server allaqachon filtr (status/qidiruv) va sahifalashni bajardi. Bu yerda faqat joriy
+  // betni ustun bo'yicha saralaymiz: ism — server bo'yicha global; guruh/mentor/fan — joriy bet ichida.
+  const sortedPage = useMemo(() => {
+    const list = [...students];
     list.sort((a, b) => {
       let valA = '', valB = '';
       switch (sortKey) {
@@ -159,15 +174,13 @@ export default function StudentsPage() {
       const cmp = valA.localeCompare(valB, 'uz');
       return sortDir === 'asc' ? cmp : -cmp;
     });
-
     return list;
-  }, [students, search, filterStatus, sortKey, sortDir]);
+  }, [students, sortKey, sortDir]);
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginatedStudents = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const totalPages = pagination.totalPages;
 
-  // Reset page when filter/search changes
-  useEffect(() => { setCurrentPage(1); }, [search, filterStatus]);
+  // Filtr/qidiruv/saralash o'zgarganda 1-betga qaytish
+  useEffect(() => { setCurrentPage(1); }, [debouncedSearch, filterStatus, sortKey, sortDir]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -235,7 +248,7 @@ export default function StudentsPage() {
           <SkeletonTable rows={10} cols={5} />
         ) : (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          {filtered.length === 0 ? (
+          {students.length === 0 ? (
             <div className="p-16 text-center text-slate-400 text-sm">O&apos;quvchilar topilmadi</div>
           ) : (
             <div className="overflow-x-auto">
@@ -275,7 +288,7 @@ export default function StudentsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedStudents.map((student, idx) => {
+                  {sortedPage.map((student, idx) => {
                     const badge = STATUS_BADGE[student.status] || STATUS_BADGE.active;
                     const group = getFirstGroup(student);
                     const mentor = group?.teacher?.name || '—';
@@ -300,7 +313,7 @@ export default function StudentsPage() {
                               href={`/dashboard/admin/students/${student.id}`}
                               className="text-sm text-slate-800 hover:text-blue-600 hover:underline transition-colors"
                             >
-                              <span className="text-slate-400 mr-0.5">{idx + 1}.</span>
+                              <span className="text-slate-400 mr-0.5">{(currentPage - 1) * PAGE_SIZE + idx + 1}.</span>
                               {student.name}
                             </Link>
                             <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${badge.cls}`}>
@@ -379,24 +392,25 @@ export default function StudentsPage() {
           )}
 
           {/* Count footer */}
-          {!loading && filtered.length > 0 && (
+          {!loading && pagination.total > 0 && (
             <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
               <span className="text-xs text-slate-400">
-                Jami: {filtered.length} ta o&apos;quvchi
+                Jami: {pagination.total} ta o&apos;quvchi
                 {filterStatus !== 'all' && ` (${STATUS_OPTIONS.find(o => o.value === filterStatus)?.label})`}
               </span>
+              {/* Taqsimot — butun filial aktiv o'quvchilari bo'yicha (server hisoblaydi) */}
               <div className="flex items-center gap-4 text-xs">
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  To&apos;lagan: {filtered.filter(s => s._balance && s._balance.balance > 0).length}
+                  To&apos;lagan: {summary ? summary.paid : '…'}
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-red-500" />
-                  Qarzdor: {filtered.filter(s => s._balance && s._balance.balance <= 0 && s._balance.totalDeducted > 0).length}
+                  Qarzdor: {summary ? summary.debtor : '…'}
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-amber-400" />
-                  Yangi: {filtered.filter(s => !s._balance || s._balance.totalDeducted === 0).length}
+                  Yangi: {summary ? summary.new : '…'}
                 </span>
               </div>
             </div>

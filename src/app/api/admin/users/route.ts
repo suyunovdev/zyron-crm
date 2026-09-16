@@ -34,6 +34,8 @@ export async function GET(req: NextRequest) {
     const page = parseInt(req.nextUrl.searchParams.get('page') || '1');
     const limit = parseInt(req.nextUrl.searchParams.get('limit') || '50');
     const search = req.nextUrl.searchParams.get('search') || '';
+    const sort = req.nextUrl.searchParams.get('sort'); // 'name' | (default: createdAt desc)
+    const dir = req.nextUrl.searchParams.get('dir') === 'desc' ? 'desc' : 'asc';
 
     // Filial cheklovi: filialga biriktirilgan admin faqat o'z filialini ko'radi
     const bId = await scopedBranchId(auth);
@@ -79,7 +81,7 @@ export async function GET(req: NextRequest) {
           },
         } : {}),
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: sort === 'name' ? { name: dir } : { createdAt: 'desc' },
     }),
       prisma.user.count({ where }),
     ]);

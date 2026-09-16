@@ -13,6 +13,7 @@ import {
   CreditCard,
   Banknote,
   ArrowRightLeft,
+  UserX,
 } from "lucide-react";
 import { fmtDate } from "@/lib/date";
 
@@ -97,6 +98,7 @@ function getMethodIcon(method: string) {
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
+  const [summary, setSummary] = useState<{ totalIncome: number; todayIncome: number; unpaidThisMonth: number; debtorCount: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
   const [showModal, setShowModal] = useState(false);
@@ -130,6 +132,7 @@ export default function AdminPaymentsPage() {
     }
   }, [selectedMonth]);
 
+  // Modal o'quvchi tanlash uchun (eslatma: limit=500 — katta filialda picker chala; keyin searchable qilinadi)
   const fetchStudents = async () => {
     try {
       const res = await fetch("/api/admin/users?role=student&limit=500");
@@ -142,25 +145,27 @@ export default function AdminPaymentsPage() {
     }
   };
 
+  // Statistika kartalari — BUTUN filial bo'yicha, server hisoblaydi (limit=500 truncate emas)
+  const fetchSummary = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/admin/payments/summary?month=${selectedMonth}`);
+      if (res.ok) setSummary(await res.json());
+    } catch {
+      console.error("Statistikani yuklashda xatolik");
+    }
+  }, [selectedMonth]);
+
   useEffect(() => {
     fetchPayments();
   }, [fetchPayments]);
 
   useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]);
+
+  useEffect(() => {
     fetchStudents();
   }, []);
-
-  const totalForMonth = payments.reduce((sum, p) => sum + p.amount, 0);
-
-  const tn = tzNow();
-  const today = `${tn.getFullYear()}-${String(tn.getMonth() + 1).padStart(2, '0')}-${String(tn.getDate()).padStart(2, '0')}`;
-  const todayPayments = payments.filter(
-    (p) => p.createdAt.split("T")[0] === today
-  );
-  const todayTotal = todayPayments.reduce((sum, p) => sum + p.amount, 0);
-
-  const paidStudentIds = new Set(payments.map((p) => p.studentId));
-  const debtorsCount = students.filter((s) => !paidStudentIds.has(s.id)).length;
 
   // Pagination (statistikaga ta'sir qilmaydi — faqat jadval qatorlari sahifalanadi)
   const totalPages = Math.ceil(payments.length / PAGE_SIZE);
@@ -195,6 +200,7 @@ export default function AdminPaymentsPage() {
           note: "",
         });
         fetchPayments();
+        fetchSummary();
       }
     } catch {
       console.error("To'lov yaratishda xatolik");
@@ -216,6 +222,7 @@ export default function AdminPaymentsPage() {
 
       if (res.ok) {
         fetchPayments();
+        fetchSummary();
       }
     } catch {
       console.error("To'lovni o'chirishda xatolik");
@@ -252,8 +259,8 @@ export default function AdminPaymentsPage() {
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Summary Cards — barcha raqamlar server hisoblaydi (butun filial, aniq) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white rounded-xl border border-slate-200 p-5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
@@ -262,7 +269,7 @@ export default function AdminPaymentsPage() {
               <div>
                 <p className="text-sm text-slate-500">Umumiy tushum</p>
                 <p className="text-xl font-bold text-slate-900">
-                  {formatAmount(totalForMonth)} so&apos;m
+                  {summary ? `${formatAmount(summary.totalIncome)} so'm` : '…'}
                 </p>
               </div>
             </div>
@@ -276,7 +283,21 @@ export default function AdminPaymentsPage() {
               <div>
                 <p className="text-sm text-slate-500">Bugungi tushum</p>
                 <p className="text-xl font-bold text-slate-900">
-                  {formatAmount(todayTotal)} so&apos;m
+                  {summary ? `${formatAmount(summary.todayIncome)} so'm` : '…'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 p-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                <UserX className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Bu oy to&apos;lamagan</p>
+                <p className="text-xl font-bold text-slate-900">
+                  {summary ? `${summary.unpaidThisMonth} ta` : '…'}
                 </p>
               </div>
             </div>
@@ -288,9 +309,9 @@ export default function AdminPaymentsPage() {
                 <AlertTriangle className="w-5 h-5 text-red-600" />
               </div>
               <div>
-                <p className="text-sm text-slate-500">Qarzdorlar</p>
+                <p className="text-sm text-slate-500">Qarzdorlar (balans)</p>
                 <p className="text-xl font-bold text-slate-900">
-                  {debtorsCount} ta
+                  {summary ? `${summary.debtorCount} ta` : '…'}
                 </p>
               </div>
             </div>

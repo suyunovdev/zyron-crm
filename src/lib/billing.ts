@@ -94,17 +94,25 @@ export interface DebtSummary {
   totalDebt: number;
   /** studentId → balance (barcha faol o'quvchilar). */
   balances: Map<string, number>;
+  /** Qamrovdagi jami o'quvchilar soni. */
+  total: number;
+  /** Dars hisoblangan va balansi >= 0 (to'lagan). */
+  paidCount: number;
+  /** Hali dars hisoblanmagan (yangi). */
+  newCount: number;
 }
 
 /**
- * Barcha FAOL o'quvchilarning qarzdorligini bitta agregatsiyada hisoblaydi
- * (admin/stats uchun). computeStudentBalance bilan bir xil formula — 3 ta so'rov.
+ * O'quvchilar qarzdorligi + to'lagan/yangi taqsimotini bitta agregatsiyada hisoblaydi
+ * (admin/stats va students/payments summary uchun). computeStudentBalance bilan bir xil formula.
+ * @param statuses qamrovdagi o'quvchi statuslari (default: active + frozen)
  */
-export async function computeDebtSummary(branchId?: string | null): Promise<DebtSummary> {
-  // Frozen o'quvchilar ham hisobga olinadi (avto-muzlatilgan qarzi yo'qolmasin); archived emas.
-  const activeStatuses = ['active', 'frozen'];
+export async function computeDebtSummary(
+  branchId?: string | null,
+  statuses: string[] = ['active', 'frozen'],
+): Promise<DebtSummary> {
   // Filial cheklovi (bo'sh bo'lsa — barcha filiallar)
-  const studentWhere = { role: 'student', status: { in: activeStatuses }, ...(branchId ? { branchId } : {}) };
+  const studentWhere = { role: 'student', status: { in: statuses }, ...(branchId ? { branchId } : {}) };
 
   // 1) O'quvchi → guruh (narx/dars soni)
   const memberships = await prisma.groupStudent.findMany({
@@ -178,14 +186,22 @@ export async function computeDebtSummary(branchId?: string | null): Promise<Debt
   const balances = new Map<string, number>();
   let debtorCount = 0;
   let totalDebt = 0;
+  let paidCount = 0;
+  let newCount = 0;
   for (const sid of studentIds) {
-    const balance = (paidByStudent.get(sid) || 0) - (costByStudent.get(sid) || 0);
+    const cost = costByStudent.get(sid) || 0;
+    const balance = (paidByStudent.get(sid) || 0) - cost;
     balances.set(sid, balance);
-    if (balance < 0) {
-      debtorCount++;
+    // Mutually-exclusive taqsimot (qo'sh-sanash yo'q):
+    if (cost === 0) {
+      newCount++;              // hali dars hisoblanmagan (yangi)
+    } else if (balance < 0) {
+      debtorCount++;           // qarzdor
       totalDebt += -balance;
+    } else {
+      paidCount++;             // to'lagan (balans >= 0)
     }
   }
 
-  return { debtorCount, totalDebt, balances };
+  return { debtorCount, totalDebt, balances, total: studentIds.size, paidCount, newCount };
 }

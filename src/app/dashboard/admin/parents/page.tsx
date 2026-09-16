@@ -17,6 +17,8 @@ interface Parent {
 export default function ParentsPage() {
   const [parents, setParents] = useState<Parent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [parentsPage, setParentsPage] = useState(1);
+  const PARENTS_PAGE_SIZE = 20;
   const [showModal, setShowModal] = useState(false);
   const [linkModal, setLinkModal] = useState<Parent | null>(null);
 
@@ -95,6 +97,10 @@ export default function ParentsPage() {
   // Allaqachon bog'langan farzandlarni qidiruvdan chiqarish
   const linkedIds = linkModal?.children.map(c => c.id) || [];
 
+  // Pagination (client-side — ro'yxat to'liq yuklanadi)
+  const totalParentPages = Math.ceil(parents.length / PARENTS_PAGE_SIZE);
+  const paginatedParents = parents.slice((parentsPage - 1) * PARENTS_PAGE_SIZE, parentsPage * PARENTS_PAGE_SIZE);
+
   return (
     <>
       <div className="space-y-5">
@@ -129,9 +135,9 @@ export default function ParentsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {parents.map((p, i) => (
+                  {paginatedParents.map((p, i) => (
                     <tr key={p.id} className="border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50/50 dark:hover:bg-slate-700/30">
-                      <td className="px-5 py-3 text-sm text-slate-400">{i + 1}</td>
+                      <td className="px-5 py-3 text-sm text-slate-400">{(parentsPage - 1) * PARENTS_PAGE_SIZE + i + 1}</td>
                       <td className="px-5 py-3 text-sm font-medium text-slate-800 dark:text-white">{p.name}</td>
                       <td className="px-5 py-3 text-sm text-slate-500">{p.login}</td>
                       <td className="px-5 py-3 text-sm text-slate-500">{p.phone || '—'}</td>
@@ -172,8 +178,33 @@ export default function ParentsPage() {
           )}
 
           {!loading && parents.length > 0 && (
-            <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+            <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between gap-3">
               <span className="text-xs text-slate-400">Jami: {parents.length} ta ota-ona</span>
+              {totalParentPages > 1 && (
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setParentsPage(p => Math.max(1, p - 1))} disabled={parentsPage === 1}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40">
+                    Oldingi
+                  </button>
+                  {Array.from({ length: totalParentPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalParentPages || Math.abs(p - parentsPage) <= 2)
+                    .map((p, i, arr) => (
+                      <span key={p} className="flex items-center">
+                        {i > 0 && arr[i - 1] !== p - 1 && <span className="px-1 text-slate-300">...</span>}
+                        <button onClick={() => setParentsPage(p)}
+                          className={`w-8 h-8 rounded-lg text-xs font-medium ${
+                            p === parentsPage ? 'bg-blue-600 text-white' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                          }`}>
+                          {p}
+                        </button>
+                      </span>
+                    ))}
+                  <button onClick={() => setParentsPage(p => Math.min(totalParentPages, p + 1))} disabled={parentsPage === totalParentPages}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40">
+                    Keyingi
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

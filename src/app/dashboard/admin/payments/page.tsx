@@ -102,6 +102,8 @@ export default function AdminPaymentsPage() {
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   const [form, setForm] = useState({
     studentId: "",
@@ -159,6 +161,11 @@ export default function AdminPaymentsPage() {
 
   const paidStudentIds = new Set(payments.map((p) => p.studentId));
   const debtorsCount = students.filter((s) => !paidStudentIds.has(s.id)).length;
+
+  // Pagination (statistikaga ta'sir qilmaydi — faqat jadval qatorlari sahifalanadi)
+  const totalPages = Math.ceil(payments.length / PAGE_SIZE);
+  const paginatedPayments = payments.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  useEffect(() => { setCurrentPage(1); }, [selectedMonth]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -338,7 +345,7 @@ export default function AdminPaymentsPage() {
                     </td>
                   </tr>
                 ) : (
-                  payments.map((payment) => (
+                  paginatedPayments.map((payment) => (
                     <tr
                       key={payment.id}
                       className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
@@ -379,6 +386,32 @@ export default function AdminPaymentsPage() {
               </tbody>
             </table>
           </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-center gap-1">
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40">
+                Oldingi
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+                .map((p, i, arr) => (
+                  <span key={p} className="flex items-center">
+                    {i > 0 && arr[i - 1] !== p - 1 && <span className="px-1 text-slate-300">...</span>}
+                    <button onClick={() => setCurrentPage(p)}
+                      className={`w-8 h-8 rounded-lg text-xs font-medium ${
+                        p === currentPage ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                      }`}>
+                      {p}
+                    </button>
+                  </span>
+                ))}
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40">
+                Keyingi
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { confirmDialog } from "@/components/confirm-dialog";
+import { toast } from "@/components/toast";
 import { Skeleton } from "@/components/skeleton";
 import { StudentSearchSelect, type StudentLite } from "@/components/student-search-select";
 import {
@@ -16,6 +16,7 @@ import {
   ArrowRightLeft,
   UserX,
   UserCheck,
+  Pencil,
 } from "lucide-react";
 import { fmtDate } from "@/lib/date";
 
@@ -109,6 +110,14 @@ export default function AdminPaymentsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 20;
 
+  // Tahrirlash / o'chirish — har ikkisida majburiy izoh (sabab)
+  const [editTarget, setEditTarget] = useState<Payment | null>(null);
+  const [editForm, setEditForm] = useState({ amount: "", month: "", method: "cash", note: "" });
+  const [editReason, setEditReason] = useState("");
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Payment | null>(null);
+  const [deleteReason, setDeleteReason] = useState("");
+
   const [form, setForm] = useState({
     studentId: "",
     amount: "",
@@ -195,25 +204,65 @@ export default function AdminPaymentsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!(await confirmDialog("Bu to'lovni o'chirmoqchimisiz?", { danger: true, confirmText: "O'chirish" }))) return;
-
-    setDeleting(id);
+  // O'chirish — majburiy izoh bilan (modal orqali)
+  const openDelete = (p: Payment) => { setDeleteTarget(p); setDeleteReason(""); };
+  const submitDelete = async () => {
+    if (!deleteTarget) return;
+    if (deleteReason.trim().length < 3) { toast.error("O'chirish sababini yozing (kamida 3 belgi)"); return; }
+    setDeleting(deleteTarget.id);
     try {
       const res = await fetch("/api/admin/payments", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id: deleteTarget.id, reason: deleteReason.trim() }),
       });
-
-      if (res.ok) {
-        fetchPayments();
-        fetchSummary();
-      }
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { toast.error(d.error || "Xatolik"); return; }
+      toast.success("To'lov o'chirildi");
+      setDeleteTarget(null);
+      fetchPayments();
+      fetchSummary();
     } catch {
-      console.error("To'lovni o'chirishda xatolik");
+      toast.error("To'lovni o'chirishda xatolik");
     } finally {
       setDeleting(null);
+    }
+  };
+
+  // Tahrirlash — majburiy izoh bilan (modal orqali)
+  const openEdit = (p: Payment) => {
+    setEditTarget(p);
+    setEditForm({ amount: String(Math.abs(p.amount)), month: p.month, method: p.method || "cash", note: p.note || "" });
+    setEditReason("");
+  };
+  const submitEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTarget) return;
+    if (editReason.trim().length < 3) { toast.error("O'zgartirish sababini yozing (kamida 3 belgi)"); return; }
+    setEditSubmitting(true);
+    try {
+      const res = await fetch("/api/admin/payments", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editTarget.id,
+          amount: Number(editForm.amount),
+          month: editForm.month,
+          method: editForm.method,
+          note: editForm.note || null,
+          reason: editReason.trim(),
+        }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) { toast.error(d.error || "Xatolik"); return; }
+      toast.success("To'lov tahrirlandi");
+      setEditTarget(null);
+      fetchPayments();
+      fetchSummary();
+    } catch {
+      toast.error("Tahrirlashda xatolik");
+    } finally {
+      setEditSubmitting(false);
     }
   };
 
@@ -393,13 +442,23 @@ export default function AdminPaymentsPage() {
                         {fmtDate(payment.createdAt)}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => handleDelete(payment.id)}
-                          disabled={deleting === payment.id}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => openEdit(payment)}
+                            title="Tahrirlash"
+                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => openDelete(payment)}
+                            disabled={deleting === payment.id}
+                            title="O'chirish"
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -560,6 +619,99 @@ export default function AdminPaymentsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Tahrirlash modali (majburiy izoh + audit) */}
+      {editTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+              <h2 className="text-lg font-semibold text-slate-900">To&apos;lovni tahrirlash</h2>
+              <button onClick={() => setEditTarget(null)} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={submitEdit} className="p-6 space-y-4">
+              <p className="text-sm text-slate-500">{editTarget.student?.name}</p>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Summa (so&apos;m)</label>
+                <input type="number" min="1000" step="1000" value={editForm.amount}
+                  onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Oy</label>
+                  <select value={editForm.month} onChange={(e) => setEditForm({ ...editForm, month: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    {monthOptions.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Usul</label>
+                  <select value={editForm.method} onChange={(e) => setEditForm({ ...editForm, method: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="cash">Naqd</option>
+                    <option value="card">Karta</option>
+                    <option value="transfer">O&apos;tkazma</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Izoh (to&apos;lovga)</label>
+                <input type="text" value={editForm.note}
+                  onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Ixtiyoriy" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">O&apos;zgartirish sababi <span className="text-red-500">*</span></label>
+                <textarea required value={editReason} onChange={(e) => setEditReason(e.target.value)}
+                  rows={2} placeholder="Nega tahrirlanmoqda? (auditga yoziladi)"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={() => setEditTarget(null)}
+                  className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50">Bekor qilish</button>
+                <button type="submit" disabled={editSubmitting}
+                  className="flex-1 bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-60">
+                  {editSubmitting ? "Saqlanmoqda..." : "Saqlash"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* O'chirish modali (majburiy izoh + audit) */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+              <h2 className="text-lg font-semibold text-slate-900">To&apos;lovni o&apos;chirish</h2>
+              <button onClick={() => setDeleteTarget(null)} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-600">
+                <span className="font-semibold text-slate-900">{deleteTarget.student?.name}</span> — {formatAmount(Math.abs(deleteTarget.amount))} so&apos;m ({deleteTarget.month}) to&apos;lovi o&apos;chiriladi. Bu amalni orqaga qaytarib bo&apos;lmaydi.
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">O&apos;chirish sababi <span className="text-red-500">*</span></label>
+                <textarea value={deleteReason} onChange={(e) => setDeleteReason(e.target.value)}
+                  rows={2} placeholder="Nega o'chirilmoqda? (auditga yoziladi)"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={() => setDeleteTarget(null)}
+                  className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50">Bekor qilish</button>
+                <button type="button" onClick={submitDelete} disabled={deleting === deleteTarget.id}
+                  className="flex-1 bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-red-700 disabled:opacity-60">
+                  {deleting === deleteTarget.id ? "O'chirilmoqda..." : "O'chirish"}</button>
+              </div>
+            </div>
           </div>
         </div>
       )}

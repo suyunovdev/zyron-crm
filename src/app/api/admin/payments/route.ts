@@ -67,6 +67,22 @@ const PaymentSchema = z.object({
   type: z.enum(['payment', 'refund', 'discount']).optional(),
 });
 
+// Tahrirlash — har bir maydon ixtiyoriy, LEKIN `reason` (audit izohi) MAJBURIY.
+const EditPaymentSchema = z.object({
+  id: z.string().min(1),
+  amount: z.coerce.number().int().refine(v => v !== 0, 'summa 0 bo\'lmasin').optional(),
+  month: z.string().regex(/^\d{4}-\d{2}$/, 'oy formati YYYY-MM').optional(),
+  method: z.enum(['cash', 'card', 'transfer']).optional(),
+  note: z.string().max(500).optional().nullable(),
+  reason: z.string().trim().min(3, 'O\'zgartirish sababi (izoh) majburiy — kamida 3 belgi'),
+});
+
+// O'chirish — `reason` (audit izohi) MAJBURIY.
+const DeletePaymentSchema = z.object({
+  id: z.string().min(1),
+  reason: z.string().trim().min(3, 'O\'chirish sababi (izoh) majburiy — kamida 3 belgi'),
+});
+
 export async function POST(req: NextRequest) {
   const auth = await requireAuth("admin");
   if (auth instanceof NextResponse) return auth;
@@ -170,24 +186,86 @@ export async function POST(req: NextRequest) {
 }
 
 // To'lovni o'chirish — faqat superadmin (moliyaviy nazorat)
-export async function DELETE(req: NextRequest) {
-  const auth = await requireAuth("superadmin");
+// To'lovni tahrirlash — majburiy izoh (reason) + auditga aniq yoziladi (nima o'zgardi + sabab).
+export async function PATCH(req: NextRequest) {
+  const auth = await requireAuth("admin");
   if (auth instanceof NextResponse) return auth;
 
-  const body = await req.json();
-  const { id } = body;
+  const parsed = await parseBody(req, EditPaymentSchema);
+  if (parsed instanceof NextResponse) return parsed;
+  const { id, amount, month, method, note, reason } = parsed;
 
-  if (!id) {
-    return NextResponse.json(
-      { error: "id majburiy" },
-      { status: 400 }
-    );
+  const existing = await prisma.payment.findUnique({
+    where: { id },
+    include: { student: { select: { name: true, branchId: true } } },
+  });
+  if (!existing) return NextResponse.json({ error: "To'lov topilmadi" }, { status: 404 });
+
+  // Filial cheklovi: admin faqat o'z filiali o'quvchisining to'lovini tahrirlaydi
+  const bId = await scopedBranchId(auth);
+  if (bId && existing.student.branchId !== bId) {
+    return NextResponse.json({ error: "Bu to'lov boshqa filialga tegishli" }, { status: 403 });
   }
 
-  const payment = await prisma.payment.findUnique({ where: { id }, include: { student: { select: { name: true } } } });
+  const methodLabels: Record<string, string> = { cash: 'Naqd', card: 'Karta', transfer: "O'tkazma" };
+  const data: Record<string, unknown> = {};
+  const changes: string[] = [];
+  if (amount !== undefined) {
+    // Ishora turdan (mavjud type) kelib chiqadi: refund → manfiy, aks holda musbat
+    const signed = existing.type === 'refund' ? -Math.abs(amount) : Math.abs(amount);
+    if (signed !== existing.amount) {
+      data.amount = signed;
+      changes.push(`summa: ${existing.amount.toLocaleString()} → ${signed.toLocaleString()} so'm`);
+    }
+  }
+  if (month !== undefined && month !== existing.month) {
+    data.month = month;
+    changes.push(`oy: ${existing.month} → ${month}`);
+  }
+  if (method !== undefined && method !== existing.method) {
+    data.method = method;
+    changes.push(`usul: ${methodLabels[existing.method] || existing.method} → ${methodLabels[method] || method}`);
+  }
+  if (note !== undefined && (note || null) !== (existing.note || null)) {
+    data.note = note || null;
+    changes.push(`izoh: "${existing.note || '—'}" → "${note || '—'}"`);
+  }
+
+  if (changes.length === 0) {
+    return NextResponse.json({ error: "Hech qanday o'zgarish kiritilmadi" }, { status: 400 });
+  }
+
+  await prisma.payment.update({ where: { id }, data });
+  await logAudit(auth, 'update', 'payment', id,
+    `To'lov tahrirlandi: ${existing.student.name} — ${changes.join('; ')}. Sabab: ${reason}`);
+
+  return NextResponse.json({ success: true });
+}
+
+// To'lovni o'chirish — majburiy izoh (reason) + auditga aniq yoziladi.
+export async function DELETE(req: NextRequest) {
+  const auth = await requireAuth("admin");
+  if (auth instanceof NextResponse) return auth;
+
+  const parsed = await parseBody(req, DeletePaymentSchema);
+  if (parsed instanceof NextResponse) return parsed;
+  const { id, reason } = parsed;
+
+  const payment = await prisma.payment.findUnique({
+    where: { id },
+    include: { student: { select: { name: true, branchId: true } } },
+  });
+  if (!payment) return NextResponse.json({ error: "To'lov topilmadi" }, { status: 404 });
+
+  // Filial cheklovi: admin faqat o'z filiali o'quvchisining to'lovini o'chiradi
+  const bId = await scopedBranchId(auth);
+  if (bId && payment.student.branchId !== bId) {
+    return NextResponse.json({ error: "Bu to'lov boshqa filialga tegishli" }, { status: 403 });
+  }
+
   await prisma.payment.delete({ where: { id } });
   await logAudit(auth, 'delete', 'payment', id,
-    `To'lov o'chirildi: ${payment?.student.name || '?'} — ${payment?.amount?.toLocaleString() || 0} so'm`);
+    `To'lov o'chirildi: ${payment.student.name} — ${payment.amount.toLocaleString()} so'm (${payment.month}, ${payment.type}). Sabab: ${reason}`);
 
   return NextResponse.json({ success: true });
 }

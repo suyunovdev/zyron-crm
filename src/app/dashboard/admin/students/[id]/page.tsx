@@ -7,7 +7,7 @@ import { SkeletonDetailPage } from '@/components/skeleton';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Phone, Loader2, Snowflake, Archive, RotateCcw,
-  X, Pencil, Send, GraduationCap, CheckCircle, XCircle,
+  X, Pencil, Trash2, Send, GraduationCap, CheckCircle, XCircle,
   ChevronDown, ChevronRight, Printer, KeyRound, Eye, EyeOff, Copy, BadgePercent,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -1125,22 +1125,27 @@ export default function StudentProfilePage() {
                                   {group.payments.map(payment => {
                                     const met = METHOD_LABELS[payment.method] || METHOD_LABELS.cash;
                                     return (
-                                      <div key={payment.id} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-sm font-bold text-emerald-600">+{formatAmount(payment.amount)}</span>
-                                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${met.cls}`}>{met.label}</span>
+                                      <div key={payment.id} className="flex items-center justify-between gap-3 py-2.5 border-b border-slate-50 last:border-0">
+                                        <div className="min-w-0">
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="text-sm font-bold text-emerald-600">+{formatAmount(payment.amount)} so&apos;m</span>
+                                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${met.cls}`}>{met.label}</span>
+                                          </div>
+                                          <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-400 min-w-0">
+                                            <span className="flex-shrink-0">{fmtDate(payment.createdAt)} {fmtTime(payment.createdAt)}</span>
+                                            {payment.note && <span className="truncate">· {payment.note}</span>}
+                                          </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-xs text-slate-400">{fmtDate(payment.createdAt)} {fmtTime(payment.createdAt)}</span>
+                                        <div className="flex items-center gap-1.5 flex-shrink-0">
                                           <button onClick={() => openEditPayment(payment)}
-                                            className="p-1 rounded text-slate-300 hover:text-blue-500 hover:bg-blue-50"
+                                            className="p-2 rounded-lg border border-slate-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-colors"
                                             title="Tahrirlash">
-                                            <Pencil className="w-3.5 h-3.5" />
+                                            <Pencil className="w-4 h-4" />
                                           </button>
                                           <button onClick={() => openDeletePayment(payment)}
-                                            className="p-1 rounded text-slate-300 hover:text-red-500 hover:bg-red-50"
+                                            className="p-2 rounded-lg border border-slate-200 text-red-500 hover:bg-red-50 hover:border-red-300 transition-colors"
                                             title="O'chirish">
-                                            <XCircle className="w-3.5 h-3.5" />
+                                            <Trash2 className="w-4 h-4" />
                                           </button>
                                         </div>
                                       </div>

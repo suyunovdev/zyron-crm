@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, X, Link2, Unlink, Search, Users } from 'lucide-react';
+import { Plus, X, Link2, Unlink, Users } from 'lucide-react';
 import { SkeletonTable } from '@/components/skeleton';
+import { StudentSearchSelect, type StudentLite } from '@/components/student-search-select';
 
 interface ChildInfo {
   id: string; name: string; login: string; phone: string | null; status: string;
@@ -11,10 +12,6 @@ interface ChildInfo {
 interface Parent {
   id: string; login: string; name: string; phone: string | null;
   status: string; createdAt: string; children: ChildInfo[];
-}
-
-interface StudentOption {
-  id: string; name: string; login: string; phone: string | null;
 }
 
 export default function ParentsPage() {
@@ -28,10 +25,6 @@ export default function ParentsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Link form
-  const [students, setStudents] = useState<StudentOption[]>([]);
-  const [studentSearch, setStudentSearch] = useState('');
-  const [loadingStudents, setLoadingStudents] = useState(false);
 
   const fetchParents = () => {
     setLoading(true);
@@ -70,38 +63,20 @@ export default function ParentsPage() {
 
   const openLinkModal = (parent: Parent) => {
     setLinkModal(parent);
-    setStudentSearch('');
-    setLoadingStudents(true);
-    // Fetch unlinked students (no parent)
-    fetch('/api/admin/users?role=student&limit=500')
-      .then(r => r.ok ? r.json() : { data: [] })
-      .then(resp => {
-        const all = Array.isArray(resp) ? resp : (resp.data || []);
-        setStudents(all.map((s: { id: string; name: string; login: string; phone: string | null }) => ({
-          id: s.id, name: s.name, login: s.login, phone: s.phone,
-        })));
-        setLoadingStudents(false);
-      })
-      .catch(() => setLoadingStudents(false));
   };
 
-  const handleLink = async (studentId: string) => {
+  const handleLink = async (student: StudentLite) => {
     if (!linkModal) return;
     await fetch('/api/admin/parents', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ parentId: linkModal.id, studentId, action: 'link' }),
+      body: JSON.stringify({ parentId: linkModal.id, studentId: student.id, action: 'link' }),
     });
     fetchParents();
-    // Refresh link modal data
-    setLinkModal(prev => {
-      if (!prev) return null;
-      const student = students.find(s => s.id === studentId);
-      if (student) {
-        return { ...prev, children: [...prev.children, { ...student, status: 'active' }] };
-      }
-      return prev;
-    });
+    // Modaldagi ro'yxatni optimistik yangilash (tanlangan o'quvchi ma'lumotidan)
+    setLinkModal(prev => prev
+      ? { ...prev, children: [...prev.children, { id: student.id, name: student.name, login: student.login || '', phone: student.phone ?? null, status: 'active' }] }
+      : null);
   };
 
   const handleUnlink = async (parentId: string, studentId: string) => {
@@ -117,15 +92,8 @@ export default function ParentsPage() {
     });
   };
 
-  const filteredStudents = students.filter(s => {
-    if (!studentSearch) return true;
-    const q = studentSearch.toLowerCase();
-    return s.name.toLowerCase().includes(q) || s.login.toLowerCase().includes(q);
-  });
-
-  // Filter out already linked children
+  // Allaqachon bog'langan farzandlarni qidiruvdan chiqarish
   const linkedIds = linkModal?.children.map(c => c.id) || [];
-  const availableStudents = filteredStudents.filter(s => !linkedIds.includes(s.id));
 
   return (
     <>
@@ -303,36 +271,15 @@ export default function ParentsPage() {
               </div>
             )}
 
-            {/* Search students */}
-            <div className="relative mb-3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input type="text" value={studentSearch}
-                onChange={e => setStudentSearch(e.target.value)}
-                placeholder="O'quvchini qidirish..."
-                className="w-full pl-10 pr-4 py-2.5 border border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-            </div>
-
-            {/* Student list */}
-            <div className="max-h-64 overflow-y-auto border border-slate-200 dark:border-slate-600 rounded-lg divide-y divide-slate-100 dark:divide-slate-700">
-              {loadingStudents ? (
-                <div className="p-4 text-center text-sm text-slate-400">Yuklanmoqda...</div>
-              ) : availableStudents.length === 0 ? (
-                <div className="p-4 text-center text-sm text-slate-400">O&apos;quvchi topilmadi</div>
-              ) : (
-                availableStudents.slice(0, 50).map(s => (
-                  <div key={s.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50">
-                    <div>
-                      <p className="text-sm font-medium text-slate-800 dark:text-white">{s.name}</p>
-                      <p className="text-xs text-slate-400">{s.login}</p>
-                    </div>
-                    <button onClick={() => handleLink(s.id)}
-                      className="px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 transition-colors">
-                      <Link2 className="w-3.5 h-3.5 inline mr-1" />
-                      Bog&apos;lash
-                    </button>
-                  </div>
-                ))
-              )}
+            {/* Farzand qidirib bog'lash (server-side qidiruv — barcha o'quvchilarni qamraydi) */}
+            <div>
+              <p className="text-xs text-slate-400 mb-1.5">Farzandini qidiring va bog&apos;lang:</p>
+              <StudentSearchSelect
+                value=""
+                excludeIds={linkedIds}
+                placeholder="O'quvchini qidiring (ism yoki telefon)"
+                onSelect={(s) => { if (s) handleLink(s); }}
+              />
             </div>
           </div>
         </div>

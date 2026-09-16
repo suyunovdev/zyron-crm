@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { SkeletonTable } from '@/components/skeleton';
+import { StudentSearchSelect } from '@/components/student-search-select';
 import {
   Plus, X, Search, Video, ChevronUp, ChevronDown, Archive,
   UserPlus, UserMinus, QrCode, Trash2, RotateCcw, CalendarPlus, Loader2, Download,
@@ -36,7 +37,6 @@ export default function GroupsPage() {
   const router = useRouter();
   const [groups, setGroups] = useState<Group[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [allStudents, setAllStudents] = useState<StudentUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -45,7 +45,6 @@ export default function GroupsPage() {
   // Expanded row
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [addStudentGroupId, setAddStudentGroupId] = useState<string | null>(null);
-  const [selectedStudentId, setSelectedStudentId] = useState('');
   const [generatingLessons, setGeneratingLessons] = useState<string | null>(null);
   const [generateMsg, setGenerateMsg] = useState<{ groupId: string; type: 'success' | 'error'; text: string } | null>(null);
 
@@ -66,14 +65,12 @@ export default function GroupsPage() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [groupsRes, teachersResp, studentsResp] = await Promise.all([
+      const [groupsRes, teachersResp] = await Promise.all([
         fetch('/api/admin/groups').then(r => r.ok ? r.json() : []).catch(() => []),
         fetch('/api/admin/users?role=teacher&limit=500').then(r => r.ok ? r.json() : { data: [] }).catch(() => ({ data: [] })),
-        fetch('/api/admin/users?role=student&limit=500').then(r => r.ok ? r.json() : { data: [] }).catch(() => ({ data: [] })),
       ]);
       setGroups(Array.isArray(groupsRes) ? groupsRes : []);
       setTeachers(Array.isArray(teachersResp) ? teachersResp : (teachersResp.data || []));
-      setAllStudents(Array.isArray(studentsResp) ? studentsResp : (studentsResp.data || []));
     } catch { /* handled above */ } finally {
       setLoading(false);
     }
@@ -229,11 +226,10 @@ export default function GroupsPage() {
     }
   };
 
-  const handleAddStudent = async (groupId: string) => {
-    if (!selectedStudentId) return;
-    await handlePatch({ id: groupId, addStudentId: selectedStudentId });
+  const handleAddStudent = async (groupId: string, studentId: string) => {
+    if (!studentId) return;
+    await handlePatch({ id: groupId, addStudentId: studentId });
     setAddStudentGroupId(null);
-    setSelectedStudentId('');
   };
 
   // Sort toggle
@@ -381,8 +377,7 @@ export default function GroupsPage() {
                   {filtered.map((group, idx) => {
                     const isExpanded = expandedId === group.id;
                     const isAddingStudent = addStudentGroupId === group.id;
-                    const enrolledIds = new Set(group.students.map(gs => gs.student.id));
-                    const availableStudents = allStudents.filter(s => !enrolledIds.has(s.id));
+                    const enrolledIds = group.students.map(gs => gs.student.id);
 
                     return (
                       <>
@@ -625,7 +620,6 @@ export default function GroupsPage() {
                                         <button
                                           onClick={() => {
                                             setAddStudentGroupId(isAddingStudent ? null : group.id);
-                                            setSelectedStudentId('');
                                           }}
                                           className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800"
                                         >
@@ -636,21 +630,14 @@ export default function GroupsPage() {
                                     </div>
 
                                     {isAddingStudent && (
-                                      <div className="flex items-center gap-2 mb-3 p-3 bg-blue-50 rounded-lg">
-                                        <select
-                                          value={selectedStudentId}
-                                          onChange={e => setSelectedStudentId(e.target.value)}
-                                          className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white"
-                                        >
-                                          <option value="">O&apos;quvchini tanlang</option>
-                                          {availableStudents.map(s => (
-                                            <option key={s.id} value={s.id}>{s.name}</option>
-                                          ))}
-                                        </select>
-                                        <button onClick={() => handleAddStudent(group.id)} disabled={!selectedStudentId}
-                                          className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-50">
-                                          Qo&apos;sh
-                                        </button>
+                                      <div className="mb-3 p-3 bg-blue-50 rounded-lg">
+                                        {/* Server-side qidiruv — barcha o'quvchilarni qamraydi (limit=500 emas) */}
+                                        <StudentSearchSelect
+                                          value=""
+                                          excludeIds={enrolledIds}
+                                          placeholder="O'quvchini qidirib qo'shing..."
+                                          onSelect={(s) => { if (s) handleAddStudent(group.id, s.id); }}
+                                        />
                                       </div>
                                     )}
 

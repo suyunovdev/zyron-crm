@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { confirmDialog } from "@/components/confirm-dialog";
 import { Skeleton } from "@/components/skeleton";
+import { StudentSearchSelect, type StudentLite } from "@/components/student-search-select";
 import {
   Plus,
   Trash2,
@@ -97,7 +98,7 @@ function getMethodIcon(method: string) {
 
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
+  const [pickedStudent, setPickedStudent] = useState<StudentLite | null>(null); // modal picker uchun
   const [summary, setSummary] = useState<{ totalIncome: number; todayIncome: number; unpaidThisMonth: number; debtorCount: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
@@ -132,19 +133,6 @@ export default function AdminPaymentsPage() {
     }
   }, [selectedMonth]);
 
-  // Modal o'quvchi tanlash uchun (eslatma: limit=500 — katta filialda picker chala; keyin searchable qilinadi)
-  const fetchStudents = async () => {
-    try {
-      const res = await fetch("/api/admin/users?role=student&limit=500");
-      if (res.ok) {
-        const resp = await res.json();
-        setStudents(Array.isArray(resp) ? resp : (resp.data || []));
-      }
-    } catch {
-      console.error("O'quvchilarni yuklashda xatolik");
-    }
-  };
-
   // Statistika kartalari — BUTUN filial bo'yicha, server hisoblaydi (limit=500 truncate emas)
   const fetchSummary = useCallback(async () => {
     try {
@@ -162,10 +150,6 @@ export default function AdminPaymentsPage() {
   useEffect(() => {
     fetchSummary();
   }, [fetchSummary]);
-
-  useEffect(() => {
-    fetchStudents();
-  }, []);
 
   // Pagination (statistikaga ta'sir qilmaydi — faqat jadval qatorlari sahifalanadi)
   const totalPages = Math.ceil(payments.length / PAGE_SIZE);
@@ -192,6 +176,7 @@ export default function AdminPaymentsPage() {
 
       if (res.ok) {
         setShowModal(false);
+        setPickedStudent(null);
         setForm({
           studentId: "",
           amount: "",
@@ -250,7 +235,7 @@ export default function AdminPaymentsPage() {
               ))}
             </select>
             <button
-              onClick={() => setShowModal(true)}
+              onClick={() => { setPickedStudent(null); setShowModal(true); }}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
             >
               <Plus className="w-4 h-4" />
@@ -458,21 +443,15 @@ export default function AdminPaymentsPage() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   O&apos;quvchi
                 </label>
-                <select
+                <StudentSearchSelect
                   value={form.studentId}
-                  onChange={(e) =>
-                    setForm({ ...form, studentId: e.target.value })
-                  }
-                  required
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">O&apos;quvchini tanlang</option>
-                  {students.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
+                  selectedName={pickedStudent?.name}
+                  autoFocus
+                  onSelect={(s) => {
+                    setPickedStudent(s);
+                    setForm({ ...form, studentId: s?.id || "" });
+                  }}
+                />
               </div>
 
               {/* Amount */}

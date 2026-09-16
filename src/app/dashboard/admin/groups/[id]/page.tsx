@@ -4,12 +4,13 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   ArrowLeft, Users, BookOpen, CalendarDays, Clock,
-  UserCheck, UserX, Check, Video, Loader2, MapPin, X, CalendarPlus, Search, Plus, GraduationCap,
+  UserCheck, UserX, Check, Video, Loader2, MapPin, X, CalendarPlus, Plus, GraduationCap,
   Pencil, Trash2, Snowflake, Play,
 } from 'lucide-react';
 import { toast } from '@/components/toast';
 import { confirmDialog } from '@/components/confirm-dialog';
 import { Skeleton } from '@/components/skeleton';
+import { StudentSearchSelect } from '@/components/student-search-select';
 
 interface Student {
   id: string;
@@ -83,9 +84,7 @@ export default function AdminGroupDetailPage() {
   const [activeTab, setActiveTab] = useState<TabType>('davomat');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [savingCells, setSavingCells] = useState<Set<string>>(new Set());
-  const [allStudents, setAllStudents] = useState<{ id: string; name: string; phone?: string; status: string }[]>([]);
   const [allTeachers, setAllTeachers] = useState<{ id: string; name: string; subject?: string }[]>([]);
-  const [search, setSearch] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [untilDate, setUntilDate] = useState('');
   const [busy, setBusy] = useState(false);
@@ -113,11 +112,9 @@ export default function AdminGroupDetailPage() {
   useEffect(() => {
     Promise.all([
       fetch(`/api/admin/groups/${groupId}`).then(r => r.ok ? r.json() : null),
-      fetch('/api/admin/users?role=student&limit=500').then(r => r.ok ? r.json() : { data: [] }),
       fetch('/api/admin/users?role=teacher&limit=500').then(r => r.ok ? r.json() : { data: [] }),
-    ]).then(([g, s, tch]) => {
+    ]).then(([g, tch]) => {
       setGroup(g);
-      setAllStudents(Array.isArray(s?.data) ? s.data : []);
       setAllTeachers(Array.isArray(tch?.data) ? tch.data : []);
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -215,7 +212,6 @@ export default function AdminGroupDetailPage() {
         body: JSON.stringify({ id: groupId, addStudentId: sid }),
       });
       if (!r.ok) { toast.error((await r.json()).error || 'Xatolik'); return; }
-      setSearch('');
       await reload();
     } finally { setBusy(false); }
   };
@@ -475,15 +471,9 @@ export default function AdminGroupDetailPage() {
     { key: 'oquvchilar', label: `O'quvchilar (${group.students.length})` },
   ];
 
-  const notInGroup = allStudents.filter(s => !group.students.some(gs => gs.student.id === s.id));
   const lessonDates = group.lessons.map(l => l.scheduledDate).sort();
   const lastLessonDate = lessonDates.length ? lessonDates[lessonDates.length - 1] : (group.startDate || '');
-  const searchResults = search.trim()
-    ? notInGroup.filter(s => {
-        const q = search.trim().toLowerCase();
-        return s.name.toLowerCase().includes(q) || (s.phone || '').includes(q);
-      }).slice(0, 8)
-    : [];
+  const memberIds = group.students.map(gs => gs.student.id);
 
   return (
     <>
@@ -928,32 +918,17 @@ export default function AdminGroupDetailPage() {
               </div>
             </div>
 
-            {/* O'quvchi qidirib qo'shish */}
+            {/* O'quvchi qidirib qo'shish (server-side qidiruv — barcha o'quvchilarni qamraydi) */}
             <div className="max-w-md">
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5 mb-1.5">
                 <Plus className="w-3.5 h-3.5" /> O&apos;quvchi qo&apos;shish
               </label>
-              <div className="relative mt-1.5">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input value={search} onChange={e => setSearch(e.target.value)}
-                  placeholder="Ism yoki telefon bo'yicha qidiring..."
-                  className="w-full rounded-lg border border-slate-200 pl-9 pr-3 py-2.5 text-sm bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/20" />
-              </div>
-              {search.trim() && (
-                <div className="mt-2 rounded-xl border border-slate-200 divide-y divide-slate-100 max-h-60 overflow-y-auto">
-                  {searchResults.length === 0 ? (
-                    <p className="px-3 py-3 text-sm text-slate-400 text-center">Topilmadi (yoki allaqachon guruhda)</p>
-                  ) : searchResults.map(s => (
-                    <button key={s.id} onClick={() => addStudent(s.id)} disabled={busy}
-                      className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-[var(--brand-primary)]/[0.06] text-left disabled:opacity-60">
-                      <span className="text-sm text-slate-800">
-                        {s.name}{s.phone && <span className="text-xs text-slate-400 ml-2">{s.phone}</span>}
-                      </span>
-                      <Plus className="w-4 h-4 text-[var(--brand-primary)] flex-shrink-0" />
-                    </button>
-                  ))}
-                </div>
-              )}
+              <StudentSearchSelect
+                value=""
+                excludeIds={memberIds}
+                placeholder="Ism yoki telefon bo'yicha qidiring..."
+                onSelect={(s) => { if (s) addStudent(s.id); }}
+              />
             </div>
 
             {/* Guruhdagi o'quvchilar */}

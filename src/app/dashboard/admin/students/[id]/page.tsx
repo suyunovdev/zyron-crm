@@ -89,6 +89,15 @@ export default function StudentProfilePage() {
   const [payForm, setPayForm] = useState({ amount: '', month: '', method: 'cash', note: '' });
   const [paySubmitting, setPaySubmitting] = useState(false);
 
+  // To'lovni tahrirlash / o'chirish — har ikkisida majburiy izoh (sabab)
+  const [editPay, setEditPay] = useState<Payment | null>(null);
+  const [editPayForm, setEditPayForm] = useState({ amount: '', month: '', method: 'cash', note: '' });
+  const [editPayReason, setEditPayReason] = useState('');
+  const [editPaySubmitting, setEditPaySubmitting] = useState(false);
+  const [delPay, setDelPay] = useState<Payment | null>(null);
+  const [delPayReason, setDelPayReason] = useState('');
+  const [delPaySubmitting, setDelPaySubmitting] = useState(false);
+
   // Doimiy chegirma (per-guruh a'zolik)
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [discountForm, setDiscountForm] = useState<{ mode: 'percent' | 'amount'; value: string }>({ mode: 'percent', value: '' });
@@ -370,14 +379,56 @@ export default function StudentProfilePage() {
     await saveDiscount(discountForm.mode === 'percent' ? val : 0, discountForm.mode === 'amount' ? val : 0);
   };
 
-  const handleDeletePayment = async (paymentId: string) => {
-    if (!(await confirmDialog("Bu to'lovni o'chirmoqchimisiz?", { danger: true, confirmText: "O'chirish" }))) return;
-    await fetch('/api/admin/payments', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: paymentId }),
-    });
-    fetchStudent();
+  // To'lovni o'chirish — majburiy izoh (sabab) bilan, auditga yoziladi
+  const openDeletePayment = (p: Payment) => { setDelPay(p); setDelPayReason(''); };
+  const submitDeletePayment = async () => {
+    if (!delPay) return;
+    if (delPayReason.trim().length < 3) { toast.error("O'chirish sababini yozing (kamida 3 belgi)"); return; }
+    setDelPaySubmitting(true);
+    try {
+      const r = await fetch('/api/admin/payments', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: delPay.id, reason: delPayReason.trim() }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { toast.error(d.error || 'Xatolik'); return; }
+      toast.success("To'lov o'chirildi");
+      setDelPay(null);
+      fetchStudent();
+    } finally { setDelPaySubmitting(false); }
+  };
+
+  // To'lovni tahrirlash — majburiy izoh (sabab) bilan, auditga yoziladi
+  const openEditPayment = (p: Payment) => {
+    setEditPay(p);
+    setEditPayForm({ amount: String(Math.abs(p.amount)), month: p.month, method: p.method || 'cash', note: p.note || '' });
+    setEditPayReason('');
+  };
+  const submitEditPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editPay) return;
+    if (editPayReason.trim().length < 3) { toast.error("O'zgartirish sababini yozing (kamida 3 belgi)"); return; }
+    setEditPaySubmitting(true);
+    try {
+      const r = await fetch('/api/admin/payments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editPay.id,
+          amount: Number(editPayForm.amount),
+          month: editPayForm.month,
+          method: editPayForm.method,
+          note: editPayForm.note || null,
+          reason: editPayReason.trim(),
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { toast.error(d.error || 'Xatolik'); return; }
+      toast.success("To'lov tahrirlandi");
+      setEditPay(null);
+      fetchStudent();
+    } finally { setEditPaySubmitting(false); }
   };
 
   const handleEditSave = async (e: React.FormEvent) => {
@@ -1079,9 +1130,14 @@ export default function StudentProfilePage() {
                                           <span className="text-sm font-bold text-emerald-600">+{formatAmount(payment.amount)}</span>
                                           <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${met.cls}`}>{met.label}</span>
                                         </div>
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2">
                                           <span className="text-xs text-slate-400">{fmtDate(payment.createdAt)} {fmtTime(payment.createdAt)}</span>
-                                          <button onClick={() => handleDeletePayment(payment.id)}
+                                          <button onClick={() => openEditPayment(payment)}
+                                            className="p-1 rounded text-slate-300 hover:text-blue-500 hover:bg-blue-50"
+                                            title="Tahrirlash">
+                                            <Pencil className="w-3.5 h-3.5" />
+                                          </button>
+                                          <button onClick={() => openDeletePayment(payment)}
                                             className="p-1 rounded text-slate-300 hover:text-red-500 hover:bg-red-50"
                                             title="O'chirish">
                                             <XCircle className="w-3.5 h-3.5" />
@@ -1267,6 +1323,93 @@ export default function StudentProfilePage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ To'lovni tahrirlash (majburiy izoh + audit) ═══ */}
+      {editPay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setEditPay(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-slate-900">To&apos;lovni tahrirlash</h2>
+              <button onClick={() => setEditPay(null)} className="p-2 hover:bg-slate-100 rounded-xl"><X className="w-5 h-5 text-slate-500" /></button>
+            </div>
+            <form onSubmit={submitEditPayment} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Summa (so&apos;m)</label>
+                <input type="number" min="1000" step="1000" value={editPayForm.amount}
+                  onChange={e => setEditPayForm(f => ({ ...f, amount: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Oy</label>
+                  <input type="month" value={editPayForm.month}
+                    onChange={e => setEditPayForm(f => ({ ...f, month: e.target.value }))}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Usul</label>
+                  <select value={editPayForm.method} onChange={e => setEditPayForm(f => ({ ...f, method: e.target.value }))}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                    <option value="cash">Naqd</option>
+                    <option value="card">Karta</option>
+                    <option value="transfer">O&apos;tkazma</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Izoh (to&apos;lovga)</label>
+                <input type="text" value={editPayForm.note}
+                  onChange={e => setEditPayForm(f => ({ ...f, note: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  placeholder="Ixtiyoriy" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">O&apos;zgartirish sababi <span className="text-red-500">*</span></label>
+                <textarea required rows={2} value={editPayReason} onChange={e => setEditPayReason(e.target.value)}
+                  placeholder="Nega tahrirlanmoqda? (auditga yoziladi)"
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={() => setEditPay(null)}
+                  className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50">Bekor qilish</button>
+                <button type="submit" disabled={editPaySubmitting}
+                  className="flex-1 bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-60">
+                  {editPaySubmitting ? 'Saqlanmoqda...' : 'Saqlash'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ To'lovni o'chirish (majburiy izoh + audit) ═══ */}
+      {delPay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setDelPay(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-slate-900">To&apos;lovni o&apos;chirish</h2>
+              <button onClick={() => setDelPay(null)} className="p-2 hover:bg-slate-100 rounded-xl"><X className="w-5 h-5 text-slate-500" /></button>
+            </div>
+            <p className="text-sm text-slate-600 mb-4">
+              {formatAmount(Math.abs(delPay.amount))} so&apos;m ({delPay.month}) to&apos;lovi o&apos;chiriladi. Bu amalni orqaga qaytarib bo&apos;lmaydi.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-1">O&apos;chirish sababi <span className="text-red-500">*</span></label>
+              <textarea rows={2} value={delPayReason} onChange={e => setDelPayReason(e.target.value)}
+                placeholder="Nega o'chirilmoqda? (auditga yoziladi)"
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" />
+            </div>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setDelPay(null)}
+                className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50">Bekor qilish</button>
+              <button type="button" onClick={submitDeletePayment} disabled={delPaySubmitting}
+                className="flex-1 bg-red-600 text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:bg-red-700 disabled:opacity-60">
+                {delPaySubmitting ? "O'chirilmoqda..." : "O'chirish"}</button>
+            </div>
           </div>
         </div>
       )}

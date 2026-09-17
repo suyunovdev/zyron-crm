@@ -39,6 +39,7 @@ export async function GET() {
     allPayments,
     todayPayments,
     debt,
+    discountedStudents,
   ] = await Promise.all([
     prisma.user.count({ where: { role: 'student', ...uB } }),
     prisma.user.count({ where: { role: 'student', status: 'active', ...uB } }),
@@ -69,6 +70,10 @@ export async function GET() {
     }),
     // Qarzdorlik (yagona billing manbasidan — student/balance bilan bir xil)
     computeDebtSummary(bId),
+    // Chegirmali a'zoliklar soni (dashboard kartasi uchun)
+    prisma.groupStudent.count({
+      where: { OR: [{ discountPercent: { gt: 0 } }, { discountAmount: { gt: 0 } }], ...(bId ? { group: { branchId: bId } } : {}) },
+    }),
   ]);
 
   const umumiyTushum = allPayments.reduce((s, p) => s + p.amount, 0);
@@ -102,6 +107,7 @@ export async function GET() {
     umumiyTushum,
     bugungiTushum,
     umumiyQarzdorlik: debt.totalDebt, // haqiqiy qarz (billing.ts orqali hisoblanadi)
+    discountedStudents,
   });
   } catch (error) {
     logger.error("[GET /api/admin/stats]", error);

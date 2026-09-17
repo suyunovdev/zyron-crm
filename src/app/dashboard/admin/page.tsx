@@ -18,6 +18,7 @@ import {
   CreditCard,
   Loader2,
   Building2,
+  BadgePercent,
 } from 'lucide-react';
 import Link from 'next/link';
 import { TodayLessonsCard, type TodayLesson } from '@/components/TodayLessonsCard';
@@ -53,6 +54,7 @@ interface Stats {
   umumiyTushum: number;
   bugungiTushum: number;
   umumiyQarzdorlik: number;
+  discountedStudents: number;
 }
 
 interface SessionUser {
@@ -242,6 +244,19 @@ export default function AdminDashboardPage() {
                   style={{ width: `${stats?.qarzdorlarPercent ?? 0}%` }}
                 />
               </div>
+            </Link>
+
+            {/* Chegirmali o'quvchilar */}
+            <Link href="/dashboard/admin/discounts" className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md transition-all group">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <BadgePercent className="w-4 h-4" />
+                  Chegirmali o&apos;quvchilar
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
+              </div>
+              <p className="text-3xl font-bold text-slate-900">{stats?.discountedStudents ?? 0} ta</p>
+              <p className="text-sm text-slate-400 mt-1">Doimiy chegirma berilgan</p>
             </Link>
           </div>
 

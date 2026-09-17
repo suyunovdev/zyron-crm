@@ -120,11 +120,14 @@ export default function AdminPaymentsPage() {
 
   const [form, setForm] = useState({
     studentId: "",
+    groupId: "",
     amount: "",
     month: getCurrentMonth(),
     method: "cash",
     note: "",
   });
+  // Tanlangan o'quvchining guruhlari (kurs tanlash uchun)
+  const [pickedGroups, setPickedGroups] = useState<{ id: string; name: string }[]>([]);
 
   const monthOptions = getMonthOptions();
 
@@ -169,6 +172,8 @@ export default function AdminPaymentsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.studentId || !form.amount || !form.month) return;
+    // O'quvchi 2+ kursda bo'lsa kurs tanlash majburiy
+    if (pickedGroups.length > 1 && !form.groupId) { toast.error("Qaysi kurs uchun ekanini tanlang"); return; }
 
     setSubmitting(true);
     try {
@@ -177,6 +182,7 @@ export default function AdminPaymentsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           studentId: form.studentId,
+          groupId: form.groupId || (pickedGroups.length === 1 ? pickedGroups[0].id : null),
           amount: Number(form.amount),
           month: form.month,
           method: form.method,
@@ -186,9 +192,11 @@ export default function AdminPaymentsPage() {
 
       if (res.ok) {
         setShowModal(false);
+        setPickedGroups([]);
         setPickedStudent(null);
         setForm({
           studentId: "",
+          groupId: "",
           amount: "",
           month: getCurrentMonth(),
           method: "cash",
@@ -285,7 +293,7 @@ export default function AdminPaymentsPage() {
               ))}
             </select>
             <button
-              onClick={() => { setPickedStudent(null); setShowModal(true); }}
+              onClick={() => { setPickedStudent(null); setPickedGroups([]); setShowModal(true); }}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
             >
               <Plus className="w-4 h-4" />
@@ -521,12 +529,36 @@ export default function AdminPaymentsPage() {
                   value={form.studentId}
                   selectedName={pickedStudent?.name}
                   autoFocus
-                  onSelect={(s) => {
+                  onSelect={async (s) => {
                     setPickedStudent(s);
-                    setForm({ ...form, studentId: s?.id || "" });
+                    setForm(f => ({ ...f, studentId: s?.id || "", groupId: "" }));
+                    setPickedGroups([]);
+                    if (s?.id) {
+                      // O'quvchi guruhlarini olish (kurs tanlash uchun)
+                      const r = await fetch(`/api/admin/users/${s.id}`).catch(() => null);
+                      if (r?.ok) {
+                        const d = await r.json();
+                        const gs = (d.groupStudents || []).map((g: { group: { id: string; name: string } }) => g.group);
+                        setPickedGroups(gs);
+                        if (gs.length === 1) setForm(f => ({ ...f, groupId: gs[0].id })); // bitta bo'lsa avtomatik
+                      }
+                    }
                   }}
                 />
               </div>
+              {/* Kurs tanlash — o'quvchi 2+ kursda bo'lsa majburiy */}
+              {pickedGroups.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Qaysi kurs uchun {pickedGroups.length > 1 && <span className="text-red-500">*</span>}
+                  </label>
+                  <select value={form.groupId} onChange={e => setForm({ ...form, groupId: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">— Kursni tanlang —</option>
+                    {pickedGroups.map(g => (<option key={g.id} value={g.id}>{g.name}</option>))}
+                  </select>
+                </div>
+              )}
 
               {/* Amount */}
               <div>

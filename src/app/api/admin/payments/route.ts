@@ -60,6 +60,7 @@ export async function GET(req: NextRequest) {
 
 const PaymentSchema = z.object({
   studentId: z.string().min(1),
+  groupId: z.string().optional().nullable(), // to'lov qaysi kurs uchun (o'quvchi a'zosi bo'lishi shart)
   amount: z.coerce.number().int().refine(v => v !== 0, 'summa 0 bo\'lmasin'),
   month: z.string().regex(/^\d{4}-\d{2}$/, 'oy formati YYYY-MM'),
   method: z.enum(['cash', 'card', 'transfer']).optional(),
@@ -70,12 +71,22 @@ const PaymentSchema = z.object({
 // Tahrirlash — har bir maydon ixtiyoriy, LEKIN `reason` (audit izohi) MAJBURIY.
 const EditPaymentSchema = z.object({
   id: z.string().min(1),
+  groupId: z.string().optional().nullable(), // kursga biriktirish/o'zgartirish (null = biriktirilmagan)
   amount: z.coerce.number().int().refine(v => v !== 0, 'summa 0 bo\'lmasin').optional(),
   month: z.string().regex(/^\d{4}-\d{2}$/, 'oy formati YYYY-MM').optional(),
   method: z.enum(['cash', 'card', 'transfer']).optional(),
   note: z.string().max(500).optional().nullable(),
   reason: z.string().trim().min(3, 'O\'zgartirish sababi (izoh) majburiy — kamida 3 belgi'),
 });
+
+// O'quvchi shu guruhda a'zomi? (to'lovni kursga bog'lash uchun tekshiruv)
+async function assertMembership(studentId: string, groupId: string): Promise<string | null> {
+  const gs = await prisma.groupStudent.findUnique({
+    where: { groupId_studentId: { groupId, studentId } },
+    select: { group: { select: { name: true } } },
+  });
+  return gs?.group.name ?? null;
+}
 
 // O'chirish — `reason` (audit izohi) MAJBURIY.
 const DeletePaymentSchema = z.object({
@@ -89,7 +100,7 @@ export async function POST(req: NextRequest) {
 
   const parsed = await parseBody(req, PaymentSchema);
   if (parsed instanceof NextResponse) return parsed;
-  const { studentId, amount, month, method, note, type } = parsed;
+  const { studentId, groupId, amount, month, method, note, type } = parsed;
 
   // refund/discount — faqat superadmin (moliyaviy nazorat)
   const payType = ['payment', 'refund', 'discount'].includes(type || '') ? type : 'payment';
@@ -103,6 +114,11 @@ export async function POST(req: NextRequest) {
   const bId = await scopedBranchId(auth);
   if (bId && student.branchId !== bId) {
     return NextResponse.json({ error: 'O\'quvchi boshqa filialga tegishli' }, { status: 403 });
+  }
+
+  // Kursga bog'lash (ixtiyoriy): berilgan bo'lsa o'quvchi shu guruhda a'zo bo'lishi shart
+  if (groupId && !(await assertMembership(studentId, groupId))) {
+    return NextResponse.json({ error: 'O\'quvchi bu kursda emas' }, { status: 400 });
   }
 
   // Ishorani type'dan hosil qilamiz: refund → manfiy (balansni kamaytiradi),
@@ -128,6 +144,7 @@ export async function POST(req: NextRequest) {
     payment = await prisma.payment.create({
       data: {
         studentId,
+        groupId: groupId || null,
         amount: signedAmount,
         month,
         method: method || "cash",
@@ -193,11 +210,11 @@ export async function PATCH(req: NextRequest) {
 
   const parsed = await parseBody(req, EditPaymentSchema);
   if (parsed instanceof NextResponse) return parsed;
-  const { id, amount, month, method, note, reason } = parsed;
+  const { id, groupId, amount, month, method, note, reason } = parsed;
 
   const existing = await prisma.payment.findUnique({
     where: { id },
-    include: { student: { select: { name: true, branchId: true } } },
+    include: { student: { select: { name: true, branchId: true } }, group: { select: { name: true } } },
   });
   if (!existing) return NextResponse.json({ error: "To'lov topilmadi" }, { status: 404 });
 
@@ -229,6 +246,16 @@ export async function PATCH(req: NextRequest) {
   if (note !== undefined && (note || null) !== (existing.note || null)) {
     data.note = note || null;
     changes.push(`izoh: "${existing.note || '—'}" → "${note || '—'}"`);
+  }
+  // Kursga biriktirish / o'zgartirish
+  if (groupId !== undefined && (groupId || null) !== existing.groupId) {
+    let newName = "biriktirilmagan";
+    if (groupId) {
+      newName = (await assertMembership(existing.studentId, groupId)) ?? '';
+      if (!newName) return NextResponse.json({ error: "O'quvchi bu kursda emas" }, { status: 400 });
+    }
+    data.groupId = groupId || null;
+    changes.push(`kurs: ${existing.group?.name || 'biriktirilmagan'} → ${newName}`);
   }
 
   if (changes.length === 0) {

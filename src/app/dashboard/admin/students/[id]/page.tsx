@@ -28,6 +28,7 @@ interface GroupStudent { discountPercent: number; discountAmount: number; group:
 interface Payment {
   id: string; amount: number; month: string;
   method: string; note: string | null; createdAt: string;
+  groupId: string | null; // to'lov qaysi kursga bog'langan (null = biriktirilmagan)
 }
 interface AttendanceRecord {
   id: string; present: boolean; markedAt: string;
@@ -86,12 +87,12 @@ export default function StudentProfilePage() {
 
   // Modals
   const [showPayModal, setShowPayModal] = useState(false);
-  const [payForm, setPayForm] = useState({ amount: '', month: '', method: 'cash', note: '' });
+  const [payForm, setPayForm] = useState({ amount: '', month: '', method: 'cash', note: '', groupId: '' });
   const [paySubmitting, setPaySubmitting] = useState(false);
 
   // To'lovni tahrirlash / o'chirish — har ikkisida majburiy izoh (sabab)
   const [editPay, setEditPay] = useState<Payment | null>(null);
-  const [editPayForm, setEditPayForm] = useState({ amount: '', month: '', method: 'cash', note: '' });
+  const [editPayForm, setEditPayForm] = useState({ amount: '', month: '', method: 'cash', note: '', groupId: '' });
   const [editPayReason, setEditPayReason] = useState('');
   const [editPaySubmitting, setEditPaySubmitting] = useState(false);
   const [delPay, setDelPay] = useState<Payment | null>(null);
@@ -207,7 +208,7 @@ export default function StudentProfilePage() {
   }, [student, activeGroup, activeMembership]);
 
   const paymentStats = useMemo(() => {
-    if (!student) return { thisMonth: 0, total: 0, deducted: 0, balance: 0 };
+    if (!student) return { thisMonth: 0, total: 0, deducted: 0, balance: 0, coursePaid: 0, courseDeducted: 0, courseBalance: 0, unlinkedCount: 0, unlinkedTotal: 0 };
     const thisMonth = student.payments
       .filter(p => p.month === currentMonth)
       .reduce((s, p) => s + p.amount, 0);
@@ -230,8 +231,29 @@ export default function StudentProfilePage() {
         }));
       deducted += billableCost(recs);
     });
-    return { thisMonth, total, deducted, balance: total - deducted };
-  }, [student, currentMonth]);
+
+    // Per-kurs (tanlangan guruh) — shu kursga bog'langan to'lov va shu kurs cost
+    let coursePaid = 0, courseDeducted = 0;
+    let unlinkedCount = 0;
+    const unlinkedTotal = student.payments.filter(p => !p.groupId).reduce((s, p) => { unlinkedCount++; return s + p.amount; }, 0);
+    if (activeGroup) {
+      coursePaid = student.payments.filter(p => p.groupId === activeGroup.id).reduce((s, p) => s + p.amount, 0);
+      if (activeGroup.price && activeGroup.lessonsPerMonth) {
+        const fb = perLessonRate(activeGroup.price, activeGroup.lessonsPerMonth);
+        const recs = student.attendances
+          .filter(a => a.lesson.groupId === activeGroup.id)
+          .sort((a, b) => a.lesson.scheduledDate.localeCompare(b.lesson.scheduledDate) || a.lesson.order - b.lesson.order)
+          .map(a => ({ scheduledDate: a.lesson.scheduledDate, present: a.present,
+            rate: discountedRate(a.lesson.perLessonRate ?? fb, { percent: activeMembership?.discountPercent, amount: activeMembership?.discountAmount, lessonsPerMonth: activeGroup.lessonsPerMonth }) }));
+        courseDeducted = billableCost(recs);
+      }
+    }
+    return {
+      thisMonth, total, deducted, balance: total - deducted,
+      coursePaid, courseDeducted, courseBalance: coursePaid - courseDeducted,
+      unlinkedCount, unlinkedTotal,
+    };
+  }, [student, currentMonth, activeGroup, activeMembership]);
 
   // Chegirma modali uchun jonli hisob-kitob (oylik narxdan; foiz proporsional — billing bilan mos)
   const discountPreview = useMemo(() => {
@@ -244,16 +266,21 @@ export default function StudentProfilePage() {
     return { price, off, final: Math.max(0, price - off) };
   }, [activeGroup, discountForm]);
 
+  // Tanlangan kurs to'lovlari (oy bo'yicha). activeGroup.id ga bog'langanlar + kursga
+  // biriktirilmagan (null) to'lovlar ham shu ro'yxatda ko'rinadi (foydalanuvchi biriktira olsin).
   const paymentsByMonth = useMemo(() => {
     if (!student) return [];
+    const list = activeGroup
+      ? student.payments.filter(p => p.groupId === activeGroup.id || !p.groupId)
+      : student.payments;
     const map: Record<string, { month: string; payments: Payment[]; total: number }> = {};
-    student.payments.forEach(p => {
+    list.forEach(p => {
       if (!map[p.month]) map[p.month] = { month: p.month, payments: [], total: 0 };
       map[p.month].payments.push(p);
       map[p.month].total += p.amount;
     });
     return Object.values(map).sort((a, b) => b.month.localeCompare(a.month));
-  }, [student]);
+  }, [student, activeGroup]);
 
   // Attendance calendar
   const attendanceDates = useMemo(() => {
@@ -330,19 +357,26 @@ export default function StudentProfilePage() {
 
   const handleAddPayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    const groups = student?.groupStudents || [];
+    // O'quvchi 2+ kursda bo'lsa kurs tanlash majburiy
+    if (groups.length > 1 && !payForm.groupId) { toast.error("Qaysi kurs uchun ekanini tanlang"); return; }
     setPaySubmitting(true);
-    await fetch('/api/admin/payments', {
+    // Bitta kursda bo'lsa avtomatik shu kurs
+    const gid = payForm.groupId || (groups.length === 1 ? groups[0].group.id : '');
+    const r = await fetch('/api/admin/payments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        studentId, amount: payForm.amount,
+        studentId, groupId: gid || null, amount: payForm.amount,
         month: payForm.month || currentMonth,
         method: payForm.method, note: payForm.note || null,
       }),
     });
-    setShowPayModal(false);
-    setPayForm({ amount: '', month: '', method: 'cash', note: '' });
+    const d = await r.json().catch(() => ({}));
     setPaySubmitting(false);
+    if (!r.ok) { toast.error(d.error || 'Xatolik'); return; }
+    setShowPayModal(false);
+    setPayForm({ amount: '', month: '', method: 'cash', note: '', groupId: '' });
     fetchStudent();
   };
 
@@ -402,7 +436,7 @@ export default function StudentProfilePage() {
   // To'lovni tahrirlash — majburiy izoh (sabab) bilan, auditga yoziladi
   const openEditPayment = (p: Payment) => {
     setEditPay(p);
-    setEditPayForm({ amount: String(Math.abs(p.amount)), month: p.month, method: p.method || 'cash', note: p.note || '' });
+    setEditPayForm({ amount: String(Math.abs(p.amount)), month: p.month, method: p.method || 'cash', note: p.note || '', groupId: p.groupId || '' });
     setEditPayReason('');
   };
   const submitEditPayment = async (e: React.FormEvent) => {
@@ -420,6 +454,7 @@ export default function StudentProfilePage() {
           month: editPayForm.month,
           method: editPayForm.method,
           note: editPayForm.note || null,
+          groupId: editPayForm.groupId || null,
           reason: editPayReason.trim(),
         }),
       });
@@ -740,7 +775,7 @@ export default function StudentProfilePage() {
               </button>
               <button
                 onClick={() => {
-                  setPayForm({ amount: '', month: currentMonth, method: 'cash', note: '' });
+                  setPayForm({ amount: '', month: currentMonth, method: 'cash', note: '', groupId: activeGroup?.id || '' });
                   setShowPayModal(true);
                 }}
                 className="px-3 py-2.5 rounded-lg bg-gradient-to-r from-red-500 to-orange-500 text-white text-sm font-semibold hover:from-red-600 hover:to-orange-600 transition-colors">
@@ -939,22 +974,52 @@ export default function StudentProfilePage() {
             </div>
           )}
 
-          {/* ── Finance summary card ── */}
+          {/* ── Bu kurs balansi (tanlangan guruh bo'yicha) ── */}
+          {activeGroup && (
+            <div className="bg-white rounded-xl border border-emerald-100 p-5">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0">
+                  <h3 className="text-base font-bold text-slate-900 truncate">{activeGroup.name}</h3>
+                  <span className="text-xs text-slate-400">Shu kurs bo&apos;yicha</span>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className={`text-2xl font-bold ${paymentStats.courseBalance >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {formatAmount(paymentStats.courseBalance)} <span className="text-sm font-normal text-slate-400">so&apos;m</span>
+                  </p>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-wider">Bu kurs balansi</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100">
+                <div>
+                  <p className="text-slate-400">Bu kursga to&apos;langan</p>
+                  <p className="font-bold text-emerald-600">{formatAmount(paymentStats.coursePaid)} so&apos;m</p>
+                </div>
+                <div>
+                  <p className="text-slate-400">Darslar uchun yechilgan</p>
+                  <p className="font-bold text-orange-600">-{formatAmount(paymentStats.courseDeducted)} so&apos;m</p>
+                </div>
+              </div>
+              {paymentStats.unlinkedCount > 0 && (
+                <p className="mt-3 text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                  ⚠️ {paymentStats.unlinkedCount} ta to&apos;lov ({formatAmount(paymentStats.unlinkedTotal)} so&apos;m) hech qaysi kursga biriktirilmagan.
+                  Ularni to&apos;lovlar ro&apos;yxatidan tahrirlab kursga biriktiring.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* ── Finance summary card (UMUMIY — barcha kurslar) ── */}
           <div className="bg-white rounded-xl border border-slate-200 p-5">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  {MONTHS_UZ[now.getMonth()]} {now.getFullYear()}
-                </h3>
-                <span className={`text-xs font-semibold ${paymentStats.thisMonth > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                  {paymentStats.thisMonth > 0 ? "To'langan" : "To'lanmagan"}
-                </span>
+                <h3 className="text-base font-bold text-slate-900">Umumiy hisob</h3>
+                <span className="text-xs text-slate-400">Barcha kurslar bo&apos;yicha</span>
               </div>
               <div className="text-right">
                 <p className={`text-2xl font-bold ${paymentStats.balance >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
                   {formatAmount(paymentStats.balance)} <span className="text-sm font-normal text-slate-400">so&apos;m</span>
                 </p>
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider">Balans</p>
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider">Umumiy balans</p>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-4 text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100">
@@ -1053,7 +1118,7 @@ export default function StudentProfilePage() {
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-base font-bold text-slate-900">To&apos;lovlar tarixi</h3>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => { setPayForm({ amount: '', month: currentMonth, method: 'cash', note: '' }); setShowPayModal(true); }}
+                      <button onClick={() => { setPayForm({ amount: '', month: currentMonth, method: 'cash', note: '', groupId: activeGroup?.id || '' }); setShowPayModal(true); }}
                         className="text-xs font-semibold text-blue-600 hover:text-blue-800 border border-blue-200 px-3 py-1.5 rounded-lg hover:bg-blue-50">
                         + To&apos;lov qo&apos;shish
                       </button>
@@ -1130,6 +1195,11 @@ export default function StudentProfilePage() {
                                           <div className="flex items-center gap-2 flex-wrap">
                                             <span className="text-sm font-bold text-emerald-600">+{formatAmount(payment.amount)} so&apos;m</span>
                                             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${met.cls}`}>{met.label}</span>
+                                            {!payment.groupId && (
+                                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700" title="Bu to'lov kursga biriktirilmagan — tahrirlab biriktiring">
+                                                Kursga biriktirilmagan
+                                              </span>
+                                            )}
                                           </div>
                                           <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-400 min-w-0">
                                             <span className="flex-shrink-0">{fmtDate(payment.createdAt)} {fmtTime(payment.createdAt)}</span>
@@ -1286,6 +1356,21 @@ export default function StudentProfilePage() {
             </div>
             <p className="text-sm text-slate-500 mb-4">{student.name}</p>
             <form onSubmit={handleAddPayment} className="space-y-4">
+              {/* Kurs tanlash — 2+ kursda majburiy, bittada avtomatik */}
+              {(student.groupStudents?.length || 0) > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Qaysi kurs uchun {(student.groupStudents?.length || 0) > 1 && <span className="text-red-500">*</span>}
+                  </label>
+                  <select value={payForm.groupId} onChange={e => setPayForm(p => ({ ...p, groupId: e.target.value }))}
+                    className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                    <option value="">— Kursni tanlang —</option>
+                    {student.groupStudents.map(gs => (
+                      <option key={gs.group.id} value={gs.group.id}>{gs.group.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Summa (so&apos;m) *</label>
                 <input type="number" required min="1000" value={payForm.amount}
@@ -1342,6 +1427,17 @@ export default function StudentProfilePage() {
               <button onClick={() => setEditPay(null)} className="p-2 hover:bg-slate-100 rounded-xl"><X className="w-5 h-5 text-slate-500" /></button>
             </div>
             <form onSubmit={submitEditPayment} className="space-y-4">
+              {/* Kurs biriktirish/o'zgartirish (eski to'lovlarni kursga bog'lash) */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Qaysi kurs uchun</label>
+                <select value={editPayForm.groupId} onChange={e => setEditPayForm(f => ({ ...f, groupId: e.target.value }))}
+                  className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                  <option value="">— Biriktirilmagan —</option>
+                  {student.groupStudents.map(gs => (
+                    <option key={gs.group.id} value={gs.group.id}>{gs.group.name}</option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Summa (so&apos;m)</label>
                 <input type="number" min="1000" step="1000" value={editPayForm.amount}

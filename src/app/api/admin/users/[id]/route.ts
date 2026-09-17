@@ -55,6 +55,7 @@ export async function GET(
             method: true,
             note: true,
             createdAt: true,
+            groupId: true,
           },
         },
         attendances: {

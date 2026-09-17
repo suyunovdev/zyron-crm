@@ -75,6 +75,7 @@ model Group {
 
   students GroupStudent[]
   lessons  Lesson[]
+  payments Payment[]
 
   @@index([teacherId])
   @@index([status])
@@ -146,6 +147,10 @@ model Payment {
   id        String   @id @default(cuid())
   studentId String
   student   User     @relation(fields: [studentId], references: [id])
+  // To'lov qaysi kurs (guruh) uchun ekani. null = kursga biriktirilmagan (eski to'lovlar / umumiy).
+  // Per-kurs to'lov ko'rinishi uchun. O'quvchi 2+ kursda bo'lsa yangi to'lovda majburiy tanlanadi.
+  groupId   String?
+  group     Group?   @relation(fields: [groupId], references: [id])
   amount    Int      // so'mda (refund uchun manfiy bo'lishi mumkin)
   month     String   // "2026-07" formatda
   method    String   @default("cash") // cash, card, transfer
@@ -159,6 +164,7 @@ model Payment {
 
   @@index([studentId])
   @@index([month])
+  @@index([groupId])
 }
 
 model Note {

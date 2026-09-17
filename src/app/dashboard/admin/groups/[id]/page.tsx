@@ -17,7 +17,7 @@ interface Student {
   name: string;
   phone: string;
   status: string;
-  paidThisMonth?: boolean; // joriy oy to'lovi qilinganmi (badge uchun)
+  paidByMonth?: Record<string, number>; // oydan-oyga to'lov summasi (kalit "YYYY-MM")
 }
 
 interface Attendance {
@@ -688,10 +688,22 @@ export default function AdminGroupDetailPage() {
                                 {memberStatus === 'frozen' && student.status !== 'frozen' && (
                                   <Snowflake className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" aria-label="Bu guruhda muzlatilgan" />
                                 )}
-                                <span
-                                  title={student.paidThisMonth ? "To'langan" : "To'lanmagan"}
-                                  className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ring-2 ring-white shadow-sm ${student.paidThisMonth ? 'bg-emerald-500' : 'bg-red-500'}`}
-                                />
+                                {(() => {
+                                  const paidAmount = student.paidByMonth?.[selectedMonth] || 0;
+                                  return (
+                                    <span className="flex items-center gap-1 flex-shrink-0">
+                                      <span
+                                        title={paidAmount > 0 ? "To'langan" : "To'lanmagan"}
+                                        className={`w-2.5 h-2.5 rounded-full ring-2 ring-white shadow-sm ${paidAmount > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}
+                                      />
+                                      {paidAmount > 0 && (
+                                        <span className="text-xs font-bold text-emerald-600" title="Tanlangan oy to'lovi">
+                                          +{paidAmount.toLocaleString('ru-RU')}
+                                        </span>
+                                      )}
+                                    </span>
+                                  );
+                                })()}
                               </div>
                             </div>
                           </td>

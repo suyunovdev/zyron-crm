@@ -3,7 +3,9 @@ import type { CSSProperties } from "react";
 import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import ThemeProvider from "@/components/ThemeProvider";
-import { BRAND_NAME, BRAND_SHORT, BRAND_COLORS, APP_URL } from "@/lib/brand";
+import { BRAND_COLORS, APP_URL } from "@/lib/brand";
+import { getBrand } from "@/lib/brand-server";
+import { BrandProvider } from "@/components/brand-context";
 
 // CSP nonce faqat dynamic render qilinganda inject qilinadi — butun ilovani
 // dynamic render'ga o'tkazamiz (kam trafikli, auth-gated CRM; SSG shart emas).
@@ -22,28 +24,32 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(APP_URL),
-  applicationName: BRAND_NAME,
-  title: {
-    default: `${BRAND_NAME} — Boshqaruv tizimi`,
-    template: `%s — ${BRAND_NAME}`,
-  },
-  description: `${BRAND_NAME} boshqaruv tizimi: o'quvchilar, guruhlar, davomat va to'lovlar.`,
-  // Private CRM — hech qayerda indekslanmasin (login/dashboard qidiruvga tushmasin).
-  robots: {
-    index: false,
-    follow: false,
-    googleBot: { index: false, follow: false },
-  },
-  // iOS'da to'liq ekranli ilova ko'rinishi.
-  appleWebApp: {
-    capable: true,
-    title: BRAND_SHORT,
-    statusBarStyle: "default",
-  },
-  formatDetection: { telephone: false },
-};
+// Brend nomi DB'dan (superadmin "Markaz profili") — har so'rovda.
+export async function generateMetadata(): Promise<Metadata> {
+  const { name, short } = await getBrand();
+  return {
+    metadataBase: new URL(APP_URL),
+    applicationName: name,
+    title: {
+      default: `${name} — Boshqaruv tizimi`,
+      template: `%s — ${name}`,
+    },
+    description: `${name} boshqaruv tizimi: o'quvchilar, guruhlar, davomat va to'lovlar.`,
+    // Private CRM — hech qayerda indekslanmasin (login/dashboard qidiruvga tushmasin).
+    robots: {
+      index: false,
+      follow: false,
+      googleBot: { index: false, follow: false },
+    },
+    // iOS'da to'liq ekranli ilova ko'rinishi.
+    appleWebApp: {
+      capable: true,
+      title: short,
+      statusBarStyle: "default",
+    },
+    formatDetection: { telephone: false },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -61,6 +67,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const brand = await getBrand();
   return (
     <html
       lang="uz"
@@ -69,10 +76,10 @@ export default async function RootLayout({
       style={
         {
           // Brend rangi butun UI ga (globals.css --brand-* orqali). Har instance
-          // o'z BRAND_COLORS'ini oladi; generic brendda mijoz nomidan hosil bo'ladi.
-          '--brand-primary': BRAND_COLORS.primary,
-          '--brand-primary-dark': BRAND_COLORS.primaryDark,
-          '--brand-primary-light': BRAND_COLORS.primaryLight,
+          // o'z rangini oladi (DB'dagi tanlov > env; generic'da nomdan hosil bo'ladi).
+          '--brand-primary': brand.colors.primary,
+          '--brand-primary-dark': brand.colors.primaryDark,
+          '--brand-primary-light': brand.colors.primaryLight,
         } as CSSProperties
       }
     >
@@ -85,7 +92,9 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-screen">
-        <ThemeProvider>{children}</ThemeProvider>
+        <BrandProvider value={brand}>
+          <ThemeProvider>{children}</ThemeProvider>
+        </BrandProvider>
         <Toaster />
         <ConfirmDialog />
       </body>

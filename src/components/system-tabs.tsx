@@ -49,7 +49,6 @@ export function SettingsTab() {
   };
   if (loading) return <Loading />;
   const fields = [
-    { k: 'centerName', label: 'Markaz nomi' },
     { k: 'defaultPrice', label: 'Standart kurs narxi (so\'m)' },
     { k: 'defaultLessonsPerMonth', label: 'Oyiga darslar (standart)' },
     { k: 'defaultSalaryShare', label: 'Ustoz standart ulushi (%)' },

@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { SlidersHorizontal, BarChart3, Building2, Send, UserCog, DatabaseBackup, ShieldAlert, Skull, TrendingUp } from 'lucide-react';
+import { SlidersHorizontal, Building, BarChart3, Building2, Send, UserCog, DatabaseBackup, ShieldAlert, Skull, TrendingUp } from 'lucide-react';
+import { CenterProfileTab } from '@/components/center-profile-tab';
 import { SettingsTab, AnalyticsTab, LeadStatsTab, BranchesTab, BroadcastTab, ImpersonateTab, BackupTab, SecurityTab, DangerTab } from '@/components/system-tabs';
 
-type Tab = 'settings' | 'analytics' | 'leadstats' | 'branches' | 'broadcast' | 'impersonate' | 'backup' | 'security' | 'danger';
+type Tab = 'profile' | 'settings' | 'analytics' | 'leadstats' | 'branches' | 'broadcast' | 'impersonate' | 'backup' | 'security' | 'danger';
 const TABS: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
+  { id: 'profile', label: 'Markaz profili', icon: Building },
   { id: 'settings', label: 'Sozlamalar', icon: SlidersHorizontal },
   { id: 'analytics', label: 'Analitika', icon: BarChart3 },
   { id: 'leadstats', label: 'Lidlar tahlili', icon: TrendingUp },
@@ -18,7 +20,7 @@ const TABS: { id: Tab; label: string; icon: typeof BarChart3 }[] = [
 ];
 
 export default function SystemPage() {
-  const [tab, setTab] = useState<Tab>('settings');
+  const [tab, setTab] = useState<Tab>('profile');
   return (
     <div className="max-w-5xl mx-auto">
       <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2 mb-4">
@@ -33,6 +35,7 @@ export default function SystemPage() {
           </button>
         ))}
       </div>
+      {tab === 'profile' && <CenterProfileTab />}
       {tab === 'settings' && <SettingsTab />}
       {tab === 'analytics' && <AnalyticsTab />}
       {tab === 'leadstats' && <LeadStatsTab />}

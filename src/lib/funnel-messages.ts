@@ -1,7 +1,6 @@
 import { escapeHtml } from '@/lib/telegram';
 import type { InlineKeyboard } from '@/lib/telegram';
 import type { ReplyKeyboard, RemoveKeyboard } from '@/lib/telegram-funnel';
-import { BRAND_SHORT } from '@/lib/brand';
 
 // Lid-bot xabar matnlari (o'zbekcha) + keyboardlar — sof funksiyalar.
 
@@ -49,10 +48,11 @@ export function restartKeyboard(): InlineKeyboard {
 
 // ─── Matnlar ───
 
-export function membershipText(): string {
+/** @param brandName markaz nomi (getBrand().short) */
+export function membershipText(brandName: string): string {
   return (
     `Assalomu alaykum! 👋\n\n` +
-    `<b>${escapeHtml(BRAND_SHORT)}</b> o’quv markazi botiga xush kelibsiz.\n\n` +
+    `<b>${escapeHtml(brandName)}</b> o’quv markazi botiga xush kelibsiz.\n\n` +
     `Davom etish uchun avval rasmiy kanalimizga a’zo bo’ling 👇, so’ng ` +
     `«✅ A’zo bo’ldim» tugmasini bosing.`
   );

@@ -13,6 +13,7 @@ import {
   chooseSubjectText, askOtherSubjectText, chooseTeacherText, noTeachersText, chooseSourceText,
   askFeedbackLikedText, askFeedbackDislikedText, submittedText, thankYouText, staffLeadText,
 } from '@/lib/funnel-messages';
+import { getBrand } from '@/lib/brand-server';
 import { BOT_SOURCE_OPTIONS, SOURCE_LABELS } from '@/lib/lead-source';
 
 // Lid yig'uvchi Telegram bot webhook (bo'lajak o'quvchilar funnel).
@@ -210,7 +211,7 @@ async function startFlow(chatId: string, userId: number): Promise<void> {
   if (!member) {
     const channel = process.env.TELEGRAM_LEAD_CHANNEL || '';
     const url = channel.startsWith('@') ? `https://t.me/${channel.slice(1)}` : 'https://t.me/';
-    await ask(chatId, membershipText(), membershipKeyboard(url));
+    await ask(chatId, membershipText((await getBrand()).short), membershipKeyboard(url));
     return;
   }
   await showBranches(chatId);

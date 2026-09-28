@@ -2,7 +2,10 @@ import { prisma } from '@/lib/db';
 
 /** Tizim sozlamalari — standart qiymatlar bilan. */
 export const SETTING_DEFAULTS: Record<string, string> = {
-  centerName: 'Aka-Uka Ta\'lim Markazi',
+  // Brend (superadmin "Markaz profili"). Bo'sh = env'dagi standart brend.
+  brandName: '',
+  brandColor: '', // #RRGGBB
+  brandLogo: '',  // data:image/png;base64,...
   defaultPrice: '400000',
   defaultLessonsPerMonth: '12',
   defaultSalaryShare: '70', // ustoz standart ulushi (%)

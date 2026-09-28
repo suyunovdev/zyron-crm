@@ -285,7 +285,11 @@ if [ "$NO_SSL" -eq 1 ]; then
   warn "--no-ssl: certbot o'tkazib yuborildi. DNS tayyor bo'lgach qo'lda:"
   warn "  sudo certbot --nginx -d $DOMAIN --redirect"
 elif sudo test -d "/etc/letsencrypt/live/$DOMAIN"; then  # live/ faqat root o'qiydi
-  ok "sertifikat allaqachon mavjud — o'tkazib yuborildi"
+  # 8-qadam nginx konfigini shablondan qayta yozdi (SSL bloki yo'qoldi) — mavjud sertifikatni
+  # qayta joylaymiz (yangi sertifikat so'ralmaydi). Aks holda 443'da boshqa sayt sertifikati chiqadi.
+  sudo certbot --nginx -d "$DOMAIN" --non-interactive --keep-until-expiring --redirect \
+    ${LE_EMAIL:+--agree-tos -m "$LE_EMAIL"}
+  ok "mavjud sertifikat nginx'ga qayta joylandi"
 else
   SERVER_IP="$(curl -fsS https://api.ipify.org 2>/dev/null || hostname -I | awk '{print $1}')"
   DNS_IP="$(dig +short A "$DOMAIN" 2>/dev/null | tail -n1 || true)"

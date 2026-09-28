@@ -28,6 +28,16 @@
 # Ixtiyoriy: --port 4051 --admin-login admin --admin-password 'xxx'
 #            --brand zyron --seed --no-ssl --branch main
 #            --repo https://github.com/suyunovdev/zyron-crm.git
+#            --brand-color '#0F766E'  (runtime brend, DB Setting'ga yoziladi)
+#            --tg-lead-channel @kanal --tg-lead-admin-chat -100123...
+#
+# Maxfiy qiymatlar argv'da EMAS, env orqali (ps'da ko'rinmasin):
+#   PROVISION_ADMIN_PASSWORD   superadmin paroli (bo'lmasa tasodifiy yaratiladi)
+#   PROVISION_TG_BOT_TOKEN     ota-ona boti tokeni (ixtiyoriy)
+#   PROVISION_TG_LEAD_TOKEN    lid boti tokeni (ixtiyoriy)
+#
+# Oxirida mashina o'qiydigan qator (control panel uchun):
+#   PROVISION_RESULT {"url":...,"port":...,"pm2":...,"dir":...}
 
 set -euo pipefail
 
@@ -48,7 +58,14 @@ BRANCH="main"
 APPS_DIR="/home/deploy/apps"
 BASE_PORT=4050
 ADMIN_LOGIN="admin"
-ADMIN_PASSWORD=""
+ADMIN_PASSWORD="${PROVISION_ADMIN_PASSWORD:-}"
+ADMIN_PASSWORD_GIVEN=0
+[ -n "$ADMIN_PASSWORD" ] && ADMIN_PASSWORD_GIVEN=1
+BRAND_COLOR=""
+TG_BOT_TOKEN="${PROVISION_TG_BOT_TOKEN:-}"
+TG_LEAD_TOKEN="${PROVISION_TG_LEAD_TOKEN:-}"
+TG_LEAD_CHANNEL=""
+TG_LEAD_ADMIN_CHAT=""
 BRAND="generic"     # generic = nomdan wordmark+rang (yangi mijoz uchun to'g'ri default)
                     # 'zyron' = Zyron logolar; '' = standart Aka-Uka logolar
 BRAND_NAME=""
@@ -68,7 +85,10 @@ while [ $# -gt 0 ]; do
     --brand)           BRAND="$2"; shift 2 ;;
     --port)            PORT="$2"; shift 2 ;;
     --admin-login)     ADMIN_LOGIN="$2"; shift 2 ;;
-    --admin-password)  ADMIN_PASSWORD="$2"; shift 2 ;;
+    --admin-password)  ADMIN_PASSWORD="$2"; ADMIN_PASSWORD_GIVEN=1; shift 2 ;;
+    --brand-color)     BRAND_COLOR="$2"; shift 2 ;;
+    --tg-lead-channel) TG_LEAD_CHANNEL="$2"; shift 2 ;;
+    --tg-lead-admin-chat) TG_LEAD_ADMIN_CHAT="$2"; shift 2 ;;
     --le-email)        LE_EMAIL="$2"; shift 2 ;;
     --repo)            REPO="$2"; shift 2 ;;
     --branch)          BRANCH="$2"; shift 2 ;;
@@ -86,11 +106,14 @@ done
 [ -n "$DOMAIN" ]     || die "--domain majburiy (masalan: crm.brightschool.uz)"
 [ -n "$BRAND_NAME" ] || die "--brand-name majburiy (masalan: \"Bright School\")"
 echo "$SLUG" | grep -qE '^[a-z0-9][a-z0-9-]*$' || die "--slug faqat kichik harf/raqam/tire (a-z0-9-)"
+if [ -n "$BRAND_COLOR" ]; then
+  echo "$BRAND_COLOR" | grep -qE '^#[0-9A-Fa-f]{6}$' || die "--brand-color formati #RRGGBB bo'lishi kerak"
+fi
 if [ "$NO_SSL" -eq 0 ] && [ -z "$LE_EMAIL" ]; then
   die "--le-email majburiy (certbot uchun) yoki --no-ssl bering"
 fi
 
-for bin in git node npm openssl; do
+for bin in git node npm openssl curl; do
   command -v "$bin" >/dev/null || die "$bin topilmadi — o'rnating"
 done
 command -v pm2 >/dev/null || die "pm2 topilmadi (npm i -g pm2)"
@@ -104,6 +127,29 @@ TEMPLATE_DIR="$(cd "$(dirname "$0")/.." && pwd)"   # bu repo ildizi (shablon man
 echo
 step "Yangi tenant: ${C_G}$NAME${C_0}  ($DOMAIN)"
 echo
+
+# Telegram bot username (getMe) — token noto'g'ri bo'lsa to'xtaymiz (boshida, build'dan oldin).
+tg_username() {
+  curl -fsS "https://api.telegram.org/bot$1/getMe" 2>/dev/null \
+    | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const j=JSON.parse(d);if(j.ok)console.log(j.result.username)}catch{}})'
+}
+TG_BOT_USERNAME=""; TG_LEAD_USERNAME=""
+if [ -n "$TG_BOT_TOKEN" ]; then
+  TG_BOT_USERNAME="$(tg_username "$TG_BOT_TOKEN")"
+  [ -n "$TG_BOT_USERNAME" ] || die "ota-ona bot tokeni noto'g'ri (getMe muvaffaqiyatsiz)"
+fi
+if [ -n "$TG_LEAD_TOKEN" ]; then
+  TG_LEAD_USERNAME="$(tg_username "$TG_LEAD_TOKEN")"
+  [ -n "$TG_LEAD_USERNAME" ] || die "lid bot tokeni noto'g'ri (getMe muvaffaqiyatsiz)"
+fi
+
+# .env dagi kalitni qo'yish/almashtirish (qayta ishga tushirishda ham to'g'ri)
+env_set() {
+  local key="$1" val="$2" file="$DIR/.env"
+  grep -v "^$key=" "$file" > "$file.tmp" || true
+  printf '%s="%s"\n' "$key" "$val" >> "$file.tmp"
+  mv "$file.tmp" "$file"; chmod 600 "$file"
+}
 
 # ---------- 1. repo checkout ----------
 step "1/9  Repo checkout"
@@ -160,6 +206,21 @@ else
   chmod 600 "$DIR/.env"
   ok "sekretlar yaratildi, .env yozildi (chmod 600)"
 fi
+env_set PLATFORM_CLIENT_URL "$APP_URL"
+if [ -n "$TG_BOT_TOKEN" ]; then
+  grep -q '^TELEGRAM_WEBHOOK_SECRET=' "$DIR/.env" || env_set TELEGRAM_WEBHOOK_SECRET "$(openssl rand -hex 24)"
+  env_set TELEGRAM_BOT_TOKEN "$TG_BOT_TOKEN"
+  env_set TELEGRAM_BOT_USERNAME "$TG_BOT_USERNAME"
+  ok "ota-ona boti: @$TG_BOT_USERNAME"
+fi
+if [ -n "$TG_LEAD_TOKEN" ]; then
+  grep -q '^TELEGRAM_LEAD_WEBHOOK_SECRET=' "$DIR/.env" || env_set TELEGRAM_LEAD_WEBHOOK_SECRET "$(openssl rand -hex 24)"
+  env_set TELEGRAM_LEAD_BOT_TOKEN "$TG_LEAD_TOKEN"
+  env_set TELEGRAM_LEAD_BOT_USERNAME "$TG_LEAD_USERNAME"
+  [ -n "$TG_LEAD_CHANNEL" ] && env_set TELEGRAM_LEAD_CHANNEL "$TG_LEAD_CHANNEL"
+  [ -n "$TG_LEAD_ADMIN_CHAT" ] && env_set TELEGRAM_LEAD_ADMIN_CHAT "$TG_LEAD_ADMIN_CHAT"
+  ok "lid boti: @$TG_LEAD_USERNAME"
+fi
 
 # ---------- 4. paketlar + baza ----------
 step "4/9  npm ci + prisma db push"
@@ -177,12 +238,19 @@ else
   [ -n "$ADMIN_PASSWORD" ] || ADMIN_PASSWORD="$(openssl rand -base64 12 | tr -dc 'A-Za-z0-9' | cut -c1-14)"
   ( cd "$DIR" && PROVISION_ADMIN_PASSWORD="$ADMIN_PASSWORD" \
       node scripts/bootstrap-superadmin.mjs --login "$ADMIN_LOGIN" --name "$BRAND_NAME admin" )
-  ok "superadmin: $ADMIN_LOGIN"
+  ok "superadmin: $ADMIN_LOGIN (parol $( [ "$ADMIN_PASSWORD_GIVEN" -eq 1 ] && echo berilgan || echo yaratildi ))"
+  # Runtime brend (superadmin "Markaz profili" tabidagi qiymatlar). Demo (--seed) o'z
+  # env brendini (Zyron logolari) saqlaydi — unga yozilmaydi.
+  ( cd "$DIR" && node scripts/set-brand.mjs --name "$BRAND_NAME" ${BRAND_COLOR:+--color "$BRAND_COLOR"} )
+  ok "brend: $BRAND_NAME ${BRAND_COLOR}"
 fi
 
 # ---------- 6. build ----------
 step "6/9  npm run build (brend inline)"
+rm -f "$DIR/.next/BUILD_ID"
 ( cd "$DIR" && npm run build )
+# Build to'liq tugamagan bo'lsa pm2 restart eski/yarim .next bilan 502 beradi
+[ -f "$DIR/.next/BUILD_ID" ] || die "build to'liq tugamadi (.next/BUILD_ID yo'q) — pm2'ga tegilmadi"
 ok "build tayyor"
 
 # ---------- 7. PM2 ----------
@@ -231,6 +299,30 @@ else
   fi
 fi
 
+# ---------- 10. Telegram webhook'lar + cron ----------
+HTTPS_OK=0
+[ -d "/etc/letsencrypt/live/$DOMAIN" ] && HTTPS_OK=1
+if [ -n "$TG_BOT_TOKEN" ] || [ -n "$TG_LEAD_TOKEN" ]; then
+  step "Telegram webhook"
+  if [ "$HTTPS_OK" -eq 1 ]; then
+    tg_hook() {  # $1 = skript, $2 = nom
+      local out; out="$(cd "$DIR" && node "scripts/$1" "$APP_URL" 2>&1 || true)"
+      if printf '%s' "$out" | grep -q 'Webhook was set'; then ok "$2 webhook o'rnatildi"
+      else warn "$2 webhook o'rnatilmadi:"; printf '%s\n' "$out" | tail -5; fi
+    }
+    if [ -n "$TG_BOT_TOKEN" ]; then tg_hook tg-setup.mjs "ota-ona boti"; fi
+    if [ -n "$TG_LEAD_TOKEN" ]; then tg_hook tg-lead-setup.mjs "lid boti"; fi
+  else
+    warn "HTTPS yo'q — webhook o'rnatilmadi (Telegram faqat https qabul qiladi)"
+  fi
+fi
+
+step "Cron (auto-absent)"
+CRON_SECRET_VAL="$(grep -E '^CRON_SECRET=' "$DIR/.env" | head -1 | cut -d= -f2- | tr -d '"')"
+CRON_LINE="*/30 * * * * curl -s -H \"x-cron-secret: $CRON_SECRET_VAL\" http://localhost:$PORT/api/cron/auto-absent >> $DIR/cron.log 2>&1"
+( crontab -l 2>/dev/null | grep -v "localhost:$PORT/api/cron/auto-absent" ; echo "$CRON_LINE" ) | crontab -
+ok "crontab: har 30 daqiqada auto-absent"
+
 # ---------- xulosa ----------
 echo
 echo -e "${C_G}================ TAYYOR ================${C_0}"
@@ -241,10 +333,16 @@ echo "  Port     : $PORT"
 echo "  Baza     : $DIR/prisma/$SLUG.db"
 if [ "$DO_SEED" -eq 0 ]; then
   echo "  Superadmin login : $ADMIN_LOGIN"
-  echo "  Superadmin parol : $ADMIN_PASSWORD"
-  echo "  (bu parolni saqlab, mijozga xavfsiz yetkazing)"
+  # Berilgan parol qayta chiqarilmaydi (panel logiga tushmasin); faqat yaratilgan bo'lsa
+  if [ "$ADMIN_PASSWORD_GIVEN" -eq 1 ]; then
+    echo "  Superadmin parol : (berilgan)"
+  else
+    echo "  Superadmin parol : $ADMIN_PASSWORD"
+    echo "  (bu parolni saqlab, mijozga xavfsiz yetkazing)"
+  fi
 fi
-echo
-echo "  Auto-absent cron (ixtiyoriy, crontab -e):"
-echo "    */30 * * * * curl -s -H \"x-cron-secret: <CRON_SECRET>\" $APP_URL/api/cron/auto-absent"
+[ -n "$TG_BOT_USERNAME" ] && echo "  Ota-ona boti    : https://t.me/$TG_BOT_USERNAME"
+[ -n "$TG_LEAD_USERNAME" ] && echo "  Lid boti        : https://t.me/$TG_LEAD_USERNAME"
 echo -e "${C_G}=======================================${C_0}"
+printf 'PROVISION_RESULT {"url":"%s","port":%s,"pm2":"%s","dir":"%s","https":%s,"parentBot":"%s","leadBot":"%s"}\n' \
+  "$APP_URL" "$PORT" "$NAME" "$DIR" "$( [ "$HTTPS_OK" -eq 1 ] && echo true || echo false )" "$TG_BOT_USERNAME" "$TG_LEAD_USERNAME"

@@ -284,7 +284,7 @@ step "9/9  HTTPS (certbot)"
 if [ "$NO_SSL" -eq 1 ]; then
   warn "--no-ssl: certbot o'tkazib yuborildi. DNS tayyor bo'lgach qo'lda:"
   warn "  sudo certbot --nginx -d $DOMAIN --redirect"
-elif [ -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+elif sudo test -d "/etc/letsencrypt/live/$DOMAIN"; then  # live/ faqat root o'qiydi
   ok "sertifikat allaqachon mavjud — o'tkazib yuborildi"
 else
   SERVER_IP="$(curl -fsS https://api.ipify.org 2>/dev/null || hostname -I | awk '{print $1}')"
@@ -301,7 +301,7 @@ fi
 
 # ---------- 10. Telegram webhook'lar + cron ----------
 HTTPS_OK=0
-[ -d "/etc/letsencrypt/live/$DOMAIN" ] && HTTPS_OK=1
+sudo test -d "/etc/letsencrypt/live/$DOMAIN" && HTTPS_OK=1
 if [ -n "$TG_BOT_TOKEN" ] || [ -n "$TG_LEAD_TOKEN" ]; then
   step "Telegram webhook"
   if [ "$HTTPS_OK" -eq 1 ]; then

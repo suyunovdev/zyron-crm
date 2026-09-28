@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import QRCode from 'qrcode';
+import { useBrand } from '@/components/brand-context';
 import { computeBillableRecords, billableCost, perLessonRate, discountedRate } from '@/lib/billing-core';
 
 // ─── Types ───
@@ -77,6 +78,7 @@ function monthsBetween(a: Date, b: Date) {
 export default function StudentProfilePage() {
   const params = useParams();
   const router = useRouter();
+  const brand = useBrand();
   const studentId = params.id as string;
 
   const [student, setStudent] = useState<StudentDetail | null>(null);
@@ -149,7 +151,7 @@ export default function StudentProfilePage() {
     if (!student) { setStudentQR(''); setParentQR(''); return; }
     const opts = { width: 220, margin: 1 } as const;
     const credText = (login: string, pass: string | null) =>
-      `Aka-Uka platformasi\nLogin: ${login}\nParol: ${pass || '—'}`;
+      `${brand.short} platformasi\nLogin: ${login}\nParol: ${pass || '—'}`;
     Promise.all([
       QRCode.toDataURL(credText(student.login, student.rawPass), opts),
       student.parent ? QRCode.toDataURL(credText(student.parent.login, student.parent.rawPass), opts) : Promise.resolve(''),

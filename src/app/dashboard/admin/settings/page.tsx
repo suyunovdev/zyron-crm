@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { CalendarDays, User, Lock, CheckCircle, Loader2, Save } from 'lucide-react';
 import { AvatarUpload } from '@/components/avatar-upload';
+import { useBrand } from '@/components/brand-context';
 
 interface SessionUser {
   id: string;
@@ -27,6 +28,7 @@ interface Stats {
 type Msg = { type: 'success' | 'error'; text: string } | null;
 
 export default function AdminSettingsPage() {
+  const brand = useBrand();
   const [user, setUser] = useState<SessionUser | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -274,7 +276,7 @@ export default function AdminSettingsPage() {
         <div className="divide-y divide-slate-100">
           <div className="flex items-center justify-between px-6 py-3.5">
             <span className="text-sm text-slate-500">Nomi</span>
-            <span className="text-sm font-semibold text-slate-900">Aka-Uka Ta&apos;lim Markazi</span>
+            <span className="text-sm font-semibold text-slate-900">{brand.name}</span>
           </div>
           <div className="flex items-center justify-between px-6 py-3.5">
             <span className="text-sm text-slate-500">Versiya</span>

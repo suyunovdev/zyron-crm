@@ -10,6 +10,7 @@ import {
   gradesText, attendanceText, ratingText, debtText, groupsText,
   topicsMonthsKeyboard, topicsMonthsText, monthTopicsText, monthTopicsKeyboard,
 } from '@/lib/tg-format';
+import { getBrand } from '@/lib/brand-server';
 
 // Ota-ona platformasi (mijoz subdomeni) — intro tugmasi uchun.
 const PLATFORM_URL = process.env.PLATFORM_CLIENT_URL || 'https://my.akaukalarmarkazi.uz';
@@ -72,7 +73,7 @@ async function handleStart(msg: TgMessage): Promise<void> {
     if (linked) {
       await showChildrenMenu(chatId, linked.name, true);
     } else {
-      await sendMessage(chatId, introText(), introKeyboard(PLATFORM_URL));
+      await sendMessage(chatId, introText((await getBrand()).short), introKeyboard(PLATFORM_URL));
     }
     return;
   }
@@ -115,12 +116,12 @@ async function showChildrenMenu(chatId: string, parentName: string, greet: boole
 
   if (children.length === 1) {
     const c = children[0];
-    const header = greet ? welcomeText(parentName) + '\n\n' : '';
+    const header = greet ? welcomeText(parentName, (await getBrand()).short) + '\n\n' : '';
     await sendMessage(chatId, header + childMenuText(c), metricsKeyboard(c.id, false));
     return;
   }
 
-  const text = greet ? welcomeText(parentName) : chooseChildText();
+  const text = greet ? welcomeText(parentName, (await getBrand()).short) : chooseChildText();
   await sendMessage(chatId, text, childrenKeyboard(children));
 }
 

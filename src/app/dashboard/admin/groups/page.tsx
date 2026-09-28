@@ -147,7 +147,7 @@ export default function GroupsPage() {
         // CRM URL
         doc.setFontSize(7);
         doc.setTextColor(120);
-        doc.text('crm.akaukalarmarkazi.uz', x + 5, y + cardH - 10);
+        doc.text(window.location.host, x + 5, y + cardH - 10);
         doc.setTextColor(0);
 
         // Move to next position

@@ -53,10 +53,10 @@ export function backKeyboard(childId: string): InlineKeyboard {
 
 // ─── Matnlar ───
 
-export function welcomeText(parentName: string): string {
+export function welcomeText(parentName: string, brandName: string): string {
   return (
     `Assalomu alaykum, <b>${escapeHtml(parentName)}</b>! 👋\n\n` +
-    `Aka-Uka o'quv markazi botiga xush kelibsiz. Bu yerda farzandingizning ` +
+    `${escapeHtml(brandName)} o'quv markazi botiga xush kelibsiz. Bu yerda farzandingizning ` +
     `baholari, davomati, reytingi va to'lovlarini kuzatib borishingiz mumkin.\n\n` +
     `Quyidan farzandingizni tanlang:`
   );
@@ -67,10 +67,10 @@ export function chooseChildText(): string {
 }
 
 /** Tanishuv — botga birinchi (ulanmagan) kirganda. */
-export function introText(): string {
+export function introText(brandName: string): string {
   return (
     `👋 Assalomu alaykum!\n\n` +
-    `Bu — <b>Aka-Uka o'quv markazi</b>ning ota-onalar uchun rasmiy boti.\n\n` +
+    `Bu — <b>${escapeHtml(brandName)} o'quv markazi</b>ning ota-onalar uchun rasmiy boti.\n\n` +
     `Shu bot orqali farzandingizning:\n` +
     `📊 Baholari\n` +
     `📅 Davomati\n` +

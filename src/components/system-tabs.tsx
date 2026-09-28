@@ -206,7 +206,7 @@ function BranchCreateModal({ onClose, onCreated }: { onClose: () => void; onCrea
               {err && <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{err}</div>}
               <div>
                 <label className="text-xs font-medium text-slate-500">Filial nomi</label>
-                <input value={form.branchName} onChange={e => setForm(s => ({ ...s, branchName: e.target.value }))} className={input} placeholder="Masalan: Aka-Ukalar Ishtixon" />
+                <input value={form.branchName} onChange={e => setForm(s => ({ ...s, branchName: e.target.value }))} className={input} placeholder="Masalan: Chilonzor filiali" />
               </div>
               <div className="pt-1 border-t border-slate-100">
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-2 mb-1">Filial admini</p>

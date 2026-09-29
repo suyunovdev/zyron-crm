@@ -200,6 +200,16 @@ env_set() {
   chmod 600 "$file"
 }
 
+# Aniq berilgan port — repo'ga tegishdan OLDIN tekshiriladi (2-qadamda ham qayta tekshiriladi)
+if [ -n "$PORT" ]; then
+  PRE_OWN=""
+  [ -f "$DIR/.env" ] && PRE_OWN="$(grep -E '^PORT=' "$DIR/.env" | head -1 | cut -d= -f2 | tr -d '"' || true)"
+  if [ "$PORT" != "$PRE_OWN" ] && { ss -ltnH "( sport = :$PORT )" 2>/dev/null | grep -q . \
+       || grep -RqsE "(127\.0\.0\.1|localhost):$PORT\b" "$NGINX_AVAIL" 2>/dev/null; }; then
+    die "port band: $PORT"
+  fi
+fi
+
 # ---------- 1. repo checkout ----------
 step "1/9  Repo checkout"
 mkdir -p "$APPS_DIR"

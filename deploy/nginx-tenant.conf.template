@@ -1,5 +1,5 @@
 # Zyron CRM — bitta mijoz (tenant) uchun nginx site shabloni.
-# provision-tenant.sh __DOMAIN__ va __PORT__ o'rniga haqiqiy qiymat qo'yadi.
+# provision-tenant.sh __DOMAIN__, __PORT__ va __NAME__ o'rniga haqiqiy qiymat qo'yadi.
 #
 # MUHIM: Next.js 16 bilan `Connection: upgrade` / Upgrade header 502 beradi.
 # Shu sabab bu yerda proxy minimal ushlab turiladi — QO'SHMANG.
@@ -11,6 +11,8 @@ server {
     listen 80;
     listen [::]:80;
     server_name __DOMAIN__;
+    # Control panel "to'xtatish": fayl bo'lsa 503 sahifa, bo'lmasa (glob) hech narsa
+    include /etc/nginx/zyron-paused/__NAME__.conf*;
 
     # Yuklama hajmi (avatar/rasm yuklash uchun bemalol)
     client_max_body_size 10M;

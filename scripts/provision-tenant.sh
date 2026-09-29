@@ -359,7 +359,7 @@ step "8/9  Nginx"
 TPL="$TEMPLATE_DIR/deploy/nginx-tenant.conf.template"
 [ -f "$TPL" ] || die "nginx shabloni topilmadi: $TPL"
 TMP_CONF="$(mktemp)"
-sed -e "s/__DOMAIN__/$DOMAIN/g" -e "s/__PORT__/$PORT/g" "$TPL" > "$TMP_CONF"
+sed -e "s/__DOMAIN__/$DOMAIN/g" -e "s/__PORT__/$PORT/g" -e "s/__NAME__/$NAME/g" "$TPL" > "$TMP_CONF"
 HAD_CONF=0
 if sudo test -f "$NGINX_AVAIL/$NAME"; then sudo cp "$NGINX_AVAIL/$NAME" "/tmp/$NAME.nginx.bak"; HAD_CONF=1; fi
 sudo cp "$TMP_CONF" "$NGINX_AVAIL/$NAME"

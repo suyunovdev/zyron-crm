@@ -183,7 +183,10 @@ fi
 [ -z "$TG_BOT_TOKEN" ] || [ "$TG_BOT_TOKEN" != "$TG_LEAD_TOKEN" ] || die "ota-ona va lid boti bir xil token bo'lolmaydi"
 
 # Domen boshqa nginx saytida band bo'lmasin (masalan mavjud mijoz domeni)
-if sudo grep -RlsE "server_name[^;]*[[:space:]]${DOMAIN//./\\.}[[:space:];]" "$NGINX_ENABLED" 2>/dev/null | grep -vx "$NGINX_ENABLED/$NAME" | grep -q .; then
+domain_taken() ( set +o pipefail
+  sudo grep -RlsE "server_name[^;]*[[:space:]]${DOMAIN//./\\.}[[:space:];]" "$NGINX_ENABLED" 2>/dev/null \
+    | grep -vx "$NGINX_ENABLED/$NAME" | grep -q . )
+if domain_taken; then
   die "$DOMAIN boshqa nginx saytida band"
 fi
 
@@ -219,7 +222,8 @@ ok "$DIR"
 # ---------- 2. port ajratish ----------
 port_in_use() { ss -ltnH "( sport = :$1 )" 2>/dev/null | grep -q .; }
 port_in_nginx() { grep -RqsE "(127\.0\.0\.1|localhost):$1\b" "$NGINX_AVAIL" 2>/dev/null; }
-port_in_envs() { grep -lsxE "PORT=\"?$1\"?" "$APPS_DIR"/*/.env 2>/dev/null | grep -vx "$DIR/.env" | grep -q .; }
+# pipefail'siz: o'qib bo'lmaydigan fayl grep'ni 2 bilan tugatadi va mosliklarni yashirardi
+port_in_envs() ( set +o pipefail; grep -lsxE "PORT=\"?$1\"?" "$APPS_DIR"/*/.env 2>/dev/null | grep -vx "$DIR/.env" | grep -q . )
 
 step "2/9  Port"
 OWN_PORT=""
@@ -266,6 +270,7 @@ else
   ok "sekretlar yaratildi, .env yozildi (chmod 600)"
 fi
 env_set PLATFORM_CLIENT_URL "$APP_URL"
+[ "$PORT" = "$OWN_PORT" ] || env_set PORT "$PORT"
 if [ -n "$TG_BOT_TOKEN" ]; then
   grep -q '^TELEGRAM_WEBHOOK_SECRET=' "$DIR/.env" || env_set TELEGRAM_WEBHOOK_SECRET "$(openssl rand -hex 24)"
   env_set TELEGRAM_BOT_TOKEN "$TG_BOT_TOKEN"
@@ -322,15 +327,15 @@ ok "build tayyor"
 
 # ---------- 7. PM2 ----------
 step "7/9  PM2"
-if pm2 describe "$NAME" >/dev/null 2>&1; then
-  pm2 restart "$NAME" --update-env
+if pm2 describe "$NAME" >/dev/null 2>&1 9>&-; then
+  ( cd "$DIR" && PORT="$PORT" pm2 restart "$NAME" --update-env 9>&- )
   ok "restart: $NAME"
 else
   ( cd "$DIR" && PORT="$PORT" TZ="Asia/Tashkent" NODE_ENV=production \
-      pm2 start node_modules/next/dist/bin/next --name "$NAME" -- start )
+      pm2 start node_modules/next/dist/bin/next --name "$NAME" -- start 9>&- )
   ok "start: $NAME (PORT=$PORT)"
 fi
-pm2 save >/dev/null
+pm2 save >/dev/null 9>&-   # 9>&-: pm2 daemon'i lock fd'sini meros olmasin (lock abadiy qolardi)
 ok "pm2 save"
 up=0
 for _ in $(seq 1 30); do
@@ -392,7 +397,7 @@ if [ -n "$TG_BOT_TOKEN" ] || [ -n "$TG_LEAD_TOKEN" ]; then
   if [ "$HTTPS_OK" -eq 1 ]; then
     tg_hook() {  # $1 = skript, $2 = nom
       local out; out="$(cd "$DIR" && node "scripts/$1" "$APP_URL" 2>&1 || true)"
-      if printf '%s' "$out" | grep -q 'Webhook was set'; then ok "$2 webhook o'rnatildi"
+      if printf '%s' "$out" | grep -qE 'Webhook (was|is already) set'; then ok "$2 webhook o'rnatildi"
       else warn "$2 webhook o'rnatilmadi:"; printf '%s\n' "$out" | tail -5; fi
     }
     if [ -n "$TG_BOT_TOKEN" ]; then tg_hook tg-setup.mjs "ota-ona boti"; fi
@@ -408,7 +413,10 @@ CRON_SECRET_VAL="$(grep -E '^CRON_SECRET=' "$DIR/.env" | head -1 | cut -d= -f2- 
 CRON_MARK="# zyron-tenant:$NAME"
 CRON_LINE="*/30 * * * * curl -s -H \"x-cron-secret: $CRON_SECRET_VAL\" http://localhost:$PORT/api/cron/auto-absent >> $DIR/cron.log 2>&1 $CRON_MARK"
 # crontab -l xato/bo'sh bo'lsa ham boshqa qatorlar yo'qolmaydi; faqat SHU tenant qatori almashtiriladi
-CUR_CRON="$(crontab -l 2>/dev/null || true)"
+if ! CUR_CRON="$(crontab -l 2>&1)"; then
+  printf '%s' "$CUR_CRON" | grep -qi 'no crontab' || die "crontab o'qib bo'lmadi: $CUR_CRON"
+  CUR_CRON=""
+fi
 { printf '%s\n' "$CUR_CRON" | grep -vF "$CRON_MARK" | grep -v "localhost:$PORT/api/cron/auto-absent" || true
   printf '%s\n' "$CRON_LINE"; } | sed '/^$/d' | crontab -
 ok "crontab: har 30 daqiqada auto-absent"

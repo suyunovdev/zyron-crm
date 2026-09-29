@@ -12,8 +12,8 @@ function arg(flag) {
   const i = process.argv.indexOf(flag);
   if (i === -1) return undefined;
   const v = process.argv[i + 1];
-  // "--name --color" kabi: qiymat o'rniga keyingi flag kelib qolmasin
-  return v === undefined || v.startsWith('--') ? '' : v;
+  // "--name --color" kabi: qiymat o'rniga keyingi ma'lum flag kelib qolmasin
+  return v === undefined || ['--name', '--color', '--if-empty'].includes(v) ? '' : v;
 }
 const ifEmpty = process.argv.includes('--if-empty');
 

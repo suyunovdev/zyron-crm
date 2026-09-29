@@ -37,6 +37,8 @@ try {
     } else {
       console.log(`"${login}" allaqachon superadmin - o'zgarish yo'q.`);
     }
+    // provision-tenant.sh uchun mashina o'qiydigan belgi: parol O'ZGARTIRILMADI
+    console.log('BOOTSTRAP_EXISTING');
   } else {
     await prisma.user.create({
       data: {
@@ -48,6 +50,7 @@ try {
       },
     });
     console.log(`Superadmin yaratildi: ${login}`);
+    console.log('BOOTSTRAP_CREATED');
   }
 } finally {
   await prisma.$disconnect();
